@@ -30,7 +30,7 @@ return new class extends Migration
                 $table->timestamps();
 
                 $table->foreign('employee_id')->references('employee_id')->on('employee')->onDelete('cascade');
-                $table->foreign('payroll_deduction_type_id')->references('deduction_id')->on('deduction')->onDelete('cascade');
+                $table->foreign('payroll_deduction_type_id')->references('id')->on('deduction_types')->onDelete('cascade');
                 $table->foreign('created_by')->references('id')->on('user')->onDelete('set null');
             });
         }
