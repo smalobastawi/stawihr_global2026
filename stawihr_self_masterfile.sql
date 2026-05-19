@@ -15,9 +15,6 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 
--- Dumping database structure for stawi_self_client
-CREATE DATABASE IF NOT EXISTS `stawi_self_client` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_uca1400_ai_ci */;
-USE `stawi_self_client`;
 
 -- Dumping structure for table stawi_self_client.absentees
 DROP TABLE IF EXISTS `absentees`;
