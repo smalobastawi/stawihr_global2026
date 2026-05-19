@@ -1,0 +1,120 @@
+@extends('admin.master')
+@section('content')
+@section('title')
+@lang('documents.document_uploads')
+@endsection
+<div class="container-fluid">
+	<div class="row bg-title">
+		<div class="">
+			<ol class="breadcrumb float-sm-right">
+				<li class="breadcrumb-item"><a href="{{ url('/') }}">Home</a></li>
+				@foreach (urlTree() as $item)
+					<li class="breadcrumb-item text-primary"><a href="{{ $item['url'] }}">{{ $item['label'] }}</a></li>
+				@endforeach
+			</ol>
+		</div>
+		@can("documents-upload.create")
+			<div class="col-lg-12 col-sm-8 col-md-6 col-xs-6">
+				<a href="{{ route('documents-upload.consent-summary') }}" class="btn btn-info pull-right m-l-20 hidden-xs hidden-sm waves-effect waves-light">
+					<i class="fa fa-chart-bar" aria-hidden="true"></i> Consent Summary
+				</a>
+				<a href="{{route('documents-upload.deleted-docs')}}"  class="btn btn-warning btn-eye pull-right m-l-20 hidden-xs hidden-sm waves-effect waves-light"> <i class="fa fa-plus-circle" aria-hidden="true"></i> @lang('documents.deleted_documents')</a>
+				&nbsp;
+				<a href="{{ route('documents-upload.create') }}"  class="btn btn-success pull-right m-l-20 hidden-xs hidden-sm waves-effect waves-light"> <i class="fa fa-plus-circle" aria-hidden="true"></i> @lang('documents.upload_document')</a>
+
+			</div>
+		@endcan
+
+	</div>
+                
+	<div class="row">
+		<div class="col-sm-12">
+			<div class="panel panel-info">
+				<div class="panel-heading"><i class="mdi mdi-table fa-fw"></i> @yield('title')</div>
+				<div class="panel-wrapper collapse in" aria-expanded="true">
+					<div class="panel-body">
+						@if(session()->has('success'))
+							<div class="alert alert-success alert-dismissable">
+								<button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+								<i class="cr-icon glyphicon glyphicon-ok"></i>&nbsp;<strong>{{ session()->get('success') }}</strong>
+							</div>
+						@endif
+						@if(session()->has('error'))
+							<div class="alert alert-danger alert-dismissable">
+								<button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+								<i class="glyphicon glyphicon-remove"></i>&nbsp;<strong>{{ session()->get('error') }}</strong>
+							</div>
+						@endif
+						<div class="table-responsive">
+							<table id="myTable" class="table table-bordered">
+								<thead>
+									 <tr class="tr_header">
+                                        <th>#</th>
+                                        <th>@lang('documents.document_name')</th>
+                                        <th>@lang('documents.uploaded_on')</th>
+                                        <th>@lang('documents.uploaded_by')</th>
+										<th>@lang('documents.reviewed_by')</th>
+										<th>@lang('documents.approved_by')</th>
+                                        <th style="text-align: center;">@lang('common.action')</th>
+                                    </tr>
+								</thead>
+								<tbody>
+									{!! $sl=null !!}
+									@foreach($documents AS $dc)
+										<tr class="{!! $dc->id !!}">
+											<td >{!! ++$sl !!}</td>
+                                            <td>{!! $dc->name!!}</td>
+                                            <td>{{ $dc->created_at->format('d-m-Y H:i') }}</td>
+                                            <td>{{ $dc->uploaded_by }} </td>
+											 <td>{{ $dc->reviewed_by }} </td>
+                                            <td>{{ $dc->approved_by }} </td>
+
+											<td style="width: 120px;">
+											@if($dc->approved_by)
+                                                <a href="{!! route('documents-upload.show',$dc->id) !!}"  class="btn btn-success btn-xs btnColor" title="View Document">
+												<i class="iconFontSize mdi mdi-eye hideMenu"></i>
+                                                </a>
+											@endif
+												@can("documents-upload.edit")
+													<a href="{!! route('documents-upload.edit',$dc->id) !!}"  class="btn btn-success btn-xs btnColor" title="Edit Document">
+														<i class="iconFontSize mdi mdi-pencil hideMenu"></i>
+													</a>
+												@endcan
+                                            @can("documents-upload.review")
+
+												<a href="{!! route('documents-upload.review', $dc->id) !!}"
+													data-token="{!! csrf_token() !!}"
+													data-id="{!! $dc->id !!}"
+													class="review btn btn-info btn-xs reviewBtn btnColor" title="Review Document">
+													<i class="iconFontSize mdi mdi-magnify hideMenu"></i>
+												 </a>
+
+										@endcan
+
+												<!-- View Consents Button -->
+												<a href="{!! route('documents-upload.consents', $dc->id) !!}"
+													class="btn btn-primary btn-xs btnColor" title="View Consents">
+													<i class="fa fa-users"></i>
+												</a>
+
+												<a href="{!! route('documents-upload.delete', $dc->id) !!}"
+													data-token="{!! csrf_token() !!}"
+													data-id="{!! $dc->id !!}"
+													class="delete btn btn-danger btn-xs deleteBtn btnColor" title="Delete Document">
+													<i class="iconFontSize mdi mdi-delete hideMenu"></i>
+												</a>
+
+
+											</td>
+										</tr>
+									@endforeach
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+@endsection

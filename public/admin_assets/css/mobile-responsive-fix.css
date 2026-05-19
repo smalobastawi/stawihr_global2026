@@ -1,0 +1,15 @@
+/* Mobile responsive: Make top bar scrollable on small screens */
+@media (max-width: 768px) {
+    .fix-header .navbar-static-top {
+        position: relative;
+        z-index: auto
+    }
+
+    .fix-header #page-wrapper {
+        margin-top: 0
+    }
+
+    .navbar-header {
+        position: relative
+    }
+}

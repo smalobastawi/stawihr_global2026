@@ -1,0 +1,192 @@
+.small-box .inner {
+    color: #fff;
+    padding-left: 15px;
+    padding-right: 15px;
+    padding-top: 15px
+}
+
+.small-box .icon {
+    color: rgba(0, 0, 0, .15);
+    font-size: 90px;
+    position: absolute;
+    right: 10px;
+    top: -10px;
+    transition: all .3s linear;
+    z-index: 0
+}
+@media (max-width: 767px) {
+    .small-box {
+        text-align: center
+    }
+
+    .small-box .icon {
+        display: none
+    }
+
+    .small-box p {
+        font-size: 12px
+    }
+}
+
+.bg-teal {
+    background-color: #39cccc !important
+}
+
+.bg-teal-active {
+    background-color: #30bbbb !important
+}
+
+@media (min-width: 1200px) {
+    .hidden-lg {
+        display: none !important
+    }
+}
+.small-box > a:hover, .small-box > a:link, .small-box > a:visited {
+    color: #fff
+}
+.small-box {
+    border-radius: 2px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .1);
+    display: block;
+    margin-bottom: 20px;
+    position: relative
+}
+
+.small-box > .inner {
+    padding: 10px
+}
+
+.small-box > .small-box-footer {
+    background: rgba(0, 0, 0, .1);
+    color: #fff;
+    color: hsla(0, 0%, 100%, .8);
+    display: block;
+    padding: 3px 0;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    z-index: 10
+}
+
+.small-box > .small-box-footer:hover {
+    background: rgba(0, 0, 0, .15);
+    color: #fff
+}
+
+.small-box h3 {
+    font-size: 38px;
+    font-weight: 700;
+    margin: 0 0 10px;
+    padding: 0;
+    white-space: nowrap
+}
+
+.small-box > a:hover, .small-box > a:link, .small-box > a:visited {
+    color: #fff
+}
+
+.bg-maroon {
+    background-color: #d81b60 !important
+}
+
+.alert-danger, .alert-error, .alert-info, .alert-success, .alert-warning, .bg-aqua, .bg-aqua-active, .bg-black, .bg-black-active, .bg-blue, .bg-blue-active, .bg-fuchsia, .bg-fuchsia-active, .bg-green, .bg-green-active, .bg-light-blue, .bg-light-blue-active, .bg-lime, .bg-lime-active, .bg-maroon, .bg-maroon-active, .bg-navy, .bg-navy-active, .bg-olive, .bg-olive-active, .bg-orange, .bg-orange-active, .bg-purple, .bg-purple-active, .bg-red, .bg-red-active, .bg-teal, .bg-teal-active, .bg-yellow, .bg-yellow-active, .callout.callout-danger, .callout.callout-info, .callout.callout-success, .callout.callout-warning, .label-danger, .label-info, .label-primary, .label-success, .label-warning, .modal-danger .modal-body, .modal-danger .modal-footer, .modal-danger .modal-header, .modal-info .modal-body, .modal-info .modal-footer, .modal-info .modal-header, .modal-primary .modal-body, .modal-primary .modal-footer, .modal-primary .modal-header, .modal-success .modal-body, .modal-success .modal-footer, .modal-success .modal-header, .modal-warning .modal-body, .modal-warning .modal-footer, .modal-warning .modal-header {
+    color: #fff !important
+}
+
+.bg-orange {
+    background-color: #ff851b !important
+}
+
+
+.small-box {
+    border-radius: 2px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, .1);
+    display: block;
+    margin-bottom: 20px;
+    position: relative
+}
+
+.small-box > .inner {
+    padding: 10px
+}
+
+.small-box > .small-box-footer {
+    background: rgba(0, 0, 0, .1);
+    color: #fff;
+    color: hsla(0, 0%, 100%, .8);
+    display: block;
+    padding: 3px 0;
+    position: relative;
+    text-align: center;
+    text-decoration: none;
+    z-index: 10
+}
+
+.small-box > .small-box-footer:hover {
+    background: rgba(0, 0, 0, .15);
+    color: #fff
+}
+
+.small-box h3 {
+    font-size: 38px;
+    font-weight: 700;
+    margin: 0 0 10px;
+    padding: 0;
+    white-space: nowrap
+}
+
+.small-box p {
+    font-size: 15px
+}
+
+.small-box p > small {
+    color: #f9f9f9;
+    display: block;
+    font-size: 13px;
+    margin-top: 5px
+}
+
+.small-box h3, .small-box p {
+    z-index: 5
+}
+
+.small-box .icon {
+    color: rgba(0, 0, 0, .15);
+    font-size: 90px;
+    position: absolute;
+    right: 10px;
+    top: -10px;
+    transition: all .3s linear;
+    margin-top:5%;
+    z-index: 0;
+}
+
+.small-box:hover {
+    color: #f9f9f9;
+    text-decoration: none
+}
+
+.small-box:hover .icon {
+    font-size: 95px
+}
+
+@media (max-width: 767px) {
+    .small-box {
+        text-align: center
+    }
+
+    .small-box .icon {
+        display: none
+    }
+
+    .small-box p {
+        font-size: 12px
+    }
+}
+.fa-solid, .fas {
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900
+}
+.small-box:hover .icon {
+     font-size: 95px;
+}

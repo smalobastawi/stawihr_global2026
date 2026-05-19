@@ -1,0 +1,34 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+//        $tables = DB::connection()->getDoctrineSchemaManager()->listTableNames();
+//        foreach ( $tables as $table ) {
+//            //add status colum
+//
+//        }
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::table('all_tables', function (Blueprint $table) {
+            //
+        });
+    }
+};

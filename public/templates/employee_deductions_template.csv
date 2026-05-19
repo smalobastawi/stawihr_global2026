@@ -1,0 +1,1 @@
+payroll_number,deduction_name,deduction_category,calculation_type,frequency,amount,percentage,rate,units,limit_per_month,limit_per_year,effective_from,effective_to,payroll_year,payroll_month,status,is_recurring,description

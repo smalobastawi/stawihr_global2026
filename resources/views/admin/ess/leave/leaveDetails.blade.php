@@ -1,0 +1,281 @@
+@extends('admin.master')
+@section('content')
+@section('title','Requested Leave Details')
+<div class="container-fluid">
+    <div class="row bg-title">
+        <div class="col-lg-8 col-md-8 col-sm-8 col-xs-12">
+            <ol class="breadcrumb">
+                <li class="active breadcrumbColor"><a href="#"><i class="fa fa-home"></i> Dashboard</a></li>
+                <li>@yield('title')</li>
+
+            </ol>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div class="panel panel-info">
+                <div class="panel-heading"><i class="mdi mdi-clipboard-text fa-fw"></i>Application Details</div>
+                <div class="panel-wrapper collapse in" aria-expanded="true">
+                    <div class="panel-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h3 class="box-title">Employee Leave Application Details</h3>
+                                <hr>
+                                <div class="form-group">
+                                    @if(isset($leaveApplicationData->employee->photo) && $leaveApplicationData->employee->photo !='')
+                                        <img style="width: 20px;margin: 0 auto"
+                                             class="profile-user-img img-responsive img-circle"
+                                             src="{!! asset('uploads/employeePhoto/'.$leaveApplicationData->employee->photo) !!}"
+                                             alt="User profile picture">
+                                    @else
+                                        <img width="100px" style="margin: 0 auto" class="profile-user-img img-responsive img-circle"
+                                             src="{!! asset('admin_assets/img/default.png') !!}"
+                                             alt="User profile picture">
+                                    @endif
+                                    <p class="text-center" style=" margin-top: 5px;font-size: 18px;">
+                                        <b> @if(isset($leaveApplicationData->employee->designation->designation_name)){{$leaveApplicationData->employee->designation->designation_name}}@endif</b>
+                                    </p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6">Employee Name :</label>
+                                    <p class="col-md-6 col-sm-6">
+                                        @if(isset($leaveApplicationData->employee->first_name)){{$leaveApplicationData->employee->first_name}}@endif
+                                        @if(isset($leaveApplicationData->employee->last_name)){{$leaveApplicationData->employee->last_name}}@endif
+                                    </p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6 ">Leave Type :</label>
+                                    <p class="col-md-6 col-sm-6">@if(isset($leaveApplicationData->leaveType->leave_type_name)){{$leaveApplicationData->leaveType->leave_type_name}}@endif</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6">Applied On :</label>
+                                    <p class="col-md-6 col-sm-6">@if(isset($leaveApplicationData->application_date)){{ dateConvertDBtoForm($leaveApplicationData->application_date)  }}@endif</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6 ">Leave From Date :</label>
+                                    <p class="col-md-6 col-sm-6">@if(isset($leaveApplicationData->application_date)){{ dateConvertDBtoForm($leaveApplicationData->application_from_date)  }}@endif</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6 ">Leave To Date :</label>
+                                    <p class="col-md-6 col-sm-6">@if(isset($leaveApplicationData->application_date)){{ dateConvertDBtoForm($leaveApplicationData->application_to_date)  }}@endif</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6 ">Number of days :</label>
+                                    <p class="col-md-6 col-sm-6">@if(isset($leaveApplicationData->application_date)){{ $leaveApplicationData->number_of_day }}@endif</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6">purpose :</label>
+                                    <p class="col-md-6 col-sm-6">@if(isset($leaveApplicationData->purpose)){{ $leaveApplicationData->purpose }}@endif</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6">Justification/Evidence (Attached)
+                                        :</label>
+
+                                    @foreach($leaveApplicationData ->justification as $justification1)
+                                    <p>
+                                        <a href="{{ url('/uploads/leaveApplication') . '/' . $justification1->file_name }}" target="_blank">View</a>
+                                    </p>
+                                    @endforeach
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6">Supervisor Approval :</label>
+                                    @if($leaveApplicationData->status ==1)
+                                        <p class="col-md-6 col-sm-6 label-warning">Pending</p>
+                                    @elseif($leaveApplicationData->status ==2)
+                                        <p class="col-md-6 col-sm-6 label-success">Approved</p>
+                                        @elseif($leaveApplicationData->final_status == LeaveStatus::RECALL)
+                                        <p class="col-md-6 col-sm-6 label-danger">Recalled </p>
+                                    @else
+                                        <p class="col-md-6 col-sm-6 label-danger">Rejected </p>
+                                    @endif
+                                </div>
+
+                            </div>
+                            <div class="col-md-6">
+                                <h3 class="box-title">Update Status</h3>
+                                <label > Supervisor Detasils: @if($supervisor_details){{ $supervisor_details->first_name . ' '. $supervisor_details->last_name }} @else <span style="background-color: red; color:white"> No Supervisor details found </span>@endif</label>
+
+                                <hr>
+
+                                <label for="inputEmail3" class="col-md-6 col-sm-6">Supervisor Approval :</label>
+                                
+                                @if($leaveApplicationData->status ==1)
+                                    <p class="col-md-6 col-sm-6 label-warning">Pending</p>
+                                @elseif($leaveApplicationData->status ==2)
+                                    <p class="col-md-6 col-sm-6 label-success">Approved</p>
+                                    @elseif($leaveApplicationData->final_status == LeaveStatus::RECALL)
+                                    <p class="col-md-6 col-sm-6 label-danger">Recalled </p>
+                                @else
+                                    <p class="col-md-6 col-sm-6 label-danger">Rejected </p>
+                                @endif
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6">Supervisor Comments:</label>
+                                    <p>-
+                                        {!! $leaveApplicationData->remarks !!}
+                                    </p>
+                                </div>
+                                <!-- P&C In Charge view here -->
+                                {{-- <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6">P&C In Charge :</label>
+                                    @if($leaveApplicationData->hr_approval ==1)
+                                        <p class="col-md-6 col-sm-6 label-warning">Pending</p>
+                                    @elseif($leaveApplicationData->hr_approval ==2)
+                                        <p class="col-md-6 col-sm-6 label-success">Approved</p>
+                                    @else
+                                        <p class="col-md-6 col-sm-6 label-danger">Rejected </p>
+                                    @endif
+                                </div> --}}
+                                {{-- <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6">HR Comments :</label>
+                                    <p>-
+                                        {!! $leaveApplicationData->hr_approval_comments !!}
+                                    </p>
+                                </div> --}}
+                
+                                <br>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6">Final Status :</label>
+                                    @if($leaveApplicationData->final_status ==1)
+                                        <p class="col-md-6 col-sm-6 label-warning">Pending</p>
+                                    @elseif($leaveApplicationData->final_status ==2)
+                                        <p class="col-md-6 col-sm-6 label-success">Approved</p>
+                                        @elseif($leaveApplicationData->final_status == LeaveStatus::RECALL)
+                                        <p class="col-md-6 col-sm-6 label-danger">Recalled </p>
+                                    @else
+                                        <p class="col-md-6 col-sm-6 label-danger">Rejected </p>
+                                    @endif
+                                </div>
+                                
+                                <form action="{{ route('requestedApplication.update', $leaveApplicationData->leave_application_id) }}" method="POST" enctype="multipart/form-data" id="leaveApproveOrRejectForm">
+@csrf
+@method('PUT')
+
+
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-sm-4">Current Balance :</label>
+                                    <p class="col-sm-8">@if(isset($currentBalance)) {{$currentBalance}} @endif days</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-sm-4 ">From Date :</label>
+                                    <p class="col-sm-8"><input type="text" readonly class="form-control"
+                                                               value="@if(isset($leaveApplicationData->application_date)){{ dateConvertDBtoForm($leaveApplicationData->application_from_date)  }}@endif">
+                                    </p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-sm-4 ">To Date :</label>
+                                    <p class="col-sm-8"><input type="text" readonly class="form-control"
+                                                               value="@if(isset($leaveApplicationData->application_to_date)){{ dateConvertDBtoForm($leaveApplicationData->application_to_date)  }}@endif">
+                                    </p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="inputEmail3" class="col-sm-4 ">Number of days :</label>
+                                    <p class="col-sm-8"><input type="text" class="form-control"
+                                                               value="@if(isset($leaveApplicationData->application_date)){{ $leaveApplicationData->number_of_day }}@endif"
+                                                               readonly></p>
+                                </div>
+                                @if($supervisor_id == session('logged_session_data.employee_id'))
+                                @if($leaveApplicationData->status == LeaveStatus::APPROVE)
+                                    <label>Leave application has been approved by the supervisor!</label>
+                                @elseif($leaveApplicationData->status == LeaveStatus::REJECT)
+                                    <label>Leave application has been rejected by the supervisor!</label>
+
+                                    @if(session('logged_session_data.employee_id') == $leaveApplicationData->employee_id)
+                                        <label>You cannot approve your own leave application</label>
+                                    @endif
+                                    @else
+                                    <div class="form-group">
+                                        <label for="inputEmail3" class="col-sm-4">Remarks :</label>
+                                        <p class="col-sm-8"><textarea class="form-control" cols="10" rows="6"
+                                                                      name="remarks" required
+                                                                      placeholder="Enter remarks....."
+                                                                      value="@if(isset($leaveApplicationData->remarks)){{ $leaveApplicationData->remarks }}@endif"></textarea>
+                                        </p>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="inputEmail3" class="col-sm-4"></label>
+
+                                        <p class="col-sm-8">
+                                            <button type="submit" name="status" class="btn btn-info btn_style"
+                                                    value="2">Approve 
+                                            </button>
+                                            <button type="submit" name="status" class="btn btn-danger btn_style"
+                                                    value="3"> Reject
+                                            </button>
+                                        </p>
+
+                                    </div>
+                                @endif
+                                @endif
+ @if(\Auth::user()->hasRole('HR Administrator') && $leaveApplicationData->status == '2' && $leaveApplicationData->hr_approval == '1')
+                                    @if(session('logged_session_data.employee_id') == $leaveApplicationData->employee_id)
+                                        <label>You cannot approve your own leave application</label>
+
+                                    @elseif($leaveApplicationData->status == '1') 
+                                        <label>Leave approval cannot proceed unless it is approved by the
+                                            supervisor</label>
+                                    @elseif($leaveApplicationData->status == '3')
+                                        <label>Leave application has been rejected by the supervisor!
+                                        </label>
+                                        
+
+                                    @else
+                                        <div class="form-group">
+                                            <label for="inputEmail3" class="col-sm-4">Remarks :</label>
+                                            <p class="col-sm-8"><textarea class="form-control" cols="10" rows="6"
+                                                                          name="remarks" required
+                                                                          placeholder="Enter remarks....."
+                                                                          value="@if(isset($leaveApplicationData->remarks)){{ $leaveApplicationData->remarks }}@endif"></textarea>
+                                            </p>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="inputEmail3" class="col-sm-4"></label>
+
+                                            <p class="col-sm-8">
+                                                <button type="submit" name="status" class="btn btn-info btn_style"
+                                                        value="2">Approve
+                                                </button>
+                                                <button type="submit" name="status" class="btn btn-danger btn_style"
+                                                        value="3"> Reject
+                                                </button>
+                                            </p>
+
+                                        </div>
+                                        @endif
+                                @elseif(session('logged_session_data.role_id') == '11')
+                                    <div class="form-group">
+                                        <label for="inputEmail3" class="col-sm-4">Remarks :</label>
+                                        <p class="col-sm-8">
+                                            <textarea class="form-control" cols="10" rows="6"
+                                                                      name="remarks" required
+                                                                      placeholder="Enter remarks....."
+                                                                      value=""></textarea>
+                                        </p>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="inputEmail3" class="col-sm-4"></label>
+
+                                        <p class="col-sm-8">
+                                            <button type="submit" name="status" class="btn btn-info btn_style"
+                                                    value="2">Approve
+                                            </button>
+                                            <button type="submit" name="status" class="btn btn-danger btn_style"
+                                                    value="3"> Reject
+                                            </button>
+                                        </p>
+
+                                    </div>
+                                @endif
+                                </form>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+
+

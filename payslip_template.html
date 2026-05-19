@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Payslip - 2025</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        .payslip-container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        /* Header Section */
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #3498db);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-placeholder {
+            width: 60px;
+            height: 60px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #2c3e50;
+            font-weight: bold;
+            font-size: 18px;
+            margin-right: 15px;
+        }
+
+        .company-name {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .payslip-title {
+            text-align: right;
+        }
+
+        .payslip-title h1 {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .payslip-title .period {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* Company and Employee Details */
+        .details-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .details-row {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .company-details, .employee-details {
+            flex: 1;
+        }
+
+        .details-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3498db;
+        }
+
+        .detail-item {
+            display: flex;
+            margin-bottom: 8px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            width: 120px;
+            color: #555;
+        }
+
+        .detail-value {
+            color: #333;
+        }
+
+        /* Main Content - Earnings and Deductions */
+        .main-content {
+            padding: 30px;
+        }
+
+        .columns-container {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .earnings-column, .deductions-column {
+            flex: 1;
+        }
+
+        .column-title {
+            background: #2c3e50;
+            color: white;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 0;
+        }
+
+        .earnings-column .column-title {
+            background: #27ae60;
+        }
+
+        .deductions-column .column-title {
+            background: #e74c3c;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .items-table th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid #dee2e6;
+            color: #555;
+        }
+
+        .items-table td {
+            padding: 10px 12px;
+            border: 1px solid #dee2e6;
+        }
+
+        .items-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .amount {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .total-row {
+            background: #e9ecef !important;
+            font-weight: bold;
+        }
+
+        .total-row td {
+            border-top: 2px solid #2c3e50;
+        }
+
+        /* Company Contributions */
+        .contributions-section {
+            margin-top: 20px;
+        }
+
+        .contributions-title {
+            background: #f39c12;
+            color: white;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 0;
+        }
+
+        /* Summary Section */
+        .summary-section {
+            background: #2c3e50;
+            color: white;
+            padding: 20px 30px;
+            margin-top: 30px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .summary-row.net-pay {
+            font-size: 20px;
+            font-weight: bold;
+            border-top: 2px solid white;
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+
+        /* Footer */
+        .footer {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .currency {
+            font-weight: 600;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .payslip-container {
+                box-shadow: none;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="payslip-container">
+        <!-- Header Section -->
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo-placeholder">LOGO</div>
+                <div class="company-name">Your Company Name</div>
+            </div>
+            <div class="payslip-title">
+                <h1>Payslip 2025</h1>
+                <div class="period">Pay Period: January 2025</div>
+            </div>
+        </div>
+
+        <!-- Company and Employee Details -->
+        <div class="details-section">
+            <div class="details-row">
+                <div class="company-details">
+                    <div class="details-title">Company Details</div>
+                    <div class="detail-item">
+                        <span class="detail-label">Company:</span>
+                        <span class="detail-value">ABC Kenya Limited</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Address:</span>
+                        <span class="detail-value">P.O. Box 12345, Nairobi</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">PIN:</span>
+                        <span class="detail-value">P051234567A</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">NSSF No:</span>
+                        <span class="detail-value">12345678</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">NHIF No:</span>
+                        <span class="detail-value">87654321</span>
+                    </div>
+                </div>
+                <div class="employee-details">
+                    <div class="details-title">Employee Details</div>
+                    <div class="detail-item">
+                        <span class="detail-label">Name:</span>
+                        <span class="detail-value">John Doe Mwangi</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Employee ID:</span>
+                        <span class="detail-value">EMP001</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Department:</span>
+                        <span class="detail-value">Finance</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Position:</span>
+                        <span class="detail-value">Accountant</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">KRA PIN:</span>
+                        <span class="detail-value">A012345678Z</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">NSSF No:</span>
+                        <span class="detail-value">98765432</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">NHIF No:</span>
+                        <span class="detail-value">13579246</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="columns-container">
+                <!-- Earnings Column -->
+                <div class="earnings-column">
+                    <div class="column-title">EARNINGS</div>
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th class="amount">Amount (KES)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Basic Income</td>
+                                <td class="amount currency">75,000.00</td>
+                            </tr>
+                            <tr>
+                                <td>House Allowance</td>
+                                <td class="amount currency">25,000.00</td>
+                            </tr>
+                            <tr>
+                                <td>Transport Allowance</td>
+                                <td class="amount currency">15,000.00</td>
+                            </tr>
+                            <tr>
+                                <td>Medical Allowance</td>
+                                <td class="amount currency">5,000.00</td>
+                            </tr>
+                            <tr>
+                                <td>Overtime</td>
+                                <td class="amount currency">8,500.00</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td><strong>Total Earnings</strong></td>
+                                <td class="amount currency"><strong>128,500.00</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Company Contributions -->
+                    <div class="contributions-section">
+                        <div class="contributions-title">COMPANY CONTRIBUTIONS</div>
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th>Description</th>
+                                    <th class="amount">Amount (KES)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>NSSF Employer</td>
+                                    <td class="amount currency">2,160.00</td>
+                                </tr>
+                                <tr>
+                                    <td>NHIF Employer</td>
+                                    <td class="amount currency">1,700.00</td>
+                                </tr>
+                                <tr>
+                                    <td>Work Injury Benefit</td>
+                                    <td class="amount currency">128.50</td>
+                                </tr>
+                                <tr class="total-row">
+                                    <td><strong>Total Contributions</strong></td>
+                                    <td class="amount currency"><strong>3,988.50</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Deductions Column -->
+                <div class="deductions-column">
+                    <div class="column-title">DEDUCTIONS</div>
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th class="amount">Amount (KES)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>PAYE Tax</td>
+                                <td class="amount currency">18,750.00</td>
+                            </tr>
+                            <tr>
+                                <td>NSSF Employee</td>
+                                <td class="amount currency">2,160.00</td>
+                            </tr>
+                            <tr>
+                                <td>NHIF</td>
+                                <td class="amount currency">1,700.00</td>
+                            </tr>
+                            <tr>
+                                <td>Housing Levy</td>
+                                <td class="amount currency">1,925.00</td>
+                            </tr>
+                            <tr>
+                                <td>Loan Repayment</td>
+                                <td class="amount currency">5,000.00</td>
+                            </tr>
+                            <tr>
+                                <td>Insurance Premium</td>
+                                <td class="amount currency">2,500.00</td>
+                            </tr>
+                            <tr>
+                                <td>Advance Recovery</td>
+                                <td class="amount currency">3,000.00</td>
+                            </tr>
+                            <tr class="total-row">
+                                <td><strong>Total Deductions</strong></td>
+                                <td class="amount currency"><strong>35,035.00</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Section -->
+        <div class="summary-section">
+            <div class="summary-row">
+                <span>Gross Pay:</span>
+                <span class="currency">KES 128,500.00</span>
+            </div>
+            <div class="summary-row">
+                <span>Total Deductions:</span>
+                <span class="currency">KES 35,035.00</span>
+            </div>
+            <div class="summary-row net-pay">
+                <span>Net Pay:</span>
+                <span class="currency">KES 93,465.00</span>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>This is a computer-generated payslip and does not require a signature.</p>
+            <p>For any queries, please contact the HR Department.</p>
+            <p>Generated on: <?php echo date('d/m/Y H:i:s'); ?> | Payslip Reference: PS-2025-001-<?php echo date('Ymd'); ?></p>
+        </div>
+    </div>
+</body>
+</html>

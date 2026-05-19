@@ -1,0 +1,59 @@
+# Advanced Leave Implementation Complete
+
+
+## ✅ Database Changes
+- **Migration Applied**: `2025_12_06_155712_add_advanced_leave_columns_to_leave_group_settings`
+- **New Columns Added to `leave_group_settings` table**:
+  - `allow_advanced_leave` (boolean, default: false) - Enable/disable advanced leave for a leave type
+  - `advanced_period_months` (integer, default: 1) - How many months ahead employees can apply for leave
+  - `advanced_limit_percentage` (decimal, default: 100) - Percentage of annual entitlement that can be taken as advance
+  - `advanced_limit_days` (decimal, nullable) - Absolute number of days that can be taken as advance
+
+- **New Table Created**: `advanced_leave_records` for tracking advanced leave usage
+  - Tracks advanced days taken, recovered days, and transaction history
+  - Includes foreign key relationships for data integrity
+
+## ✅ Model Updates
+- **LeaveGroupSetting Model** (`app/Models/LeaveGroupSetting.php`): Added new advanced leave fields to fillable array
+- **AdvancedLeaveRecord Model** (`app/Models/AdvancedLeaveRecord.php`): Created new model with:
+  - Relationship methods for employee, leave type, and financial year
+  - Helper methods for calculating net advanced days and available limits
+  - Business logic for advance leave validation
+
+## ✅ Repository Layer
+- **LeaveRepository** (`app/Repositories/LeaveRepository.php`): Enhanced with new methods:
+  - `calculateAdvancedLeaveAvailable()` - Calculates available advance leave for an employee
+  - `calculateEmployeeLeaveBalanceWithAdvanced()` - Returns comprehensive leave balance including advance
+  - `recordAdvancedLeaveUsage()` - Records advance leave when applied
+  - `recordAdvancedLeaveRecovery()` - Records recovery when leave is taken
+  - `getOrCreateAdvancedRecord()` - Manages advanced leave records per financial year
+
+## ✅ Controller Updates
+- **EssIndexController** (`app/Http/Controllers/Ess/EssIndexController.php`): 
+  - Updated `leaveBalance()` method to return structured JSON with:
+    - `regular_balance` - Current earned leave balance
+    - `available_advanced` - Available advance leave days
+    - `total_available` - Combined available days
+
+## ✅ Business Logic Features
+- **Period-Based Limits**: Advance leave calculations consider elapsed months in financial year
+- **Annual Entitlement Constraints**: Advance cannot exceed total annual entitlement
+- **Recovery Tracking**: System tracks when advanced leave is "recovered" through actual leave taken
+- **Transaction History**: All advanced leave transactions are logged with timestamps
+- **Financial Year Scoping**: All calculations are scoped to current financial year
+
+## 📋 Configuration Options
+Administrators can now configure advanced leave settings per leave type in leave groups:
+
+1. **Enable Advanced Leave**: Toggle to allow/disable advance applications
+2. **Period Control**: Set how many months ahead employees can apply
+3. **Limit Control**: Set either percentage-based or absolute day limits
+4. **Flexible Configuration**: Different settings per leave type and employee group
+
+## 🔄 Integration Points
+The system is now ready for:
+- Leave application forms to show available advance leave
+- Leave approval workflows to consider advance limits
+- Leave balance calculations to include advance allowances
+- Reporting on advanced leave usage and recovery
+
