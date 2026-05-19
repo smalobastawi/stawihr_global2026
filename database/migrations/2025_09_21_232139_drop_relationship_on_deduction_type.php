@@ -11,27 +11,27 @@ return new class extends Migration
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
-        // First, drop any existing foreign key
-        try {
-            Schema::table('employee_deductions', function (Blueprint $table) {
-                $table->dropForeign(['payroll_deduction_type_id']);
-            });
-        } catch (\Exception $e) {
-            // Ignore error if foreign key doesn't exist
-        }
-
-        // Ensure the column is nullable and has the correct type
         Schema::table('employee_deductions', function (Blueprint $table) {
-            $table->unsignedBigInteger('payroll_deduction_type_id')->nullable()->change();
+            // Make deduction_type_id nullable (harmonized column name)
+            if (Schema::hasColumn('employee_deductions', 'deduction_type_id')) {
+                $table->unsignedBigInteger('deduction_type_id')->nullable()->change();
+            }
         });
 
-        // Use raw SQL to add the foreign key (more reliable)
+        // Drop old foreign key name if it exists from previous broken migration
+        try {
+            DB::statement("ALTER TABLE employee_deductions DROP FOREIGN KEY IF EXISTS employee_deductions_payroll_deduction_type_id_foreign");
+        } catch (\Exception $e) {
+            // Ignore
+        }
+
+        // Add correct foreign key using the standardized column name
         DB::statement("
             ALTER TABLE employee_deductions 
-            ADD CONSTRAINT employee_deductions_payroll_deduction_type_id_foreign 
-            FOREIGN KEY (payroll_deduction_type_id) 
+            ADD CONSTRAINT employee_deductions_deduction_type_id_foreign 
+            FOREIGN KEY (deduction_type_id) 
             REFERENCES deduction_types(id) 
-            ON DELETE SET NULL 
+            ON DELETE CASCADE 
             ON UPDATE CASCADE
         ");
 
@@ -42,22 +42,20 @@ return new class extends Migration
     {
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
 
-        // Drop using raw SQL
-        DB::statement("
-            ALTER TABLE employee_deductions 
-            DROP FOREIGN KEY employee_deductions_payroll_deduction_type_id_foreign
-        ");
-
-        // Restore original if needed
-        if (Schema::hasTable('payroll_deduction_types')) {
+        // Drop the current foreign key
+        try {
             DB::statement("
                 ALTER TABLE employee_deductions 
-                ADD FOREIGN KEY (payroll_deduction_type_id) 
-                REFERENCES payroll_deduction_types(id) 
-                ON DELETE CASCADE 
-                ON UPDATE CASCADE
+                DROP FOREIGN KEY IF EXISTS employee_deductions_deduction_type_id_foreign
             ");
+        } catch (\Exception $e) {
+            // Ignore
         }
+
+        // Restore non-nullable + original state
+        Schema::table('employee_deductions', function (Blueprint $table) {
+            $table->unsignedBigInteger('deduction_type_id')->nullable(false)->change();
+        });
 
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
     }

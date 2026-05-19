@@ -17,7 +17,7 @@ return new class extends Migration
             Schema::create('employee_deductions', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('employee_id');
-                $table->unsignedInteger('deduction_type_id');
+                $table->unsignedBigInteger('deduction_type_id');
                 $table->string('deduction_category')->nullable();
                 $table->decimal('percentage', 8, 2)->nullable();
                 $table->decimal('rate', 8, 2)->nullable();
@@ -29,8 +29,9 @@ return new class extends Migration
                 $table->string('reference_number')->nullable()->unique();
                 $table->timestamps();
 
+                // Foreign keys - deduction_type_id FK removed because deduction_types table is created later
                 $table->foreign('employee_id')->references('employee_id')->on('employee')->onDelete('cascade');
-                $table->foreign('deduction_type_id')->references('id')->on('deduction_types');
+                // deduction_type_id FK will be added by 2025_09_21_232139_drop_relationship_on_deduction_type.php
                 $table->foreign('created_by')->references('id')->on('user')->onDelete('set null');
             });
         }
