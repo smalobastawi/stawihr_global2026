@@ -13,7 +13,11 @@ return new class extends Migration
     {
         Schema::table('job_requisitions', function (Blueprint $table) {
             // 1. POSITION DETAILS - additional fields
-            $table->string('work_location', 255)->nullable()->after('location_id');
+            if (Schema::hasColumn('job_requisitions', 'location_id')) {
+                $table->string('work_location', 255)->nullable()->after('location_id');
+            } else {
+                $table->string('work_location', 255)->nullable();
+            }
             $table->date('proposed_start_date')->nullable()->after('required_by_date');
 
             // 2. REASON FOR REQUISITION
