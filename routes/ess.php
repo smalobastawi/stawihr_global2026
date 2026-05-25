@@ -29,6 +29,7 @@ Route::group(['module' => 'Self Service', 'prefix' => 'ess', 'as' => 'ess.', 'mi
         Route::post('/balance', [EssIndexController::class, 'leaveBalance'])->name('balance');
         Route::post('applyForTotalNumberOfDays', [ApplyForLeaveController::class, 'applyForTotalNumberOfDays'])->name('leave.employee.apply.totaldays');
         Route::get('/{applyForLeave}', [EssIndexController::class, 'viewLeaveDetails'])->name('applyForLeave.show');
+        Route::post('/approveOrReject', [EssIndexController::class, 'approveOrRejectLeave'])->name('leave.approveOrReject');
         Route::post('/delete_justification', [EssIndexController::class, 'deleteLeaveJustification'])->name('justification.delete');
         Route::delete('/recall/{id}', [EssIndexController::class, 'recall'])->name('recall');
     });

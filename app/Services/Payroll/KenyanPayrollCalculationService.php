@@ -1434,7 +1434,7 @@ class KenyanPayrollCalculationService
                 $deductions[] = [
                     'name' => $deduction->payrollDeductionType->name,
                     'code' => $deduction->deductionType->code ?? 'custom',
-                    'type_id' => $deduction->payroll_deduction_type_id ?? null,
+                    'type_id' => $deduction->deduction_type_id ?? null,
                     'amount' => $amount,
                     'units' => 1,
                     'calculation_basis' => $employeePayroll->basic_salary,
@@ -1482,7 +1482,7 @@ class KenyanPayrollCalculationService
                 $deductions[] = [
                     'name' => $deduction->payrollDeductionType->name,
                     'code' => $deduction->deductionType->code ?? 'custom',
-                    'type_id' => $deduction->payroll_deduction_type_id ?? null,
+                    'type_id' => $deduction->deduction_type_id ?? null,
                     'amount' => $amount,
                     'units' => 1,
                     'calculation_basis' => $employeePayroll->basic_salary,

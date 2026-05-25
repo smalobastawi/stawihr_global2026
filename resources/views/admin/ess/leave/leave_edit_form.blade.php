@@ -332,6 +332,7 @@
                     application_from_date: fromDateStr,
                     application_to_date: toDateStr,
                     leave_type_id: $('.leave_type_id').val(),
+                    employee_id: $('.employee_id').val(),
                     _token: $('input[name=_token]').val()
                 },
                 dataType: 'json',

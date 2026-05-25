@@ -62,7 +62,7 @@ class DeductionType extends Model
      */
     public function employeeDeductions()
     {
-        return $this->hasMany(EmployeeDeductions::class, 'payroll_deduction_type_id', 'id');
+        return $this->hasMany(EmployeeDeductions::class, 'deduction_type_id', 'id');
     }
 
     /**

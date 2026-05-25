@@ -29,6 +29,14 @@
                 </a>
             </li>
             <li role="presentation">
+                <a href="#leave_approvals" aria-controls="leave_approvals" role="tab" data-toggle="tab">
+                    Leave Approvals
+                    @if($pendingLeaveApprovals->count() > 0)
+                        <span class="badge badge-danger" style="margin-left: 5px;">{{ $pendingLeaveApprovals->count() }}</span>
+                    @endif
+                </a>
+            </li>
+            <li role="presentation">
                 <a href="#payroll_approvals" aria-controls="payroll_approvals" role="tab" data-toggle="tab">
                     Payroll Output Approvals
                 </a>
@@ -520,6 +528,104 @@
                 </div>
             </div>
 
+
+            <!-- Leave Approvals Section -->
+            <div role="tabpanel" class="tab-pane fade" id="leave_approvals">
+                <div class="col-sm-12">
+                    <div class="panel panel-info">
+                        <div class="panel-heading">
+                            <i class="mdi mdi-calendar-clock fa-fw"></i> Leave Approvals
+                            <span class="badge badge-info pull-right">{{ $pendingLeaveApprovals->count() }} pending</span>
+                        </div>
+                        <div class="panel-wrapper collapse in" aria-expanded="true">
+                            <div class="panel-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead>
+                                            <tr class="tr_header">
+                                                <th>#</th>
+                                                <th>Employee Name</th>
+                                                <th>Leave Type</th>
+                                                <th>Duration</th>
+                                                <th>Applied On</th>
+                                                <th>Days</th>
+                                                <th>Purpose</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @forelse($pendingLeaveApprovals as $index => $leave)
+                                                <tr class="{{ $leave->leave_application_id }}">
+                                                    <td>{{ $index + 1 }}</td>
+                                                    <td>
+                                                        @if(isset($leave->employee->first_name))
+                                                            {{ $leave->employee->first_name }}
+                                                        @endif
+                                                        @if(isset($leave->employee->last_name))
+                                                            {{ $leave->employee->last_name }}
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if(isset($leave->leaveType->leave_type_name))
+                                                            {{ $leave->leaveType->leave_type_name }}
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        {{ dateConvertDBtoForm($leave->application_from_date) }}
+                                                        <b>to</b>
+                                                        {{ dateConvertDBtoForm($leave->application_to_date) }}
+                                                    </td>
+                                                    <td>{{ dateConvertDBtoForm($leave->application_date) }}</td>
+                                                    <td>{{ $leave->number_of_day }}</td>
+                                                    <td style="max-width: 250px; word-wrap: break-word;">{{ $leave->purpose }}</td>
+                                                    <td>
+                                                        @if($leave->status == \App\Lib\Enumerations\LeaveStatus::PENDING)
+                                                            <span class="label label-warning">Pending</span>
+                                                        @elseif($leave->status == \App\Lib\Enumerations\LeaveStatus::APPROVE)
+                                                            <span class="label label-success">Approved</span>
+                                                        @else
+                                                            <span class="label label-danger">Rejected</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        <a href="{{ route('ess.leave.applyForLeave.show', $leave->leave_application_id) }}"
+                                                           class="btn btn-xs btn-primary" title="Review">
+                                                            <i class="fa fa-eye"></i> View
+                                                        </a>
+
+                                                        @if($leave->status == \App\Lib\Enumerations\LeaveStatus::PENDING)
+                                                            <button class="btn btn-xs btn-success remarksForLeave"
+                                                                    data-leave_application_id="{{ $leave->leave_application_id }}"
+                                                                    data-status="2" title="Approve">
+                                                                <i class="fa fa-check"></i> Approve
+                                                            </button>
+
+                                                            <button class="btn btn-xs btn-danger remarksForLeave"
+                                                                    data-leave_application_id="{{ $leave->leave_application_id }}"
+                                                                    data-status="3" title="Reject">
+                                                                <i class="fa fa-times"></i> Reject
+                                                            </button>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="9" class="text-center">
+                                                        <div class="alert alert-info">
+                                                            There are no pending leave approvals at this time.
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Payroll Approvals Section -->
             <div role="tabpanel" class="tab-pane fade" id="payroll_approvals">
@@ -1719,6 +1825,72 @@
                 document.getElementById('activate-form-' + delegationId).submit();
             }
         }
+        $(document).on('click', '.remarksForLeave', function () {
+
+            var actionTo = "{{ route('leave.manage.approve_reject') }}";
+            var leave_application_id = $(this).attr('data-leave_application_id');
+            var status = $(this).attr('data-status');
+
+            if(status == 2){
+                var statusText = "Are you want to approve leave application?";
+                var btnColor = "#2cabe3";
+            }else{
+                var statusText = "Are you want to reject leave application?";
+                var btnColor = "red";
+            }
+
+            swal({
+                    title: "",
+                    text: statusText,
+                    type: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: btnColor,
+                    confirmButtonText: "Yes",
+                    closeOnConfirm: false
+                },
+                function (isConfirm) {
+                    var token = '{{ csrf_token() }}';
+                    if (isConfirm) {
+                        $.ajax({
+                            type: 'POST',
+                            url:actionTo,
+                            data: {leave_application_id:leave_application_id,status:status,_token:token},
+                            success: function (data) {
+                                if (data == 'approve') {
+                                    swal({
+                                            title: "Approved!",
+                                            text: "Leave application approved.",
+                                            type: "success"
+                                        },
+                                        function (isConfirm) {
+                                            if (isConfirm) {
+                                                $('.' + leave_application_id).fadeOut();
+                                            }
+                                        });
+
+                                }else{
+                                    swal({
+                                            title: "Rejected!",
+                                            text: "Leave application rejected.",
+                                            type: "success"
+                                        },
+                                        function (isConfirm) {
+                                            if (isConfirm) {
+                                                $('.' + leave_application_id).fadeOut();
+                                            }
+                                        });
+                                }
+                            }
+
+                        });
+                    } else {
+                        swal("Cancelled", "Your data is safe .", "error");
+                    }
+                });
+            return false;
+
+        });
+
     </script>
     @include('admin.partials.drag-scroll-script')
 

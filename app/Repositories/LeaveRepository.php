@@ -28,13 +28,26 @@ class LeaveRepository
 
     public function calculateTotalNumberOfLeaveDays($application_from_date, $application_to_date, $leaveTypeId, $employeeId = null)
     {
-        // If employee_id is provided (e.g., when applying on behalf), use that employee
-        // Otherwise, use the logged-in user's employee details (for self-application)
         if ($employeeId) {
-            $employee = Employee::where('employee_id', $employeeId)->first();
+            $employee = Employee::with(['leaveGroup.publicHolidays', 'leaveGroup.weeklyHolidays'])
+                ->where('employee_id', $employeeId)
+                ->first();
         } else {
             $user = Auth::user();
-            $employee = $user->employeeDetails;
+            if (!$user) {
+                return 0;
+            }
+
+            $employee = Employee::with(['leaveGroup.publicHolidays', 'leaveGroup.weeklyHolidays'])
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (!$employee && method_exists($user, 'employeeDetails')) {
+                $employee = $user->employeeDetails;
+                if ($employee) {
+                    $employee->load(['leaveGroup.publicHolidays', 'leaveGroup.weeklyHolidays']);
+                }
+            }
         }
 
         if (!$employee) {
@@ -265,25 +278,59 @@ class LeaveRepository
 
     public function calculateEmployeeLeaveBalanceWithAdvanced($leave_type_id, $employee_id)
     {
-        // Get regular leave balance (which now includes adjustments)
-        $regularBalance = $this->calculateEmployeeLeaveBalance($leave_type_id, $employee_id);
-
-        // Get available advanced leave
-        $availableAdvanced = $this->calculateAdvancedLeaveAvailable($leave_type_id, $employee_id);
-        $advanceDaysAllowed = $this->calculateTotalAdvanceDaysByPeriod($leave_type_id, $employee_id);
-
-        // Get adjustment details for response
         $today = date('Y-m-d');
         $fiscal_year = FinancialYear::where('start_date', '<=', $today)
             ->where('end_date', '>=', $today)
             ->first();
 
-        $adjustmentDetails = $this->getAdjustmentDetails($leave_type_id, $employee_id, $fiscal_year->id);
+        $regularBalance = $this->calculateEmployeeLeaveBalance($leave_type_id, $employee_id);
+        $availableAdvanced = $this->calculateAdvancedLeaveAvailable($leave_type_id, $employee_id);
+        $advanceDaysAllowed = $this->calculateTotalAdvanceDaysByPeriod($leave_type_id, $employee_id);
+
+        $adjustmentDetails = $fiscal_year
+            ? $this->getAdjustmentDetails($leave_type_id, $employee_id, $fiscal_year->id)
+            : ['has_adjustments' => false, 'total_additions' => 0, 'total_deductions' => 0, 'net_adjustment' => 0, 'adjustment_count' => 0];
+
+        $employee = Employee::where('employee_id', $employee_id)->first();
+        $earnedDays = ($employee && $fiscal_year)
+            ? $employee->getEarnedLeaveDays($leave_type_id, $fiscal_year->id)
+            : 0;
+
+        $rolledOverLeaves = ($fiscal_year)
+            ? (LeaveRollover::where('employee_id', $employee_id)
+                ->where('final_status', '2')
+                ->where('financial_year_id', $fiscal_year->id)
+                ->where('leave_type_id', $leave_type_id)
+                ->value('days_requested') ?? 0)
+            : 0;
+
+        $totalEntitlement = $earnedDays + $rolledOverLeaves + ($adjustmentDetails['net_adjustment'] ?? 0);
+        $usedDays = ($fiscal_year)
+            ? $this->calculateLeaveDaysUsedByType(
+                $employee_id,
+                $leave_type_id,
+                $fiscal_year->start_date,
+                $fiscal_year->end_date
+            )
+            : 0;
+        $pendingDays = ($fiscal_year)
+            ? $this->calculatePendingLeaveDaysByType(
+                $employee_id,
+                $leave_type_id,
+                $fiscal_year->start_date,
+                $fiscal_year->end_date
+            )
+            : 0;
 
         return [
             'regular_balance' => (float) $regularBalance,
             'advance_available' => (float) $availableAdvanced,
             'total_available' => (float) ($regularBalance + $availableAdvanced),
+            'total_entitlement' => (float) $totalEntitlement,
+            'earned_days' => (float) $earnedDays,
+            'used_days' => (float) $usedDays,
+            'pending_days' => (float) $pendingDays,
+            'applicable_on' => $this->getLeaveTypeApplicableOn($employee_id, $leave_type_id),
             'is_advance_period' => $this->isWithinAdvancePeriod($leave_type_id, $employee_id),
             'advance_days_allowed' => (float) $advanceDaysAllowed,
             'has_adjustments' => $adjustmentDetails['has_adjustments'] ?? false,
@@ -292,6 +339,62 @@ class LeaveRepository
             'net_adjustment' => (float) ($adjustmentDetails['net_adjustment'] ?? 0),
             'adjustment_details' => $adjustmentDetails,
         ];
+    }
+
+    /**
+     * Resolve whether a leave type counts calendar or working days for an employee.
+     */
+    public function getLeaveTypeApplicableOn($employee_id, $leave_type_id)
+    {
+        $employee = Employee::where('employee_id', $employee_id)->first();
+        if (!$employee || !$employee->leaveGroup) {
+            return 'calendar_days';
+        }
+
+        $setting = LeaveGroupSetting::where('leave_group_id', $employee->leaveGroup->id)
+            ->where('leave_type_id', $leave_type_id)
+            ->first();
+
+        return $setting?->applicable_on ?? 'calendar_days';
+    }
+
+    /**
+     * Calculate pending leave days for a leave type within the financial year.
+     */
+    public function calculatePendingLeaveDaysByType($employeeId, $leaveTypeId, $fiscalStartDate, $fiscalEndDate)
+    {
+        $employee = Employee::where('employee_id', $employeeId)->first();
+
+        if (!$employee) {
+            return 0;
+        }
+
+        $pendingLeaves = LeaveApplication::where('employee_id', $employeeId)
+            ->where('leave_type_id', $leaveTypeId)
+            ->where('final_status', LeaveStatus::PENDING)
+            ->where(function ($query) use ($fiscalStartDate, $fiscalEndDate) {
+                $query->whereBetween('application_from_date', [$fiscalStartDate, $fiscalEndDate])
+                    ->orWhereBetween('application_to_date', [$fiscalStartDate, $fiscalEndDate])
+                    ->orWhere(function ($q) use ($fiscalStartDate, $fiscalEndDate) {
+                        $q->where('application_from_date', '<=', $fiscalStartDate)
+                            ->where('application_to_date', '>=', $fiscalEndDate);
+                    });
+            })
+            ->get();
+
+        $totalPendingDays = 0;
+        foreach ($pendingLeaves as $leave) {
+            $totalPendingDays += $this->calculateLeaveDaysInPeriod(
+                $employee,
+                $leave->application_from_date,
+                $leave->application_to_date,
+                $leaveTypeId,
+                $fiscalStartDate,
+                $fiscalEndDate
+            );
+        }
+
+        return $totalPendingDays;
     }
 
     /**

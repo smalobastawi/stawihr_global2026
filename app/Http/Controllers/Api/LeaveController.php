@@ -13,6 +13,7 @@ use App\Mail\Leave\SupervisorLeaveApplicationMail;
 use App\Models\Employee;
 use App\Models\LeaveApplication;
 use App\Models\LeaveType;
+use App\Models\LeaveGroupSetting;
 use App\Models\FinancialYear;
 use App\Models\User;
 use App\Repositories\CommonRepository;
@@ -85,11 +86,15 @@ class LeaveController extends Controller
                 if ($user->employee_id) {
                     return $user->employee_id;
                 }
-                // For users who might not have employee_id but are employees
+
+                $employee = Employee::where('user_id', $user->id)->first();
+                if ($employee) {
+                    return $employee->employee_id;
+                }
+
                 if (method_exists($user, 'getEmployeeId')) {
                     return $user->getEmployeeId();
                 }
-                return $user->id;
             }
             return null;
         } catch (\Exception $e) {
@@ -163,14 +168,51 @@ class LeaveController extends Controller
     }
 
     /**
+     * Normalize leave date inputs from mobile (Y-m-d) or web (d/m/Y) formats.
+     */
+    protected function normalizeLeaveDates(Request $request): array
+    {
+        $from = $request->input('from_date')
+            ?? $request->input('application_from_date');
+        $to = $request->input('to_date')
+            ?? $request->input('application_to_date');
+
+        return [
+            'from_date' => dateConvertFormtoDB($from),
+            'to_date' => dateConvertFormtoDB($to),
+        ];
+    }
+
+    /**
+     * Calculate leave days for an employee using leave group settings
+     * (calendar_days vs working_days, excluding weekly/public holidays).
+     */
+    protected function calculateLeaveDaysForEmployee(
+        string $fromDate,
+        string $toDate,
+        int $leaveTypeId,
+        int $employeeId
+    ) {
+        return $this->leaveRepository->calculateTotalNumberOfLeaveDays(
+            $fromDate,
+            $toDate,
+            $leaveTypeId,
+            $employeeId
+        );
+    }
+
+    /**
      * Apply for a new leave with enhanced validation
      */
     public function applyLeave(Request $request)
     {
         $request->validate([
-            'leave_type' => 'required|string',
-            'from_date' => 'required|date',
-            'to_date' => 'required|date|after_or_equal:from_date',
+            'leave_type' => 'required_without:leave_type_id|nullable|string',
+            'leave_type_id' => 'required_without:leave_type|nullable|integer',
+            'from_date' => 'required_without:application_from_date|nullable|string',
+            'to_date' => 'required_without:application_to_date|nullable|string',
+            'application_from_date' => 'required_without:from_date|nullable|string',
+            'application_to_date' => 'required_without:to_date|nullable|string',
             'purpose' => 'nullable|string',
             'evidence' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
         ]);
@@ -187,9 +229,39 @@ class LeaveController extends Controller
             }
 
             $employee_id = $employee->employee_id;
-            $leave_type = $request->leave_type;
-            $from_date = $request->from_date;
-            $to_date = $request->to_date;
+            $dates = $this->normalizeLeaveDates($request);
+            $from_date = $dates['from_date'];
+            $to_date = $dates['to_date'];
+
+            if (empty($from_date) || empty($to_date)) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'From date and to date are required',
+                ], 400);
+            }
+
+            if (Carbon::parse($from_date)->gt(Carbon::parse($to_date))) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'To date must be on or after from date',
+                ], 422);
+            }
+
+            if ($request->filled('leave_type_id')) {
+                $leaveType = DB::table('leave_type')
+                    ->where('leave_type_id', $request->leave_type_id)
+                    ->first();
+            } else {
+                $leaveType = DB::table('leave_type')
+                    ->where('leave_type_name', $request->leave_type)
+                    ->first();
+            }
+
+            if (!$leaveType) {
+                return response()->json(['status' => 'error', 'message' => 'Leave type not found'], 404);
+            }
+
+            $leave_type = $leaveType->leave_type_name;
 
             // Overlap check
             $overlappingLeave = LeaveApplication::where('employee_id', $employee_id)
@@ -218,16 +290,16 @@ class LeaveController extends Controller
                 return response()->json(['status' => 'error', 'message' => 'You already have a leave application within this period. Please select different periods'], 400);
             }
 
-            $leaveType = DB::table('leave_type')->where('leave_type_name', $leave_type)->first();
-            if (!$leaveType) {
-                return response()->json(['status' => 'error', 'message' => 'Leave type not found'], 404);
-            }
-
             $leave_type_id = $leaveType->leave_type_id;
             $fiscal_year = $this->getCurrentFinancialYear();
 
-            // Calculate requested days and balances using repository
-            $numberOfDays = $this->leaveRepository->calculateTotalNumberOfLeaveDays($from_date, $to_date, $leave_type_id);
+            // Calculate requested days using employee leave group rules
+            $numberOfDays = $this->calculateLeaveDaysForEmployee(
+                $from_date,
+                $to_date,
+                $leave_type_id,
+                $employee_id
+            );
             $balanceInfo = $this->leaveRepository->calculateEmployeeLeaveBalanceWithAdvanced($leave_type_id, $employee_id);
 
             $regularBalance = $balanceInfo['regular_balance'] ?? 0;
@@ -334,19 +406,21 @@ class LeaveController extends Controller
             }
 
             $employee_id = $employee->employee_id;
-            $leave_type = $request->leave_type;
 
-            if (empty($leave_type)) {
+            if ($request->filled('leave_type_id')) {
+                $leaveType = DB::table('leave_type')
+                    ->where('leave_type_id', $request->leave_type_id)
+                    ->first();
+            } elseif ($request->filled('leave_type')) {
+                $leaveType = DB::table('leave_type')
+                    ->where('leave_type_name', $request->leave_type)
+                    ->first();
+            } else {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Leave type is required'
                 ], 400);
             }
-
-            // Find the leave type by leave_type_name
-            $leaveType = DB::table('leave_type')
-                ->where('leave_type_name', $leave_type)
-                ->first();
 
             if (!$leaveType) {
                 return response()->json([
@@ -356,19 +430,39 @@ class LeaveController extends Controller
             }
 
             $leave_type_id = $leaveType->leave_type_id;
+            $leave_type = $leaveType->leave_type_name;
             $fiscal_year = $this->getCurrentFinancialYear();
 
-            $balance = $this->leaveRepository->calculateEmployeeLeaveBalance(
+            // Match ESS leave balance endpoint (includes advance leave breakdown)
+            $balanceData = $this->leaveRepository->calculateEmployeeLeaveBalanceWithAdvanced(
                 $leave_type_id,
-                $employee_id,
-                $fiscal_year->id
+                $employee_id
             );
+
+            $annualEntitlement = null;
+            $leaveGroup = $employee->leaveGroup;
+            if ($leaveGroup) {
+                $setting = LeaveGroupSetting::where('leave_group_id', $leaveGroup->id)
+                    ->where('leave_type_id', $leave_type_id)
+                    ->first();
+                $annualEntitlement = $setting?->annual_entitlement;
+            }
 
             return response()->json([
                 'status' => 'success',
                 'data' => [
                     'leave_type' => $leave_type,
-                    'balance' => $balance,
+                    'leave_type_id' => $leave_type_id,
+                    'balance' => round($balanceData['regular_balance'], 1),
+                    'regular_balance' => round($balanceData['regular_balance'], 1),
+                    'total_available' => round($balanceData['total_available'], 1),
+                    'advance_available' => round($balanceData['advance_available'], 1),
+                    'annual_entitlement' => $annualEntitlement,
+                    'total_entitlement' => round($balanceData['total_entitlement'], 1),
+                    'earned_days' => round($balanceData['earned_days'], 1),
+                    'used_days' => round($balanceData['used_days'], 1),
+                    'pending_days' => round($balanceData['pending_days'], 1),
+                    'applicable_on' => $balanceData['applicable_on'],
                     'fiscal_year' => $fiscal_year->year_name ?? $fiscal_year->name ?? date('Y')
                 ]
             ], 200);
@@ -390,16 +484,47 @@ class LeaveController extends Controller
     public function create()
     {
         try {
-            $employee_id = $this->getEmployeeId();
-            if (!$employee_id) {
+            $user = auth()->user();
+            if (!$user) {
                 return response()->json([
                     'status' => 'error',
                     'message' => 'Employee not authenticated.',
                 ], 401);
             }
 
-            $leaveTypeList = $this->commonRepository->leaveTypeList();
-            $getEmployeeInfo = $this->commonRepository->getEmployeeDetails($employee_id);
+            $employee = Employee::where('user_id', $user->id)->first();
+            if (!$employee) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No employee record found.',
+                ], 404);
+            }
+
+            $leaveGroup = $employee->leaveGroup;
+            if ($leaveGroup) {
+                $leaveGroup->load('settings');
+            }
+
+            $leaveTypeList = $employee->applicableLeaveTypes()->map(function ($leaveType) use ($leaveGroup) {
+                $item = [
+                    'leave_type_id' => $leaveType->leave_type_id,
+                    'leave_type_name' => $leaveType->leave_type_name,
+                ];
+
+                if ($leaveGroup) {
+                    $setting = $leaveGroup->settings
+                        ->where('leave_type_id', $leaveType->leave_type_id)
+                        ->first();
+                    if ($setting) {
+                        $item['annual_entitlement'] = $setting->annual_entitlement;
+                        $item['max_carryover_days'] = $setting->max_carryover_days;
+                    }
+                }
+
+                return $item;
+            })->values();
+
+            $getEmployeeInfo = $this->commonRepository->getEmployeeDetails($user->id);
             $employeeList = $this->commonRepository->employeeListForLeaves();
 
             return response()->json([
@@ -428,16 +553,41 @@ class LeaveController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Cannot edit approved/rejected application'], 422);
         }
 
-        $validated = $request->validate([
-            'from_date' => 'required|date',
-            'to_date' => 'required|date|after_or_equal:from_date',
+        $request->validate([
+            'from_date' => 'required_without:application_from_date|nullable|string',
+            'to_date' => 'required_without:application_to_date|nullable|string',
+            'application_from_date' => 'required_without:from_date|nullable|string',
+            'application_to_date' => 'required_without:to_date|nullable|string',
             'purpose' => 'nullable|string|max:1000'
         ]);
 
-        $numberOfDays = $this->leaveRepository->calculateTotalNumberOfLeaveDays($validated['from_date'], $validated['to_date'], $app->leave_type_id);
+        $dates = $this->normalizeLeaveDates($request);
+        $from_date = $dates['from_date'];
+        $to_date = $dates['to_date'];
+
+        if (empty($from_date) || empty($to_date)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'From date and to date are required',
+            ], 400);
+        }
+
+        if (Carbon::parse($from_date)->gt(Carbon::parse($to_date))) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'To date must be on or after from date',
+            ], 422);
+        }
+
+        $numberOfDays = $this->calculateLeaveDaysForEmployee(
+            $from_date,
+            $to_date,
+            $app->leave_type_id,
+            $app->employee_id
+        );
         $app->update([
-            'application_from_date' => $validated['from_date'],
-            'application_to_date' => $validated['to_date'],
+            'application_from_date' => $from_date,
+            'application_to_date' => $to_date,
             'number_of_day' => $numberOfDays,
             'purpose' => $validated['purpose'] ?? $app->purpose,
         ]);
@@ -485,17 +635,21 @@ class LeaveController extends Controller
     }
 
 
-    /**
-     * Calculate total number of leave days
-     */
-
-
     public function calculateLeaveDays(Request $request)
     {
         try {
-            $leaveTypeId = $request->leave_type_id;
-            $application_from_date = dateConvertFormtoDB($request->application_from_date);
-            $application_to_date = dateConvertFormtoDB($request->application_to_date);
+            $request->validate([
+                'leave_type_id' => 'required|integer',
+                'from_date' => 'required_without:application_from_date|nullable|string',
+                'to_date' => 'required_without:application_to_date|nullable|string',
+                'application_from_date' => 'required_without:from_date|nullable|string',
+                'application_to_date' => 'required_without:to_date|nullable|string',
+            ]);
+
+            $leaveTypeId = (int) $request->leave_type_id;
+            $dates = $this->normalizeLeaveDates($request);
+            $application_from_date = $dates['from_date'];
+            $application_to_date = $dates['to_date'];
 
             if (empty($application_from_date) || empty($application_to_date)) {
                 return response()->json([
@@ -504,14 +658,41 @@ class LeaveController extends Controller
                 ], 400);
             }
 
-            $days = $this->leaveRepository->calculateTotalNumberOfLeaveDays($application_from_date, $application_to_date, $leaveTypeId);
+            if (Carbon::parse($application_from_date)->gt(Carbon::parse($application_to_date))) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'To date must be on or after from date',
+                ], 422);
+            }
+
+            $employee = Employee::where('user_id', $request->user()->id)->first();
+            if (!$employee) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Employee profile not found'
+                ], 404);
+            }
+
+            $employeeId = $employee->employee_id;
+
+            $days = $this->calculateLeaveDaysForEmployee(
+                $application_from_date,
+                $application_to_date,
+                $leaveTypeId,
+                $employeeId
+            );
+
+            $applicableOn = $this->leaveRepository->getLeaveTypeApplicableOn($employeeId, $leaveTypeId);
 
             return response()->json([
                 'status' => 'success',
                 'data' => [
-                    'number_of_days' => $days
+                    'number_of_days' => $days,
+                    'applicable_on' => $applicableOn,
                 ]
             ], 200);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
         } catch (\Exception $e) {
             Log::error('API: Error calculating leave days - ' . $e->getMessage());
             return response()->json([
@@ -526,6 +707,18 @@ class LeaveController extends Controller
 
 
 
+
+    /** Legacy alias for older API clients (GET/POST calculate-days). */
+    public function calculateTotalLeaveDays(Request $request)
+    {
+        return $this->calculateLeaveDays($request);
+    }
+
+    /** Legacy alias for older API clients. */
+    public function getLeaveBalance(Request $request)
+    {
+        return $this->getEmployeeLeaveBalance($request);
+    }
 
     /**
      * Get the supervisor code for the currently authenticated employee.
@@ -963,53 +1156,39 @@ class LeaveController extends Controller
     public function getLeaveTypes()
     {
         try {
-            // Get authenticated user
             $user = auth()->user();
             if (!$user) {
                 return response()->json(['status' => 'error', 'message' => 'User not authenticated'], 401);
             }
 
-            // Get employee record
-            $employee = \App\Models\Employee::where('user_id', $user->id)->first();
+            $employee = Employee::where('user_id', $user->id)->first();
             if (!$employee) {
                 return response()->json(['status' => 'error', 'message' => 'No employee record found'], 404);
             }
 
-            // Get employee's leave group
-            $employeeLeaveGroup = \App\Models\EmployeeLeavegroup::where('employee_id', $employee->employee_id)->first();
-            if (!$employeeLeaveGroup) {
-                return response()->json(['status' => 'success', 'message' => 'No leave group assigned', 'data' => []], 200);
-            }
+            // Match ESS leave apply form: types allowed for the employee's leave group
+            $leaveTypes = $employee->applicableLeaveTypes();
+            $leaveGroup = $employee->leaveGroup;
 
-            // Get leave types for this leave group through the settings relationship
-            $leaveGroup = \App\Models\LeaveGroup::with('settings')->find($employeeLeaveGroup->leave_group_id);
-            if (!$leaveGroup || !$leaveGroup->settings || $leaveGroup->settings->isEmpty()) {
-                return response()->json(['status' => 'success', 'message' => 'No leave types assigned to this group', 'data' => []], 200);
-            }
-
-            // Extract leave type IDs from settings
-            // $leaveTypeIds = $leaveGroup->settings->pluck('leave_type_id')->toArray();
-            $leaveTypeIds = $employee->applicableLeaveTypes()->pluck('leave_type_id');
-
-            // $leaveTypeList = $employee->applicableLeaveTypes()->pluck('leave_type_id');
-            // Get only those specific leave types
-            $leaveTypes = \App\Models\LeaveType::whereIn('leave_type_id', $leaveTypeIds)
-                ->where('status', 1)
-                ->get();
-
-            // Add settings for each leave type
-            foreach ($leaveTypes as $leaveType) {
-                $setting = $leaveGroup->settings->where('leave_type_id', $leaveType->leave_type_id)->first();
-                if ($setting) {
-                    $leaveType->annual_entitlement = $setting->annual_entitlement;
-                    $leaveType->max_carryover_days = $setting->max_carryover_days;
+            if ($leaveGroup) {
+                $leaveGroup->load('settings');
+                foreach ($leaveTypes as $leaveType) {
+                    $setting = $leaveGroup->settings
+                        ->where('leave_type_id', $leaveType->leave_type_id)
+                        ->first();
+                    if ($setting) {
+                        $leaveType->annual_entitlement = $setting->annual_entitlement;
+                        $leaveType->max_carryover_days = $setting->max_carryover_days;
+                    }
                 }
             }
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Employee leave types retrieved successfully',
-                'data' => $leaveTypes
+                'message' => $leaveTypes->isEmpty()
+                    ? 'No leave types assigned to this employee'
+                    : 'Employee leave types retrieved successfully',
+                'data' => $leaveTypes->values(),
             ], 200);
         } catch (\Exception $e) {
             \Log::error('Error fetching leave types: ' . $e->getMessage());

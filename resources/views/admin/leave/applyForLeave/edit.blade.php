@@ -210,7 +210,13 @@
                     $.ajax({
                         type: 'POST',
                         url: action,
-                        data: {'application_from_date': application_from_date,'application_to_date': application_to_date,'_token': $('input[name=_token]').val()},
+                        data: {
+                            'application_from_date': application_from_date,
+                            'application_to_date': application_to_date,
+                            'leave_type_id': $('.leave_type_id').val(),
+                            'employee_id': $('.employee_id').val(),
+                            '_token': $('input[name=_token]').val()
+                        },
                         dataType: 'json',
                         success: function (data) {
                             var currentBalance =  $('.current_balance').val();

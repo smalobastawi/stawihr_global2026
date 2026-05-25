@@ -23,6 +23,8 @@ use App\Http\Controllers\Api\EmployeeDocumentsController;
 use App\Http\Controllers\User\LoginController;
 use App\Http\Controllers\Api\LeaveApiController;
 use App\Http\Controllers\Api\Leave\LeaveApplicationApiController;
+use App\Http\Controllers\Api\DisciplinaryController;
+use App\Http\Controllers\Api\PipController;
 
 
 /*
@@ -41,6 +43,9 @@ Route::group(['prefix' => 'auth'], function () {
     Route::group(['middleware' => 'auth:sanctum'], function () {
         Route::get('logout', [AuthController::class, 'logout']);
         Route::get('user', [AuthController::class, 'user']);
+        Route::get('password-change-options', [AuthController::class, 'passwordChangeOptions']);
+        Route::post('send-password-change-otp', [AuthController::class, 'sendPasswordChangeOtp']);
+        Route::post('change-password', [AuthController::class, 'changePassword']);
     });
 });
 
@@ -89,6 +94,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/department/profile', [DepartmentController::class, 'profile']);
 
     // Attendance Routes
+    Route::get('/attendance/clock-status', [AttendanceController::class, 'getClockStatus']);
     Route::post('/attendance/checkin', [AttendanceController::class, 'checkin']);
 
 
@@ -170,7 +176,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('payroll/salary-details', [PayrollController::class, 'getAuthUserSalaryDetails']);
     Route::get('payroll/yearly-salary', [PayrollController::class, 'calculateAuthUserYearlySalary']);
     Route::get('payroll/recent-payslips', [PayrollController::class, 'getRecentPayslips'])->name('api.payroll.recentPayslips');
-    Route::get('payroll/payslip/{id}', [PayrollController::class, 'getPayslipUrl']);
+    Route::get('payroll/payslip/{id}', [PayrollController::class, 'getPayslipDetail']);
+    Route::get('payroll/payslip/{id}/url', [PayrollController::class, 'getPayslipUrl']);
+    Route::get('payroll/payslip/{id}/view', [PayrollController::class, 'viewPayslip']);
 });
 Route::get('/approvals/pending/all', [ApprovalsController::class, 'getAllPendingApprovals']);
 Route::get('/approvals/requests/all', [ApprovalsController::class, 'getAllApprovalRequests']);
@@ -196,6 +204,7 @@ Route::post('/leave/approval', [LeaveApprovalController::class, 'processApproval
 Route::get('/leave-approvals/pending', [LeaveApprovalController::class, 'getPendingApprovals']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/attendance/clock-status', [AttendanceController::class, 'getClockStatus']);
     Route::post('/attendance/checkin', [AttendanceController::class, 'checkin']);
     Route::get('/attendance/get', [AttendanceController::class, 'getAttendance']);
 });
@@ -240,7 +249,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('leave/calculate-days', [LeaveController::class, 'calculateLeaveDays']);
 
     // Apply for leave
-    Route::post('leave/apply', [LeaveController::class, 'applyForLeave']);
+        Route::post('leave/apply', [LeaveController::class, 'applyLeave']);
 
     // Get all leave applications for the authenticated employee
     Route::get('/leaves', [LeaveController::class, 'index'])->name('leaves.index');
@@ -289,12 +298,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 Route::post('/auth/google-login', [AuthController::class, 'loginWithGoogle']);
-
-Route::middleware('auth:api')->group(function () {
-    Route::post('leave/apply', [LeaveController::class, 'applyLeave']);
-});
-
-
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -395,6 +398,16 @@ Route::middleware('auth:sanctum')->get('/supervisor/reports/rejected-leaves', [A
 Route::get('/supervisor/employees-on-leave-today', [LeaveController::class, 'supervisorEmployeesOnLeaveToday'])->middleware('auth:api');
 Route::middleware('auth:sanctum')->get('leave/is-supervisor', [LeaveController::class, 'isSupervisor']);
 Route::middleware('auth:sanctum')->get('/my-work-shift', [App\Http\Controllers\Api\AttendanceController::class, 'getMyWorkShift']);
+
+Route::middleware('auth:sanctum')->prefix('disciplinary')->group(function () {
+    Route::get('/cases', [DisciplinaryController::class, 'index']);
+    Route::get('/cases/{id}', [DisciplinaryController::class, 'show']);
+});
+
+Route::middleware('auth:sanctum')->prefix('pip')->group(function () {
+    Route::get('/plans', [PipController::class, 'index']);
+    Route::get('/plans/{id}', [PipController::class, 'show']);
+});
 
 // Feedback API Routes
 // Public routes for anonymous feedback

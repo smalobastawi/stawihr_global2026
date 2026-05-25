@@ -28,7 +28,7 @@ class EmployeeDeductions extends Model
 
     protected $fillable = [
         'employee_id',
-        'payroll_deduction_type_id',
+        'deduction_type_id',
         'deduction_category',
         'calculation_type',
         'amount',
@@ -106,7 +106,7 @@ class EmployeeDeductions extends Model
 
     public function payrollDeductionType()
     {
-        return $this->belongsTo(DeductionType::class, 'payroll_deduction_type_id', 'id');
+        return $this->belongsTo(DeductionType::class, 'deduction_type_id', 'id');
     }
 
     public function approvedBy()
@@ -264,7 +264,7 @@ class EmployeeDeductions extends Model
     public function getYearlyTotal()
     {
         return static::where('employee_id', $this->employee_id)
-            ->where('payroll_deduction_type_id', $this->payroll_deduction_type_id)
+            ->where('deduction_type_id', $this->deduction_type_id)
             ->where('payroll_year', $this->payroll_year)
             ->where('id', '!=', $this->id)
             ->sum('amount');
@@ -362,7 +362,7 @@ class EmployeeDeductions extends Model
     {
         return [
             'employee_id' => 'required|exists:employees,employee_id',
-            'payroll_deduction_type_id' => 'required|exists:payroll_deduction_types,id',
+            'deduction_type_id' => 'required|exists:deduction_types,id',
             'calculation_type' => 'required|in:' . implode(',', CalculationTypes::toArray()),
             'amount' => 'required_if:calculation_type,fixed_amount|numeric|min:0',
             'percentage' => 'required_if:calculation_type,percentage_of_basic,percentage_of_gross|numeric|between:0,100',

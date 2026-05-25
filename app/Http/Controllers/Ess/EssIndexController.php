@@ -26,6 +26,7 @@ use App\Models\ApprovalRequest;
 use App\Models\TrainingInvitee;
 use App\Lib\Enumerations\Gender;
 use App\Models\DisciplinaryCase;
+use App\Models\WorkShift;
 use App\Models\LeaveApplication;
 use App\Models\TrainingAttendant;
 use App\Models\LeaveJustification;
@@ -576,6 +577,20 @@ class EssIndexController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Get pending leave applications where current user is the supervisor
+        $pendingLeaveApprovals = [];
+        $loggedInEmployee = employeeInfo();
+        if ($loggedInEmployee) {
+            $supervisorId = $loggedInEmployee->employee_id;
+            $pendingLeaveApprovals = LeaveApplication::with(['employee', 'leaveType'])
+                ->whereHas('employee', function ($query) use ($supervisorId) {
+                    $query->where('supervisor_id', $supervisorId);
+                })
+                ->where('final_status', LeaveStatus::PENDING)
+                ->orderBy('leave_application_id', 'desc')
+                ->get();
+        }
+
         return view('admin.ess.approvals.index', compact(
             'approvals',
             'submissions',
@@ -585,7 +600,8 @@ class EssIndexController extends Controller
             'processedPayrollRecords',
             'totalsRow',
             'myDelegations',
-            'delegatedToMe'
+            'delegatedToMe',
+            'pendingLeaveApprovals'
         ));
     }
 
@@ -695,6 +711,19 @@ class EssIndexController extends Controller
         return view('admin.ess.disciplinary.details', ['case' => $disciplinary, 'caseActions' => $caseActions, 'ess' => $ess]);
     }
 
+    public function shifts()
+    {
+        $employee = $this->employee;
+        $workShift = $employee->work_shift_id
+            ? WorkShift::find($employee->work_shift_id)
+            : null;
+
+        return view('admin.ess.shifts.index', [
+            'employee' => $employee,
+            'workShift' => $workShift,
+        ]);
+    }
+
     public function payroll()
     {
         $results = SalaryDetails::with(['employee' => function ($query) {
@@ -786,6 +815,15 @@ class EssIndexController extends Controller
         $input['application_to_date'] = dateConvertFormtoDB($request->application_to_date);
         $input['application_date'] = date('Y-m-d');
         $input['financial_year_id'] = $currentFinancialYear->id;
+
+        // Recalculate number of days respecting working_days vs calendar_days setting
+        $calculatedDays = $this->leaveRepository->calculateTotalNumberOfLeaveDays(
+            $input['application_from_date'],
+            $input['application_to_date'],
+            $request->leave_type_id,
+            $employee->employee_id
+        );
+        $input['number_of_day'] = $calculatedDays;
         $existingLeave = LeaveApplication::where('employee_id', $request->employee_id)
             ->whereIn('final_status', [1, 2])
             ->where(function ($query) use ($input) {
@@ -848,7 +886,7 @@ class EssIndexController extends Controller
             'staff_first_name' => $getEmployeeFirstName,
             'staff_last_name' => $getEmployeeSecondName,
             'leave_to_date' => $request->application_to_date,
-            'no_of_days' => $request->number_of_day,
+            'no_of_days' => $input['number_of_day'],
             'latest_leave' => $leaveLatest,
             'leaveType' => $leaveType,
         ]);
@@ -902,645 +940,85 @@ class EssIndexController extends Controller
 
         if ($leave_type_id != '' && $employee_id != '') {
             $balanceData = $this->leaveRepository->calculateEmployeeLeaveBalanceWithAdvanced($leave_type_id, $employee_id);
-            $advanceInfo = $this->leaveRepository->getAdvanceDaysInfo($leave_type_id, $employee_id);
-
-            // Return structured response for frontend with adjustment info
-            return response()->json([
-                'regular_balance' => round($balanceData['regular_balance'], 1),
-                'advance_available' => round($balanceData['advance_available'], 1),
-                'total_available' => round($balanceData['total_available'], 1),
-                'is_advance_period' => $advanceInfo['is_within_period'],
-                'advance_days_allowed' => round($balanceData['advance_days_allowed'], 1),
-                'max_advance_limit' => round($advanceInfo['max_limit'], 1),
-                'period_months' => $advanceInfo['period_months'],
-                'accrual_rate' => round($advanceInfo['accrual_rate'], 1),
-                // New adjustment fields
-                'has_adjustments' => $balanceData['adjustment_details']['has_adjustments'],
-                'adjustment_additions' => round($balanceData['adjustment_details']['total_additions'], 1),
-                'adjustment_deductions' => round($balanceData['adjustment_details']['total_deductions'], 1),
-                'net_adjustment' => round($balanceData['adjustment_details']['net_adjustment'], 1),
-                'adjustment_count' => $balanceData['adjustment_details']['adjustment_count']
-            ]);
-        }
-
-        return response()->json(['error' => 'Invalid parameters'], 400);
-    }
-
-    public function notifications()
-    {
-        $user = User::findOrFail(Auth::user()->id);
-        $notifications =  $user->notifications()->paginate(20);
-        return view('admin.ess.notifications.index', compact('notifications'));
-    }
-
-    public function markAllNotificationsRead()
-    {
-        Auth::user()->unreadNotifications->markAsRead();
-        return back()->with('success', 'All notifications marked as read');
-    }
-
-    public function markNotificationRead($id)
-    {
-        $user = User::findOrFail(Auth::user()->id);
-        $notification = $user->notifications()->where('id', $id)->first();
-        if ($notification) {
-            $notification->markAsRead();
-        }
-        return back()->with('success', 'Notification marked as read');
-    }
-
-    public function destroyNotification($id)
-    {
-        try {
-            $user = User::findOrFail(Auth::user()->id);
-            $user->notifications()->where('id', $id)->delete();
-            $bug = 0;
-        } catch (\Exception $e) {
-            $bug = $e->getMessage();
-        }
-
-        if ($bug == 0) {
-            echo "success";
-        } elseif ($bug == 1451) {
-            echo 'hasForeignKey';
+            return response()->json($balanceData);
         } else {
-            echo 'error';
+            return response()->json(['error' => 'Invalid parameters'], 400);
         }
     }
 
-    // recruitment module
-    public function jobPosts()
+    public function editLeave($id)
     {
-        $activeJobs = Job::active()->get();
-        return view('admin.ess.recruitments.job_posts', [
-            'results' => $activeJobs,
-            'ess' => 'set'
-        ]);
-    }
-
-    public function jobPostDetails($jobId)
-    {
-        $loggedInEmployee = employeeInfo();
-        if ($loggedInEmployee) {
-            $job = Job::findOrFail($jobId);
-            return view('admin.ess.recruitments.job_post_details', [
-                'job' => $job,
-                'ess' => 'set',
-                'employee' => $loggedInEmployee
-            ]);
-        }
-    }
-
-    public function jobApply(InternalJobApplicationRequest $request, $id)
-    {
-        // Handle file upload
-        $resumePath = $request->file('resume')->store('resumes', 'public');
-
-        $job = Job::findOrFail($request->job_id);
-        if (!$job || $job->status != 1 || $job->application_end_date < now()) {
-            return redirect()->back()->with('error', 'The job you are applying for is not available.');
+        $leaveApplication = LeaveApplication::where('leave_application_id', $id)->first();
+        if (!$leaveApplication) {
+            return redirect()->route('ess.leave.index')->with('error', 'Leave application not found.');
         }
 
-        // Check existing application for this job
-        $existingApplication = JobApplicant::where('applicant_email', $request->email)
-            ->where('job_id', $job->job_id)
-            ->first();
-
-        if ($existingApplication) {
-            return redirect()->back()->with('error', 'This email has already been used for an application to this position!');
-        }
-
-        // Create application
-        $application = JobApplicant::create([
-            'job_id' => $job->job_id,
-            'employee_id' => $request->employee_id,
-            'applicant_name' => $request->name,
-            'applicant_email' => $request->email,
-            'phone' => $request->phone,
-            'cover_letter' => $request->input('cover_letter', ''),
-            'attached_resume' => $resumePath,
-            'years_of_experience' => $request->years_of_experience,
-            'highest_qualification' => $request->highest_qualification,
-            'location_id' => $job->location_id, // Auto-set for internal
-            'application_source' => $request->application_source,
-            'application_date' => now(),
-        ]);
-
-        Mail::to($request->email)->send(new JobApplicationConfirmation(
-            $application,
-            $job->load(['branch', 'createdBy']),
-            $application
-        ));
-
-        // Send notification to HR admins
-        $hrAdmins = Employee::whereHas('user.roles', function ($q) {
-            $q->where('name', 'HR Administrator');
-        })->where('status', 1)->with('user')->get()
-            ->pluck('email')
-            ->filter()
-            ->unique();
-        if ($hrAdmins->isNotEmpty()) {
-            Mail::to($hrAdmins)->send(new NewApplicationHrNotification(
-                $application,
-                $job
-            ));
-        }
-        return redirect()->route('ess.recruitment.job.posts')->with('success', 'Your application has been submitted successfully!');
-    }
-
-    public function contacts()
-    {
-        return view('admin.ess.contacts.index');
-    }
-
-    public function trainings(Request $request)
-    {
-
-        $login_employee = employeeInfo();
-        if ($login_employee) {
-            if ($request->training_id) {
-                $trainingTypeList = TrainingType::all();
-                $facilitatorList = TrainingFacilitator::all();
-                $training = Training::whereId($request->training_id)->first();
-
-                // Get invitation status for this training
-                $invitationStatus = null;
-                if ($login_employee->trainingInvites()->where('training_id', $request->training_id)->exists()) {
-                    $invitationStatus = $this->employee->trainingInvites()
-                        ->where('training_id', $request->training_id)
-                        ->first()
-                        ->status;
-                }
-
-                return view('admin.training.employeeTraining.form')->with([
-                    'trainingTypeList' => $trainingTypeList,
-                    'facilitatorList' => $facilitatorList,
-                    'ess' => 'ess',
-                    'editModeData' => $training,
-                    'showOnly' => 1,
-                    'invitationStatus' => $invitationStatus
-                ]);
-            }
-
-            // Get all training invites with their status
-            $invitations = $login_employee->trainingInvites()
-                ->with(['training', 'training.trainingType'])
-                ->orderBy('id', 'DESC')
-                ->get();
-
-            // Get pending invitations
-            $send_invitations = $login_employee->trainingInvites()
-                ->where('status', TrainingInvitationStatus::SENT)
-                ->orderBy('id', 'DESC')
-                ->get();
-
-            // Get all attended trainings
-            $attendances = $login_employee->trainingAttendances()
-                ->with(['training', 'training.trainingType'])
-                ->orderBy('id', 'DESC')
-                ->get();
-
-            // Create a collection with all trainings (invited + attended)
-            $all_trainings = $invitations->merge($attendances)
-                ->unique('training_id')
-                ->sortByDesc('id');
-
-
-            return view('admin.ess.trainings.index')->with([
-                'all_trainings' => $all_trainings,
-                'invitations' => $invitations,
-                'invitations_sent' => $send_invitations,
-                'attendances' => $attendances,
-                'employee' => $login_employee,
-            ]);
-        }
-    }
-
-    public function showTraining($id)
-    {
-        $training = Training::with(['trainingType', 'facilitator'])
-            ->findOrFail($id);
-
-        // Check if the current employee is invited to this training
-        $invitationStatus = null;
-        $login_employee = employeeInfo();
-        $employee = [];
-        if ($login_employee) {
-            $invitationStatus = TrainingInvitee::where('training_id', $id)
-                ->where('employee_id',  $login_employee->employee_id)
-                ->first();
-            $employee =  $login_employee;
-        }
-        return view('admin.ess.trainings.view', [
-            'employeeList' => $this->commonRepository->employeeList(),
-            'trainingTypeList' => $this->commonRepository->trainingTypeList(),
-            'facilitatorList' => $this->commonRepository->trainingFacilitorList(),
-            'showOnly' => true, // Force showOnly mode
-            'editModeData' => $training,
-            'start_date' => $training->start_date ? Carbon::parse($training->start_date)->format('Y-m-d') : null,
-            'end_date' => $training->end_date ? Carbon::parse($training->end_date)->format('Y-m-d') : null,
-            'invitationStatus' => $invitationStatus, // Pass invitation status to view
-            'ess' => 'ess',
-            'employee' => $employee
-        ]);
-    }
-
-    public function handleInvitationResponse(Request $request, Training $training, Employee $employee, string $status)
-    {
-        // Validate the status (optional but recommended)
-        if (!in_array($status, ['accepted', 'declined'])) {
-            return redirect()->route('ess.trainings.index')->with('error', 'Invalid invitation response status.');
-        }
-
-        // Parse with the same timezone (e.g., 'Africa/Nairobi' or your local TZ)
-        $startDate = Carbon::parse($training->start_date)->timezone(config('app.timezone'))->startOfDay();
-
-        $today = Carbon::now(config('app.timezone'))->startOfDay();
-
-        // Check if training has started
-        if ($today->gt($startDate)) {
-            return redirect()->route('ess.trainings.index')->with('error', 'This invitation is no longer active');
-        }
-
-        // Check if already responded
-        // $invite = TrainingInvitee::where([
-        //     'training_id' => $training->id,
-        //     'employee_id' => $employee->employee_id
-        // ])->firstOrFail();
-
-        // if ($invite && $invite->responded_at) {
-        //     return redirect()->route('ess.trainings.index')->with('error', 'You have already responded to this invitation');
-        // }
-
-        // Process response
-        TrainingInvitee::updateOrCreate(
-            [
-                'training_id' => $training->id,
-                'employee_id' => $employee->employee_id
-            ],
-            [
-                'status' => $status === 'accepted'
-                    ? TrainingInvitationStatus::ACCEPTED
-                    : TrainingInvitationStatus::DECLINED,
-                'responded_at' => now(),
-                'responded_from' => $request->ip()
-            ]
-        );
-
-        // Redirect to attendance confirmation if accepted
-        if ($status === 'accepted') {
-            return redirect()->route('ess.trainings.attendance.confirm', [
-                'training' => $training->id,
-                'employee' => $employee->employee_id
-            ]);
-        }
-
-        return redirect()
-            ->route('ess.trainings.index')
-            ->with([
-                'error' => $training->subject . ' invitation has been declined'
-            ]);
-    }
-
-    public function showTrainingAttendanceConfirmation(Training $training, Employee $employee)
-    {
-        return view('admin.ess.trainings.attendance_confirmation', [
-            'training' => $training,
-            'employee' => $employee
-        ]);
-    }
-
-    public function handleAttendanceResponse(Request $request, Training $training, Employee $employee)
-    {
-        $validated = $request->validate([
-            'status' => 'required|in:confirmed,declined'
-        ]);
-
-        $status = TrainingAttendanceStatus::getValue($validated['status']);
-
-
-        $attendance = TrainingAttendant::updateOrCreate(
-            [
-                'training_id' => $training->id,
-                'employee_id' => $employee->employee_id
-            ],
-            [
-                'status' => $status,
-                'responded_at' => now()
-            ]
-        );
-
-        if ($status === TrainingAttendanceStatus::CONFIRMED) {
-            try {
-                Mail::to($employee->email)
-                    ->send(new TrainingConfirmationMail($training, $employee));
-
-                return redirect()->route('ess.trainings.index')
-                    ->with(['success' => $training->subject . ' attendance has been confirmed']);
-            } catch (\Exception $e) {
-                // Log the error for debugging
-                Log::error('Failed to send training confirmation email: ' . $e->getMessage());
-
-                // Still return success response but notify admin about email failure
-                return redirect()->route('ess.trainings.index')
-                    ->with([
-                        'success' => $training->subject . ' attendance confirmed, but the confirmation email failed to send',
-                        'warning' => 'Please notify the administrator about this issue'
-                    ]);
-            }
-        }
-
-        return redirect()->route('ess.trainings.index')->with(['error' => $training->subject . ' attendance has been declined']);
-    }
-
-    public function shifts()
-    {
-        $employee = employeeInfo();
-
-        if (!$employee) {
-            return redirect()->back()->with('error', 'Employee information not found.');
-        }
-
-        $workShift = $employee->workShift;
-
-        return view('admin.ess.shifts.index', compact('employee', 'workShift'));
-    }
-
-    public function documents(Request $request)
-    {
-        $doc_id = $request->doc_id;
-        $employee = Employee::where('employee_id', session('logged_session_data.employee_id'))->first();
-
-        if ($doc_id && $doc_id != null) {
-            $document = HrDocument::findOrFail($doc_id);
-
-            // Check if employee has already consented
-            $hasConsented = false;
-            $consent = null;
-            if ($employee) {
-                $hasConsented = $document->hasEmployeeConsented($employee->employee_id);
-                $consent = $document->getEmployeeConsent($employee->employee_id);
-            }
-
-            //on viewing of a document record the view as a count in the Document View model and be sure to update specific model's count using updateOrcreate
-            DocumentView::updateOrCreate(
-                ['document_id' =>  $doc_id],
-                ['count' => DB::raw('count + 1')]
-            );
-            return view('admin.ess.docs.view')->with([
-                'document' => $document,
-                'employee' => $employee,
-                'hasConsented' => $hasConsented,
-                'consent' => $consent,
-            ]);
-        }
-
-        $documents = HrDocument::all();
-
-        // Get consent status for each document
-        $documentConsents = [];
-        if ($employee) {
-            foreach ($documents as $doc) {
-                $documentConsents[$doc->id] = $doc->hasEmployeeConsented($employee->employee_id);
-            }
-        }
-
-        return view('admin.ess.docs.index')->with([
-            'documents' => $documents,
-            'employee' => $employee,
-            'documentConsents' => $documentConsents,
-        ]);
-    }
-
-    /**
-     * Handle document acknowledgment/consent.
-     */
-    public function acknowledgeDocument(Request $request, $documentId)
-    {
-        $employee = Employee::where('employee_id', session('logged_session_data.employee_id'))->first();
-
-        if (!$employee) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Employee information not found.'
-            ], 404);
-        }
-
-        $document = HrDocument::findOrFail($documentId);
-
-        // Check if already consented
-        if ($document->hasEmployeeConsented($employee->employee_id)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'You have already acknowledged this document.'
-            ], 422);
-        }
-
-        try {
-            DocumentConsent::create([
-                'document_id' => $documentId,
-                'employee_id' => $employee->employee_id,
-                'user_id' => auth()->id(),
-                'consented_at' => now(),
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->header('User-Agent'),
-                'acknowledgment_text' => $request->input('acknowledgment_text', 'I have read and understood this document and agree to abide by the terms stated therein.'),
-            ]);
-
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Document acknowledged successfully!'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Failed to acknowledge document: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Serve a document file from storage to ESS users.
-     */
-    public function serveDocument($documentId)
-    {
-        $document = HrDocument::findOrFail($documentId);
-
-        // Check if document is approved for viewing
-        if (!$document->approved_by) {
-            return abort(403, 'Document not approved for viewing.');
-        }
-
-        if (!$document->file_path || !Storage::disk('local')->exists($document->file_path)) {
-            return abort(404, 'Document file not found.');
-        }
-
-        $file = Storage::disk('local')->get($document->file_path);
-        $mimeType = Storage::disk('local')->mimeType($document->file_path);
-        $filename = basename($document->file_path);
-
-        return response($file, 200)
-            ->header('Content-Type', $mimeType)
-            ->header('Content-Disposition', 'inline; filename="' . $filename . '"');
-    }
-
-    public function editLeave($leaveApplication)
-    {
-        $leaveApplication = LeaveApplication::where('leave_application_id', $leaveApplication)
-            ->with('justification')
-            ->firstOrFail();
-
-        // Check if leave is past and approved
-        $currentDate = now()->startOfDay();
-        $applicationToDate = \Carbon\Carbon::parse($leaveApplication->application_to_date)->startOfDay();
-        $isPastLeave = $applicationToDate->lt($currentDate);
-
-        if ($isPastLeave && $leaveApplication->final_status == LeaveStatus::APPROVE) {
-            return redirect()->route('ess.leave.index')
-                ->with('error', 'Past approved leaves cannot be edited.');
-        }
-
-        $leaveTypeList = $this->employee->applicableLeaveTypes()->pluck('leave_type_name', 'leave_type_id');
-        $getEmployeeInfo = $this->commonRepository->getEmployeeDetails(Auth::user()->id);
-
-        // Get current financial year
-        $financialYear = FinancialYear::active()->first();
-        if (!$financialYear) {
-            return redirect()->back()->with('error', 'No active financial year found. Please contact administrator.');
-        }
-
-        // Format dates for JavaScript (dd/mm/yyyy format)
-        $financialYearStart = \Carbon\Carbon::parse($financialYear->start_date)->format('d/m/Y');
-        $financialYearEnd = \Carbon\Carbon::parse($financialYear->end_date)->format('d/m/Y');
+        $leaveTypeList = LeaveType::where('status', 1)->get();
+        $getEmployeeInfo = Employee::where('employee_id', session('logged_session_data.employee_id'))->first();
+        $signed_in_user_role = User::select('role_id')->where('id', session('logged_session_data.id'))->pluck('role_id')->first();
 
         return view('admin.ess.leave.leave_edit_form', [
             'leaveApplication' => $leaveApplication,
             'leaveTypeList' => $leaveTypeList,
             'getEmployeeInfo' => $getEmployeeInfo,
-            'financialYearStart' => $financialYearStart,
-            'financialYearEnd' => $financialYearEnd,
-            'financialYear' => $financialYear
+            'signed_in_user_role' => $signed_in_user_role,
+            'ess' => 'set'
         ]);
     }
 
-    public function updateLeave(ApplyForLeaveRequest $request)
+    public function updateLeave(Request $request)
     {
+        $leaveApplication = LeaveApplication::where('leave_application_id', $request->leave_application_id)->first();
+        if (!$leaveApplication) {
+            return redirect()->route('ess.leave.index')->with('error', 'Leave application not found.');
+        }
+
         $input = $request->all();
-        $user = Auth::user();
-        $employee = $user->employeeDetails;
-        $leaveApplication = LeaveApplication::findOrFail($request->leave_application_id);
-
-        $getEmployeeEmail = $this->commonRepository->getEmployeeDetails(Auth::user()->id)->email;
-
-        $getEmployeeFirstName = $this->commonRepository->getEmployeeDetails(Auth::user()->id)->first_name;
-        $getEmployeeSecondName = $this->commonRepository->getEmployeeDetails(Auth::user()->id)->last_name;
-
-        //$supervisor_id = Employee::where('employee_id', Auth::user()->id)->pluck('supervisor_id')->first();
-        $supervisor_id = DB::table('employee')->select('supervisor_id')->where('user_id', Auth::user()->id)->pluck('supervisor_id')->first();
-
-        $user = Auth::user();
-        $employee = $user->employeeDetails;
-        $supervisor_email = null;
-        $hr_email = null;
-        $supervisor = $employee->supervisor;
-        $branch = $employee->branch;
-        $hrApprover = $employee->hr();
-
-        if ($supervisor) {
-            $supervisor_email = $supervisor->email;
-        }
-        if ($hrApprover) {
-            $hr_email = $hrApprover->email;
-        }
-
         $input['application_from_date'] = dateConvertFormtoDB($request->application_from_date);
         $input['application_to_date'] = dateConvertFormtoDB($request->application_to_date);
-        $input['application_date'] = date('Y-m-d');
-        $input['final_status'] = LeaveStatus::PENDING;
-        $input['status'] = LeaveStatus::PENDING;
-        $relieverDetails = Employee::where('employee_id', '=', $request->reliever_id)->first();
 
-        $existingLeave = LeaveApplication::where('leave_application_id', '!=', $request->leave_application_id)->where('employee_id', $request->employee_id)
+        // Recalculate number of days respecting working_days vs calendar_days setting
+        $calculatedDays = $this->leaveRepository->calculateTotalNumberOfLeaveDays(
+            $input['application_from_date'],
+            $input['application_to_date'],
+            $request->leave_type_id,
+            $leaveApplication->employee_id
+        );
+        $input['number_of_day'] = $calculatedDays;
 
-            ->whereIn('final_status', [1, 2])->where(function ($query) use ($input) {
-                $query->whereBetween('application_from_date', [$input['application_from_date'], $input['application_to_date']])
-                    ->orWhereBetween('application_to_date', [$input['application_from_date'], $input['application_to_date']])
-                    ->orWhere(function ($query) use ($input) {
-                        $query->where('application_from_date', '<=', $input['application_from_date'])
-                            ->where('application_to_date', '>=', $input['application_to_date']);
-                    });
-            })
-            ->first();
-        // dd($existingLeave);
-
-        if ($existingLeave) {
-            // Return an error response or handle the case where an overlapping leave exists
-            return redirect()->back()->with('error', 'You already have a leave application within this period. Please selec different periods');
-        }
-
-        //continue to save the details
         try {
             $leaveApplication->update($input);
-            $bug = "0";
+            return redirect()->route('ess.leave.index')->with('success', 'Leave application updated successfully.');
         } catch (\Exception $e) {
-            $bug = $e;
-            Log::error($e);
-        }
-
-        $justification_file = $request->file('justification_file');
-        if ($justification_file) {
-            foreach ($justification_file as $leaveFile) {
-
-                // $fileName = Str::random(20) . '_' . $leaveFile . '.' . $leaveFile->getClientOriginalExtension();
-                $fileName = Str::random(20) . '.' . $leaveFile->getClientOriginalExtension();
-                $leaveFile->move('uploads/leaveApplication/', $fileName);
-                $input['leave_application_id'] = $leaveApplication['leave_application_id'];
-                $input['file_name'] = $fileName;
-                $input['employee_id'] = Auth::user()->id;
-                LeaveJustification::create($input);
-            }
-        }
-
-        $leaveType = LeaveType::where('leave_type_id', $request->leave_type_id)->pluck('leave_type_name');
-        $leaveLatest = LeaveApplication::latest()->pluck('leave_application_id')->first();
-        $mailContent = ([
-            'leave_from_date' => $request->application_from_date,
-            'staff_first_name' => $getEmployeeFirstName,
-            'staff_last_name' => $getEmployeeSecondName,
-            'leave_to_date' => $request->application_to_date,
-            'no_of_days' => $request->number_of_day,
-            'latest_leave' => $leaveLatest,
-            'leaveType' => $leaveType,
-        ]);
-
-
-        try {
-            Mail::to($getEmployeeEmail)->send(new StaffLeaveApplicationMail($mailContent));
-        } catch (\Exception $e) {
-            Log::info($e->getMessage() . ' Staff Leave application email failed');
-        }
-        //send mail to supervisor
-        try {
-            Mail::to($supervisor_email)->send(new SupervisorLeaveApplicationMail($mailContent));
-        } catch (\Exception $e) {
-            Log::info($e->getMessage() . ' Supervisor Leave application email failed');
-            // dd($e);
-
-        }
-        // try {
-        //     Mail::to($hr_email)->send(new HR_LeaveApplicationMail($mailContent));
-        // } catch (\Exception $e) {
-        //     Log::info($e->getMessage() . 'Leave application email failed');
-        // }
-
-
-
-        if ($bug == 0) {
-            return redirect()->route('ess.leave.index')->with('success', 'Leave application successfully send.');
-        } else {
-            return redirect()->route('ess.leave.index')->with('error', 'Some error found !, Please try again.');
+            return redirect()->back()->with('error', 'Failed to update leave application.');
         }
     }
+
+    public function deleteLeaveJustification(Request $request)
+    {
+        $justification = LeaveJustification::where('id', $request->id)->first();
+        if ($justification) {
+            $justification->delete();
+            return response()->json(['success' => true]);
+        }
+        return response()->json(['success' => false]);
+    }
+
+    public function recall($id)
+    {
+        $leaveApplication = LeaveApplication::where('leave_application_id', $id)->first();
+        if (!$leaveApplication) {
+            return redirect()->route('ess.leave.index')->with('error', 'Leave application not found.');
+        }
+
+        try {
+            $leaveApplication->delete();
+            return redirect()->route('ess.leave.index')->with('success', 'Leave application recalled successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to recall leave application.');
+        }
+    }
+
     public function viewLeaveDetails($id)
     {
         $leaveApplicationData = LeaveApplication::with(['employee' => function ($q) {
@@ -1556,6 +1034,39 @@ class EssIndexController extends Controller
         $supervisor_details = Employee::where('employee_id', $supervisor_id)->first();
         $currentBalance = $this->leaveRepository->calCulateEmployeeLeaveBalance($leaveApplicationData->leave_type_id, $leaveApplicationData->employee_id);
         return view('admin.ess.leave.leaveDetails', ['leaveApplicationData' => $leaveApplicationData, 'currentBalance' => $currentBalance, 'signed_in_user_role' => $signed_in_user_role, 'supervisor_id' => $supervisor_id, 'supervisor_details' => $supervisor_details]);
+    }
+
+    public function approveOrRejectLeave(Request $request)
+    {
+        $data  = LeaveApplication::findOrFail($request->leave_application_id);
+        $input = $request->all();
+
+        if ($request->status == LeaveStatus::APPROVE) {
+            $input['approve_date'] = date('Y-m-d');
+            $input['final_status'] = LeaveStatus::APPROVE;
+            $input['approve_by']   = session('logged_session_data.employee_id');
+        } else {
+            $input['reject_date']  = date('Y-m-d');
+            $input['final_status'] = LeaveStatus::REJECT;
+            $input['reject_by']    = session('logged_session_data.employee_id');
+        }
+
+        try {
+            $data->update($input);
+            $bug = 0;
+        } catch (\Exception $e) {
+            $bug = $e->getMessage();
+        }
+
+        if ($bug == 0) {
+            if ($request->status == LeaveStatus::APPROVE) {
+                return redirect()->route('ess.approval.index')->with('success', 'Leave application approved successfully.');
+            } else {
+                return redirect()->route('ess.approval.index')->with('success', 'Leave application rejected successfully.');
+            }
+        } else {
+            return redirect()->route('ess.approval.index')->with('error', 'An error occurred, please try again.');
+        }
     }
 
     public function awards()
@@ -1602,75 +1113,6 @@ class EssIndexController extends Controller
 
         // Redirect user to the Google Form responder page
         return redirect()->away($survey->form_url);
-    }
-
-    public function deleteLeaveJustification(Request $request)
-    {
-        $document = LeaveJustification::findOrFail($request->id);
-        // Delete file from storage
-        Storage::delete('uploads/leaveApplication/' . $document->file_name);
-        $document->delete();
-
-        return response()->json(['success' => true]);
-    }
-    public function recall($id)
-    {
-
-        $user = Auth::user();
-        $employee = $user->employeeDetails;
-        $getEmployeeEmail = $employee->email;
-
-        $leave = LeaveApplication::findOrFail($id);
-
-        // Check if leave is past and approved
-        $currentDate = now()->startOfDay();
-        $applicationToDate = \Carbon\Carbon::parse($leave->application_to_date)->startOfDay();
-        $isPastLeave = $applicationToDate->lt($currentDate);
-
-        if ($isPastLeave && $leave->final_status == LeaveStatus::APPROVE) {
-            return redirect()->route('ess.leave.index')
-                ->with('error', 'Past approved leaves cannot be recalled.');
-        }
-
-        $supervisor = $employee->supervisor;
-        $supervisor_email = $supervisor ? $supervisor->email : null;
-
-        // Update leave status
-        $leave->final_status = LeaveStatus::RECALL;
-        $leave->status = LeaveStatus::RECALL;
-        $leave->save();
-
-        $leaveType = LeaveType::where('leave_type_id', $leave->leave_type_id)
-            ->value('leave_type_name');
-
-        $mailContent = [
-            'leave_from_date' => $leave->application_from_date,
-            'staff_first_name' => $employee->first_name,
-            'staff_last_name' => $employee->last_name,
-            'leave_to_date' => $leave->application_to_date,
-            'no_of_days' => $leave->number_of_day,
-            'latest_leave' => $id,
-            'leaveType' => $leaveType,
-        ];
-
-        // Send email to employee
-        try {
-            Mail::to($getEmployeeEmail)->send(new StaffLeaveRecallMail($mailContent));
-        } catch (Exception $e) {
-            Log::error('Staff Leave Recall email failed: ' . $e->getMessage());
-        }
-
-        // Send email to supervisor if exists
-        if ($supervisor_email) {
-            try {
-                Mail::to($supervisor_email)->send(new SupervisorLeaveRecallMail($mailContent));
-            } catch (Exception $e) {
-                Log::error('Supervisor Leave Recall email failed: ' . $e->getMessage());
-            }
-        }
-
-        return redirect()->route('ess.leave.index')
-            ->with('success', 'Leave application recalled successfully.');
     }
 
     public function subordinates()
@@ -2348,5 +1790,103 @@ class EssIndexController extends Controller
             'pastSchedules' => $pastSchedules,
             'employee' => $employee
         ]);
+    }
+
+    /**
+     * Display available job posts for ESS.
+     */
+    public function jobPosts()
+    {
+        $results = Job::where('status', 1)
+            ->where('application_end_date', '>=', date('Y-m-d'))
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
+        return view('admin.ess.recruitments.job_posts', [
+            'results' => $results
+        ]);
+    }
+
+    /**
+     * Display job post details for ESS.
+     */
+    public function jobPostDetails($id)
+    {
+        $job = Job::find($id);
+        if (!$job || $job->status != 1 || $job->application_end_date < now()) {
+            return redirect()->back()->with('error', 'The job you are trying to view is not available.');
+        }
+
+        $employee = Employee::where('employee_id', session('logged_session_data.employee_id'))->first();
+
+        return view('admin.ess.recruitments.job_post_details', [
+            'job' => $job,
+            'employee' => $employee
+        ]);
+    }
+
+    /**
+     * Handle internal job application from ESS.
+     */
+    public function jobApply(Request $request)
+    {
+        try {
+            $job = Job::findOrFail($request->job_id);
+            if (!$job || $job->status != 1 || $job->application_end_date < now()) {
+                return redirect()->back()->with('error', 'The job you are applying for is not available.');
+            }
+
+            // Handle file upload
+            $resumePath = $request->file('resume')->store('resumes', 'public');
+
+            // Create application with all fields
+            $application = JobApplicant::create([
+                'job_id' => $job->job_id,
+                'applicant_name' => $request->name,
+                'applicant_email' => $request->email,
+                'phone' => $request->phone,
+                'cover_letter' => $request->input('cover_letter', ''),
+                'attached_resume' => $resumePath,
+                'years_of_experience' => $request->years_of_experience,
+                'highest_qualification' => $request->highest_qualification,
+                'location_id' => $job->location_id,
+                'application_source' => 'internal',
+                'application_date' => now(),
+            ]);
+
+            // Send confirmation email to applicant
+            try {
+                Mail::to($request->email)->send(new JobApplicationConfirmation(
+                    $application,
+                    $job->load(['branch', 'createdBy']),
+                    $application
+                ));
+            } catch (Exception $e) {
+                Log::info('Job application confirmation email failed: ' . $e->getMessage());
+            }
+
+            // Send notification to HR admins
+            $hrAdmins = Employee::whereHas('user.roles', function ($q) {
+                $q->where('name', 'HR Administrator');
+            })->where('status', 1)->with('user')->get()
+                ->pluck('email')
+                ->filter()
+                ->unique();
+
+            if ($hrAdmins->isNotEmpty()) {
+                try {
+                    Mail::to($hrAdmins)->send(new NewApplicationHrNotification(
+                        $application,
+                        $job
+                    ));
+                } catch (Exception $e) {
+                    Log::info('HR notification email failed: ' . $e->getMessage());
+                }
+            }
+
+            return redirect()->route('ess.recruitment.job.posts')->with('success', 'Your application has been submitted successfully!');
+        } catch (Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
     }
 }

@@ -167,6 +167,14 @@ class Employee extends Model
         return $this->belongsTo(Location::class, 'location_id');
     }
 
+    /**
+     * Alias for location used across legacy/admin code.
+     */
+    public function branch()
+    {
+        return $this->belongsTo(Location::class, 'location_id');
+    }
+
     public function workLocation()
     {
         return $this->belongsTo(Location::class, 'location_id');
@@ -489,7 +497,7 @@ class Employee extends Model
         })->toArray();
 
         $leaveDays = 0;
-        for ($date = $start; $date->lte($end); $date->addDay()) {
+        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
             $dayName = strtolower($date->format('l')); // Get day name (e.g., 'saturday')
 
             if ($settings->applicable_on === 'calendar_days') {

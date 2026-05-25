@@ -91,6 +91,11 @@ class ApplyForLeaveController extends Controller
                 'regular_balance' => round($balanceData['regular_balance'], 1),
                 'advance_available' => round($balanceData['advance_available'], 1),
                 'total_available' => round($balanceData['total_available'], 1),
+                'total_entitlement' => round($balanceData['total_entitlement'], 1),
+                'earned_days' => round($balanceData['earned_days'], 1),
+                'used_days' => round($balanceData['used_days'], 1),
+                'pending_days' => round($balanceData['pending_days'], 1),
+                'applicable_on' => $balanceData['applicable_on'],
                 'is_advance_period' => $advanceInfo['is_within_period'],
                 'advance_days_allowed' => round($balanceData['advance_days_allowed'], 1),
                 'max_advance_limit' => round($advanceInfo['max_limit'], 1),
@@ -116,7 +121,16 @@ class ApplyForLeaveController extends Controller
         $application_to_date = dateConvertFormtoDB($request->application_to_date);
         $employeeId = $request->employee_id;
 
-        return $this->leaveRepository->calculateTotalNumberOfLeaveDays($application_from_date, $application_to_date, $leaveTypeId, $employeeId);
+        if (empty($leaveTypeId) || empty($application_from_date) || empty($application_to_date)) {
+            return 0;
+        }
+
+        return $this->leaveRepository->calculateTotalNumberOfLeaveDays(
+            $application_from_date,
+            $application_to_date,
+            $leaveTypeId,
+            $employeeId
+        );
     }
 
 

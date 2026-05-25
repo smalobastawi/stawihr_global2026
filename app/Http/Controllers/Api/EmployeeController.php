@@ -31,7 +31,13 @@ class EmployeeController extends Controller
     public function profile()
     {
         $user = auth()->user();
-        $employee = Employee::where('user_id', $user->id)->with(['department', 'branch', 'payGrade'])->first();
+        if (!$user) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $employee = Employee::where('user_id', $user->id)
+            ->with(['department', 'branch', 'designation', 'workShift'])
+            ->first();
 
         if (!$employee) {
             return response()->json(['message' => 'Employee not found'], 404);

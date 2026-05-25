@@ -161,9 +161,134 @@
     </div>
     <!--/.row -->
 
+    {{-- Employee Self Service (ESS) Section --}}
+    @if (Auth::user()->hasRole('Employee'))
     <div class="row">
-        @if($ip_attendance_status == 1 && employeeInfo())
-        <!-- employe attendance  -->
+        <div class="col-md-12">
+            <div class="panel panel-info">
+                <div class="panel-heading">
+                    <i class="fa fa-user-circle fa-fw"></i> Employee Self Service
+                </div>
+                <div class="panel-wrapper collapse in" aria-expanded="true">
+                    <div class="panel-body">
+                    <div class="row">
+                        @can('ess.leave.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white;" href="{{ route('ess.leave.index') }}" class="btn btn-info btn-block" style="white-space: normal;">
+                                <i class="fa fa-calendar"></i> My Leaves
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.leave.form')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.leave.form') }}" class="btn btn-info btn-block" >
+                                <i class="fa fa-calendar-plus-o"></i> Apply Leave
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.payroll.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.payroll.index') }}" class="btn btn-success btn-block" style="white-space: normal;">
+                                <i class="fa fa-money"></i> My Payroll
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.loans.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.loans.index') }}" class="btn btn-success btn-block" style="white-space: normal;">
+                                <i class="fa fa-university"></i> My Loans
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.approval.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.approval.index') }}" class="btn btn-warning btn-block" style="white-space: normal;">
+                                <i class="fa fa-check-square-o"></i> My Approvals
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.diciplinary.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.diciplinary.index') }}" class="btn btn-danger btn-block" style="white-space: normal;">
+                                <i class="fa fa-gavel"></i> Disciplinary
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.shifts.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.shifts.index') }}" class="btn btn-primary btn-block" style="white-space: normal;">
+                                <i class="fa fa-clock-o"></i> My Shifts
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.trainings.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.trainings.index') }}" class="btn btn-primary btn-block" style="white-space: normal;">
+                                <i class="fa fa-graduation-cap"></i> Trainings
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.awards.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.awards.index') }}" class="btn btn-success btn-block" style="white-space: normal;">
+                                <i class="fa fa-trophy"></i> My Awards
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.documents.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:blue" href="{{ route('ess.documents.index') }}" class="btn btn-default btn-block" style="white-space: normal;">
+                                <i class="fa fa-file-text"></i> Documents
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.feedback.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.feedback.index') }}" class="btn btn-info btn-block" style="white-space: normal;">
+                                <i class="fa fa-comments"></i> Feedback
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.recruitment.job.posts')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.recruitment.job.posts') }}" class="btn btn-success btn-block" style="white-space: normal;">
+                                <i class="fa fa-briefcase"></i> Jobs
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.subordinates.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.subordinates.index') }}" class="btn btn-primary btn-block" style="white-space: normal;">
+                                <i class="fa fa-sitemap"></i> My Team
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.performance.myAppraisals')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.performance.myAppraisals') }}" class="btn btn-warning btn-block" style="white-space: normal;">
+                                <i class="fa fa-star"></i> Performance
+                            </a>
+                        </div>
+                        @endcan
+                        @can('ess.pip.myPlans')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.pip.myPlans') }}" class="btn btn-danger btn-block" style="white-space: normal;">
+                                <i class="fa fa-tasks"></i> My PIP
+                            </a>
+                        </div>
+                        @endcan
+                        
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    <div class="row">
+        @if(Auth::user()->hasRole('Employee') && $ip_attendance_status == 1 && employeeInfo())
+        <!-- employee attendance check-in/check-out for Employee role -->
         @php
         $logged_user = employeeInfo();
         @endphp

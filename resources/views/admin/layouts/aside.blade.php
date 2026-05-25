@@ -175,7 +175,7 @@
                             <li>
                                 <a href="{{ route('ess.subordinates.index') }}">
                                     <i data-icon="/" class="linea-icon linea-basic fa-fw"></i>
-                                    <span class="hideMenu">Subordinate</span>
+                                    <span class="hideMenu">My Team</span>
                                 </a>
                             </li>
                         @endcan

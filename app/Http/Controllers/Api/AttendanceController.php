@@ -15,6 +15,7 @@ use App\Models\WorkShift;
 use App\Models\EmployeeType;
 use Illuminate\Support\Facades\Auth;
 use App\Models\WhiteListedIp;
+use App\Models\IpSetting;
 use App\Repositories\AttendanceRepository;
 
 class AttendanceController extends Controller
@@ -26,110 +27,294 @@ class AttendanceController extends Controller
         $this->attendanceRepository = $attendanceRepository;
     }
 
+    public function getClockStatus(Request $request)
+    {
+        $employee = Employee::where('user_id', $request->user()->id)->first();
+
+        if (!$employee) {
+            return response()->json(['success' => false, 'error' => 'Employee not found.'], 404);
+        }
+
+        $settings = $this->resolveIpSettings();
+        $payload = $this->buildClockStatusPayload($employee, $settings);
+
+        return response()->json(array_merge(['success' => true], $payload));
+    }
+
     public function checkin(Request $request)
     {
+        $request->validate([
+            'attendanceType' => 'required|in:checkIn,checkOut',
+        ]);
+
         $user = $request->user();
         $employee = Employee::where('user_id', $user->id)->first();
 
+        if (!$employee) {
+            return response()->json(['success' => false, 'error' => 'Employee not found.'], 404);
+        }
+
         if (!$employee->employee_id) {
-            return response()->json(['error' => 'Employee ID is required.'], 400);
+            return response()->json(['success' => false, 'error' => 'Employee ID is required.'], 400);
         }
 
         if ($employee->status != 1) {
-            return response()->json(['error' => 'Your timesheet account is not active. Please contact HR for assistance'], 400);
+            return response()->json([
+                'success' => false,
+                'error' => 'Your timesheet account is not active. Please contact HR for assistance',
+            ], 400);
+        }
+
+        $settings = $this->resolveIpSettings();
+        if ($settings['attendance_enabled'] !== 1) {
+            return response()->json(['success' => false, 'error' => 'Attendance check-in is not enabled.'], 403);
+        }
+
+        if (!$employee->work_shift_id) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Work shift not found. Contact HR for assistance',
+            ], 400);
+        }
+
+        $shift = $employee->workShift;
+        if (!$shift) {
+            return response()->json(['success' => false, 'error' => 'Employee shift not configured.'], 400);
         }
 
         try {
-            $ip_check_status = $request->ip_check_status;
-            $user_ip = $request->ip();
-            $date = date('Y-m-d');
-            $getAttendance = Attendance::where('employee_id', $employee->employee_id)->where('date', $date)->first();
+            $now = Carbon::now();
+            $resolved = $this->resolveAttendanceDate($employee);
+            $attendanceDate = $resolved['date'];
+            $userIp = $request->ip();
 
-            if ($ip_check_status == 1) {
-                $check_white_listed = WhiteListedIp::where('white_listed_ip', '=', $user_ip)->count();
-                if ($check_white_listed > 0) {
-                    if ($request->attendanceType == "checkIn") {
-                        if ($getAttendance && $getAttendance->time_in) {
-                            return response()->json(['error' => 'You have already checked in today.'], 400);
-                        }
-
-                        Attendance::updateOrCreate(
-                            ['employee_id' => $employee->employee_id, 'date' => $date],
-                            [
-                                'employee_id' => $employee->employee_id,
-                                'department_id' => $employee->department_id,
-                                'date' => $date,
-                                'time_in' => date("Y-m-d H:i:s"),
-                                'presence_status' => "PRESENT",
-                                'created_by' => Auth::id(),
-                                'entry_type' => AttendanceEntryType::MOBILE_APP,
-                            ]
-                        );
-
-                        return response()->json(['success' => 'Attendance updated.']);
-                    } else {
-                        if (!$getAttendance || !$getAttendance->time_in || $getAttendance->time_out) {
-                            return response()->json(['error' => 'Message received!'], 400);
-                        }
-
-                        $working_time = Carbon::parse($getAttendance->time_in)->diffInHours(Carbon::now());
-                        $overtime = $working_time - 9;
-                        $late_time = $working_time < 9 ? 9 - $working_time : 0;
-
-                        $getAttendance->update([
-                            'time_out' => date("Y-m-d H:i:s"),
-                            'over_time' => $overtime,
-                            'late_time' => $late_time,
-                            'working_time' => $working_time,
-                        ]);
-
-                        return response()->json(['success' => 'Attendance updated.']);
-                    }
-                } else {
-                    return response()->json(['error' => 'Invalid IP Address.'], 400);
-                }
-            } else {
-                if ($request->attendanceType == "checkIn") {
-                    if ($getAttendance && $getAttendance->time_in) {
-                        return response()->json(['error' => 'You have already checked in today.'], 400);
-                    }
-
-                    Attendance::updateOrCreate(
-                        ['employee_id' => $employee->employee_id, 'date' => $date],
-                        [
-                            'employee_id' => $employee->employee_id,
-                            'department_id' => $employee->department_id,
-                            'date' => $date,
-                            'time_in' => date("Y-m-d H:i:s"),
-                            'presence_status' => "PRESENT",
-                            'created_by' => Auth::id(),
-                            'entry_type' => AttendanceEntryType::MOBILE_APP,
-                        ]
-                    );
-
-                    return response()->json(['success' => 'Attendance updated.']);
-                } else {
-                    if (!$getAttendance || !$getAttendance->time_in || $getAttendance->time_out) {
-                        return response()->json(['error' => 'Message!'], 400);
-                    }
-
-                    $working_time = Carbon::parse($getAttendance->time_in)->diffInHours(Carbon::now());
-                    $overtime = $working_time - 9;
-                    $late_time = $working_time < 9 ? 9 - $working_time : 0;
-
-                    $getAttendance->update([
-                        'time_out' => date("Y-m-d H:i:s"),
-                        'over_time' => $overtime,
-                        'late_time' => $late_time,
-                        'working_time' => $working_time,
-                    ]);
-
-                    return response()->json(['success' => 'Attendance updated.']);
+            if ($settings['ip_check_enabled'] === 1) {
+                $checkWhiteListed = WhiteListedIp::where('white_listed_ip', $userIp)->exists();
+                if (!$checkWhiteListed) {
+                    return response()->json(['success' => false, 'error' => 'Invalid IP Address.'], 400);
                 }
             }
+
+            if ($request->attendanceType === 'checkIn') {
+                return $this->performCheckIn($employee, $shift, $attendanceDate, $now, $user->id);
+            }
+
+            return $this->performCheckOut($employee, $shift, $attendanceDate, $now);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'An error occurred: ' . $e->getMessage()], 500);
+            return response()->json(['success' => false, 'error' => 'An error occurred: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function resolveIpSettings(): array
+    {
+        $ipSetting = IpSetting::orderBy('id', 'desc')->first();
+
+        return [
+            'attendance_enabled' => (int) ($ipSetting->status ?? 0),
+            'ip_check_enabled' => (int) ($ipSetting->ip_status ?? 0),
+        ];
+    }
+
+    private function resolveAttendanceDate(Employee $employee): array
+    {
+        $now = Carbon::now();
+        $shift = $employee->workShift;
+
+        if (!$shift) {
+            return [
+                'date' => $now->format('Y-m-d'),
+                'shift' => null,
+                'now' => $now,
+            ];
+        }
+
+        $shiftEnd = Carbon::parse($shift->end_time);
+        $shiftStart = Carbon::parse($shift->start_time);
+        $isNightShift = $shiftEnd->lt($shiftStart);
+
+        if ($isNightShift && $now->lt($shiftEnd)) {
+            $attendanceDate = $now->copy()->subDay()->format('Y-m-d');
+        } else {
+            $attendanceDate = $now->format('Y-m-d');
+        }
+
+        return [
+            'date' => $attendanceDate,
+            'shift' => $shift,
+            'now' => $now,
+        ];
+    }
+
+    private function resolveShowCheckoutButton(?Attendance $attendance, WorkShift $shift, Carbon $now): bool
+    {
+        if (!$attendance || !$attendance->time_in || $attendance->time_out) {
+            return false;
+        }
+
+        $shiftStart = Carbon::parse($shift->start_time);
+        $shiftEnd = Carbon::parse($shift->end_time);
+
+        $checkoutWindowStart = $now->copy()->setTimeFromTimeString($shift->end_time);
+        $checkoutWindowEnd = $checkoutWindowStart->copy()->addHour();
+
+        if ($shiftStart->gt($shiftEnd)) {
+            if ($now->lt($checkoutWindowStart)) {
+                $checkoutWindowStart->subDay();
+                $checkoutWindowEnd->subDay();
+            }
+        }
+
+        return $now->between($checkoutWindowStart, $checkoutWindowEnd) || $now->gt($checkoutWindowEnd);
+    }
+
+    private function buildClockStatusPayload(Employee $employee, array $settings): array
+    {
+        $attendanceEnabled = $settings['attendance_enabled'] === 1;
+
+        $payload = [
+            'attendance_enabled' => $attendanceEnabled,
+            'ip_check_enabled' => $settings['ip_check_enabled'] === 1,
+            'has_work_shift' => (bool) $employee->work_shift_id,
+            'attendance_date' => null,
+            'time_in' => null,
+            'time_out' => null,
+            'is_checked_in' => false,
+            'is_checked_out' => false,
+            'can_check_in' => false,
+            'can_check_out' => false,
+            'show_checkout_button' => false,
+            'message' => null,
+        ];
+
+        if (!$attendanceEnabled) {
+            $payload['message'] = 'Attendance check-in is not enabled.';
+            return $payload;
+        }
+
+        if (!$employee->work_shift_id) {
+            $payload['message'] = 'Work shift not assigned. Contact HR for assistance.';
+            return $payload;
+        }
+
+        $resolved = $this->resolveAttendanceDate($employee);
+        $shift = $resolved['shift'];
+        $now = $resolved['now'];
+        $attendanceDate = $resolved['date'];
+
+        if (!$shift) {
+            $payload['message'] = 'Work shift not found. Contact HR for assistance.';
+            return $payload;
+        }
+
+        $attendance = Attendance::where('employee_id', $employee->employee_id)
+            ->where('date', $attendanceDate)
+            ->first();
+
+        $isCheckedIn = $attendance && $attendance->time_in;
+        $isCheckedOut = $attendance && $attendance->time_out;
+        $showCheckout = $this->resolveShowCheckoutButton($attendance, $shift, $now);
+
+        $payload['attendance_date'] = $attendanceDate;
+        $payload['time_in'] = $attendance?->time_in;
+        $payload['time_out'] = $attendance?->time_out;
+        $payload['is_checked_in'] = (bool) $isCheckedIn;
+        $payload['is_checked_out'] = (bool) $isCheckedOut;
+        $payload['show_checkout_button'] = $showCheckout;
+        $payload['can_check_in'] = !$isCheckedIn;
+        $payload['can_check_out'] = $isCheckedIn && !$isCheckedOut && $showCheckout;
+
+        if ($isCheckedIn && !$isCheckedOut && !$showCheckout) {
+            $payload['message'] = 'Check-out will be available during your shift checkout window.';
+        }
+
+        return $payload;
+    }
+
+    private function performCheckIn(
+        Employee $employee,
+        WorkShift $shift,
+        string $attendanceDate,
+        Carbon $now,
+        int $userId
+    ) {
+        $existingCheckin = Attendance::where('employee_id', $employee->employee_id)
+            ->where('date', $attendanceDate)
+            ->whereNotNull('time_in')
+            ->first();
+
+        if ($existingCheckin) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Attendance check-in already recorded for this shift.',
+            ], 400);
+        }
+
+        $attendance = Attendance::updateOrCreate(
+            ['employee_id' => $employee->employee_id, 'date' => $attendanceDate],
+            [
+                'employee_id' => $employee->employee_id,
+                'date' => $attendanceDate,
+                'time_in' => $now,
+                'presence_status' => 'PRESENT',
+                'created_by' => $userId,
+                'department_id' => $employee->department_id,
+                'entry_type' => AttendanceEntryType::MOBILE_APP,
+                'national_id' => $employee->national_id,
+                'payroll_number' => $employee->payroll_number ?? '',
+                'work_shift_id' => $shift->work_shift_id,
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Check-in recorded successfully.',
+            'time_in' => $attendance->time_in,
+            'attendance_date' => $attendanceDate,
+        ]);
+    }
+
+    private function performCheckOut(
+        Employee $employee,
+        WorkShift $shift,
+        string $attendanceDate,
+        Carbon $now
+    ) {
+        $attendance = Attendance::where('employee_id', $employee->employee_id)
+            ->where('date', $attendanceDate)
+            ->first();
+
+        if (!$attendance || !$attendance->time_in) {
+            return response()->json(['success' => false, 'error' => 'No check-in found for this shift.'], 400);
+        }
+
+        if ($attendance->time_out) {
+            return response()->json(['success' => false, 'error' => 'Check-out already recorded for this shift.'], 400);
+        }
+
+        if (!$this->resolveShowCheckoutButton($attendance, $shift, $now)) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Check-out is not available yet. Please wait until your shift checkout window.',
+            ], 400);
+        }
+
+        $timeIn = Carbon::parse($attendance->time_in);
+        $workingHours = $timeIn->diffInHours($now);
+        $standardHours = 9;
+
+        $attendance->update([
+            'time_out' => $now,
+            'working_time' => $workingHours,
+            'over_time' => max(0, $workingHours - $standardHours),
+            'late_time' => max(0, $standardHours - $workingHours),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Check-out recorded successfully.',
+            'time_out' => $attendance->time_out,
+            'attendance_date' => $attendanceDate,
+        ]);
     }
 
     // General attendance records
@@ -884,19 +1069,32 @@ class AttendanceController extends Controller
             return response()->json(['error' => 'Employee profile not found.'], 404);
         }
 
-        // Check if employee has a work shift assigned
         if (!$employee->work_shift_id) {
-            return response()->json(['error' => 'No work shift assigned to this employee.'], 404);
+            return response()->json([
+                'success' => true,
+                'employee' => [
+                    'id' => $employee->employee_id,
+                    'name' => $employee->full_name,
+                ],
+                'work_shift' => null,
+                'message' => 'No work shift assigned to this employee.',
+            ]);
         }
 
-        // Get the work shift details
         $workShift = WorkShift::find($employee->work_shift_id);
 
         if (!$workShift) {
-            return response()->json(['error' => 'Work shift not found.'], 404);
+            return response()->json([
+                'success' => true,
+                'employee' => [
+                    'id' => $employee->employee_id,
+                    'name' => $employee->full_name,
+                ],
+                'work_shift' => null,
+                'message' => 'Work shift not found.',
+            ]);
         }
 
-        // Format times for better readability
         $startTime = Carbon::parse($workShift->start_time)->format('h:i A');
         $endTime = Carbon::parse($workShift->end_time)->format('h:i A');
         $lateCountTime = Carbon::parse($workShift->late_count_time)->format('h:i A');
@@ -904,6 +1102,10 @@ class AttendanceController extends Controller
 
         return response()->json([
             'success' => true,
+            'employee' => [
+                'id' => $employee->employee_id,
+                'name' => $employee->full_name,
+            ],
             'work_shift' => [
                 'id' => $workShift->work_shift_id,
                 'name' => $workShift->shift_name,
@@ -915,9 +1117,9 @@ class AttendanceController extends Controller
                     'start_time' => $startTime,
                     'end_time' => $endTime,
                     'late_count_time' => $lateCountTime,
-                    'overtime_count_time' => $overtimeCountTime
-                ]
-            ]
+                    'overtime_count_time' => $overtimeCountTime,
+                ],
+            ],
         ]);
     }
 }

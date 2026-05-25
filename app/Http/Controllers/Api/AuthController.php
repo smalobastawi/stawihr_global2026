@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use App\Models\User;
 use Validator;
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\User\LoginController;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -253,6 +254,102 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Successfully logged out'
+        ]);
+    }
+
+    /**
+     * Whether password change requires OTP verification.
+     */
+    public function passwordChangeOptions(Request $request)
+    {
+        return response()->json([
+            'success' => true,
+            'requires_otp' => (bool) env('2FA_PASSWORD_CHANGE', false),
+        ]);
+    }
+
+    /**
+     * Send OTP for password change (mobile/API, Sanctum authenticated).
+     */
+    public function sendPasswordChangeOtp(Request $request)
+    {
+        if (!env('2FA_PASSWORD_CHANGE')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'OTP service not available',
+            ], 400);
+        }
+
+        $user = $request->user();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        return app(LoginController::class)->sendOtpToUser($user);
+    }
+
+    /**
+     * Change password for the authenticated user.
+     */
+    public function changePassword(Request $request)
+    {
+        $rules = [
+            'oldPassword' => 'required|string',
+            'password' => [
+                'required',
+                'confirmed',
+                'min:6',
+                'regex:/^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{6,}$/',
+            ],
+        ];
+
+        if (env('2FA_PASSWORD_CHANGE')) {
+            $rules['verification_code'] = 'required|digits:4';
+        }
+
+        $request->validate($rules);
+
+        $user = $request->user();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        if (!Hash::check($request->oldPassword, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Old password does not match.',
+            ], 422);
+        }
+
+        if (env('2FA_PASSWORD_CHANGE')) {
+            $storedOtp = User::where('id', $user->id)
+                ->where('verification_code_expiry_date', '>=', now()->subMinutes(10))
+                ->value('verification_code');
+
+            if (!$storedOtp || (string) $request->verification_code !== (string) $storedOtp) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid or expired OTP.',
+                ], 422);
+            }
+        }
+
+        $user->update([
+            'password' => Hash::make($request->password),
+            'password_changed_at' => now(),
+            'verification_code' => null,
+            'verification_code_expiry_date' => null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password successfully updated.',
         ]);
     }
 

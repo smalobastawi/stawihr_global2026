@@ -147,125 +147,60 @@
                                     @endif
                                 </div>
                                 
-                                <form action="{{ route('requestedApplication.update', $leaveApplicationData->leave_application_id) }}" method="POST" enctype="multipart/form-data" id="leaveApproveOrRejectForm">
-@csrf
-@method('PUT')
+                                <form action="{{ route('ess.leave.leave.approveOrReject') }}" method="POST" enctype="multipart/form-data" id="leaveApproveOrRejectFormEss">
+                                    @csrf
 
-
-                                <div class="form-group">
-                                    <label for="inputEmail3" class="col-sm-4">Current Balance :</label>
-                                    <p class="col-sm-8">@if(isset($currentBalance)) {{$currentBalance}} @endif days</p>
-                                </div>
-                                <div class="form-group">
-                                    <label for="inputEmail3" class="col-sm-4 ">From Date :</label>
-                                    <p class="col-sm-8"><input type="text" readonly class="form-control"
-                                                               value="@if(isset($leaveApplicationData->application_date)){{ dateConvertDBtoForm($leaveApplicationData->application_from_date)  }}@endif">
-                                    </p>
-                                </div>
-                                <div class="form-group">
-                                    <label for="inputEmail3" class="col-sm-4 ">To Date :</label>
-                                    <p class="col-sm-8"><input type="text" readonly class="form-control"
-                                                               value="@if(isset($leaveApplicationData->application_to_date)){{ dateConvertDBtoForm($leaveApplicationData->application_to_date)  }}@endif">
-                                    </p>
-                                </div>
-                                <div class="form-group">
-                                    <label for="inputEmail3" class="col-sm-4 ">Number of days :</label>
-                                    <p class="col-sm-8"><input type="text" class="form-control"
-                                                               value="@if(isset($leaveApplicationData->application_date)){{ $leaveApplicationData->number_of_day }}@endif"
-                                                               readonly></p>
-                                </div>
-                                @if($supervisor_id == session('logged_session_data.employee_id'))
-                                @if($leaveApplicationData->status == LeaveStatus::APPROVE)
-                                    <label>Leave application has been approved by the supervisor!</label>
-                                @elseif($leaveApplicationData->status == LeaveStatus::REJECT)
-                                    <label>Leave application has been rejected by the supervisor!</label>
-
-                                    @if(session('logged_session_data.employee_id') == $leaveApplicationData->employee_id)
-                                        <label>You cannot approve your own leave application</label>
-                                    @endif
-                                    @else
                                     <div class="form-group">
-                                        <label for="inputEmail3" class="col-sm-4">Remarks :</label>
-                                        <p class="col-sm-8"><textarea class="form-control" cols="10" rows="6"
-                                                                      name="remarks" required
-                                                                      placeholder="Enter remarks....."
-                                                                      value="@if(isset($leaveApplicationData->remarks)){{ $leaveApplicationData->remarks }}@endif"></textarea>
+                                        <label for="inputEmail3" class="col-sm-4">Current Balance :</label>
+                                        <p class="col-sm-8">@if(isset($currentBalance)) {{$currentBalance}} @endif days</p>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="inputEmail3" class="col-sm-4 ">From Date :</label>
+                                        <p class="col-sm-8"><input type="text" readonly class="form-control"
+                                                                   value="@if(isset($leaveApplicationData->application_date)){{ dateConvertDBtoForm($leaveApplicationData->application_from_date)  }}@endif">
                                         </p>
                                     </div>
                                     <div class="form-group">
-                                        <label for="inputEmail3" class="col-sm-4"></label>
-
-                                        <p class="col-sm-8">
-                                            <button type="submit" name="status" class="btn btn-info btn_style"
-                                                    value="2">Approve 
-                                            </button>
-                                            <button type="submit" name="status" class="btn btn-danger btn_style"
-                                                    value="3"> Reject
-                                            </button>
+                                        <label for="inputEmail3" class="col-sm-4 ">To Date :</label>
+                                        <p class="col-sm-8"><input type="text" readonly class="form-control"
+                                                                   value="@if(isset($leaveApplicationData->application_to_date)){{ dateConvertDBtoForm($leaveApplicationData->application_to_date)  }}@endif">
                                         </p>
-
                                     </div>
-                                @endif
-                                @endif
- @if(\Auth::user()->hasRole('HR Administrator') && $leaveApplicationData->status == '2' && $leaveApplicationData->hr_approval == '1')
-                                    @if(session('logged_session_data.employee_id') == $leaveApplicationData->employee_id)
-                                        <label>You cannot approve your own leave application</label>
-
-                                    @elseif($leaveApplicationData->status == '1') 
-                                        <label>Leave approval cannot proceed unless it is approved by the
-                                            supervisor</label>
-                                    @elseif($leaveApplicationData->status == '3')
-                                        <label>Leave application has been rejected by the supervisor!
-                                        </label>
-                                        
-
-                                    @else
-                                        <div class="form-group">
-                                            <label for="inputEmail3" class="col-sm-4">Remarks :</label>
-                                            <p class="col-sm-8"><textarea class="form-control" cols="10" rows="6"
-                                                                          name="remarks" required
-                                                                          placeholder="Enter remarks....."
-                                                                          value="@if(isset($leaveApplicationData->remarks)){{ $leaveApplicationData->remarks }}@endif"></textarea>
-                                            </p>
-                                        </div>
-                                        <div class="form-group">
-                                            <label for="inputEmail3" class="col-sm-4"></label>
-
-                                            <p class="col-sm-8">
-                                                <button type="submit" name="status" class="btn btn-info btn_style"
-                                                        value="2">Approve
-                                                </button>
-                                                <button type="submit" name="status" class="btn btn-danger btn_style"
-                                                        value="3"> Reject
-                                                </button>
-                                            </p>
-
-                                        </div>
+                                    <div class="form-group">
+                                        <label for="inputEmail3" class="col-sm-4 ">Number of days :</label>
+                                        <p class="col-sm-8"><input type="text" class="form-control"
+                                                                   value="@if(isset($leaveApplicationData->application_date)){{ $leaveApplicationData->number_of_day }}@endif"
+                                                                   readonly></p>
+                                    </div>
+                                    @if($supervisor_id == session('logged_session_data.employee_id'))
+                                        @if($leaveApplicationData->status == LeaveStatus::APPROVE)
+                                            <label>Leave application has been approved by the supervisor!</label>
+                                        @elseif($leaveApplicationData->status == LeaveStatus::REJECT)
+                                            <label>Leave application has been rejected by the supervisor!</label>
+                                        @elseif(session('logged_session_data.employee_id') == $leaveApplicationData->employee_id)
+                                            <label>You cannot approve your own leave application</label>
+                                        @else
+                                            <div class="form-group">
+                                                <label for="inputEmail3" class="col-sm-4">Remarks :</label>
+                                                <p class="col-sm-8"><textarea class="form-control" cols="10" rows="6"
+                                                                               name="remarks" required
+                                                                               placeholder="Enter remarks.....">@if(isset($leaveApplicationData->remarks)){{ $leaveApplicationData->remarks }}@endif</textarea>
+                                                </p>
+                                            </div>
+                                            <input type="hidden" name="leave_application_id" value="{{ $leaveApplicationData->leave_application_id }}">
+                                            <div class="form-group">
+                                                <label for="inputEmail3" class="col-sm-4"></label>
+                                                <p class="col-sm-8">
+                                                    <button type="submit" name="status" class="btn btn-info btn_style"
+                                                            value="2">Approve
+                                                    </button>
+                                                    <button type="submit" name="status" class="btn btn-danger btn_style"
+                                                            value="3"> Reject
+                                                    </button>
+                                                </p>
+                                            </div>
                                         @endif
-                                @elseif(session('logged_session_data.role_id') == '11')
-                                    <div class="form-group">
-                                        <label for="inputEmail3" class="col-sm-4">Remarks :</label>
-                                        <p class="col-sm-8">
-                                            <textarea class="form-control" cols="10" rows="6"
-                                                                      name="remarks" required
-                                                                      placeholder="Enter remarks....."
-                                                                      value=""></textarea>
-                                        </p>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="inputEmail3" class="col-sm-4"></label>
-
-                                        <p class="col-sm-8">
-                                            <button type="submit" name="status" class="btn btn-info btn_style"
-                                                    value="2">Approve
-                                            </button>
-                                            <button type="submit" name="status" class="btn btn-danger btn_style"
-                                                    value="3"> Reject
-                                            </button>
-                                        </p>
-
-                                    </div>
-                                @endif
+                                    @endif
                                 </form>
 
                             </div>
