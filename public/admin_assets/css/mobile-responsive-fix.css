@@ -12,4 +12,33 @@
     .navbar-header {
         position: relative
     }
+
+    /* Allow navbar content to scroll horizontally on small screens */
+    .navbar-header {
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Ensure the lists inside navbar-header stay inline */
+    .navbar-header .nav.navbar-top-links {
+        display: inline-flex;
+        float: none;
+        white-space: nowrap;
+    }
+
+    .navbar-header .nav.navbar-top-links > li {
+        float: none;
+        display: inline-block;
+        white-space: nowrap;
+    }
+
+    /* Hide scrollbar for cleaner look */
+    .navbar-header::-webkit-scrollbar {
+        display: none;
+    }
+    .navbar-header {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
 }
