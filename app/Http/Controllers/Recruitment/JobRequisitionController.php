@@ -260,6 +260,7 @@ class JobRequisitionController extends Controller
 
     /**
      * Submit job requisition for approval
+     * If no approval workflow is configured, auto-approves immediately.
      */
     public function submitForApproval($id)
     {
@@ -273,13 +274,29 @@ class JobRequisitionController extends Controller
                     ->with('error', 'This job requisition cannot be submitted for approval.');
             }
 
-            $jobRequisition->status = JobRequisition::STATUS_PENDING_APPROVAL;
+            // Check if a generic approval workflow is configured
+            if ($jobRequisition->requiresApproval()) {
+                // Workflow-based: initialize approval logs and set to pending
+                $jobRequisition->initializeApprovalWorkflow();
+                $jobRequisition->status = JobRequisition::STATUS_PENDING_APPROVAL;
+                $jobRequisition->save();
+                DB::commit();
+
+                return redirect()->route('jobRequisition.show', $id)
+                    ->with('success', 'Job requisition submitted for approval successfully. Workflow-based approval is now active.');
+            }
+
+            // No workflow configured: auto-approve immediately
+            $jobRequisition->status = JobRequisition::STATUS_APPROVED;
+            $jobRequisition->approved_by = Auth::id();
+            $jobRequisition->approved_at = now();
+            $jobRequisition->approval_comments = 'Auto-approved: no approval workflow configured for job requisitions.';
             $jobRequisition->save();
 
             DB::commit();
 
             return redirect()->route('jobRequisition.show', $id)
-                ->with('success', 'Job requisition submitted for approval successfully.');
+                ->with('success', 'Job requisition approved automatically — no approval workflow is configured.');
         } catch (\Exception $e) {
             DB::rollback();
             Log::error('Error submitting job requisition for approval: ' . $e->getMessage());
@@ -308,6 +325,7 @@ class JobRequisitionController extends Controller
 
     /**
      * Approve job requisition
+     * Supports both workflow-based and legacy signature-based approval.
      */
     public function approve(Request $request, $id)
     {
@@ -325,6 +343,37 @@ class JobRequisitionController extends Controller
                     ->with('error', 'This job requisition cannot be approved in its current status.');
             }
 
+            // Workflow-based approval
+            if ($jobRequisition->requiresApproval()) {
+                $currentStep = $jobRequisition->currentApprovalStep();
+                if ($currentStep) {
+                    $jobRequisition->recordApprovalAction(
+                        $currentStep,
+                        'approved',
+                        $request->approval_comments ?? 'Approved via job requisition form.'
+                    );
+                }
+
+                // Check if fully approved
+                if ($jobRequisition->isFullyApproved()) {
+                    $jobRequisition->status = JobRequisition::STATUS_APPROVED;
+                    $jobRequisition->approved_by = Auth::id();
+                    $jobRequisition->approved_at = now();
+                    $jobRequisition->approval_comments = $request->approval_comments;
+                }
+
+                $jobRequisition->save();
+                DB::commit();
+
+                $message = $jobRequisition->status === JobRequisition::STATUS_APPROVED
+                    ? 'Job requisition approved successfully. All workflow steps completed.'
+                    : 'Approval recorded. Pending further workflow steps.';
+
+                return redirect()->route('jobRequisition.show', $id)
+                    ->with('success', $message);
+            }
+
+            // Legacy: signature-based approval (direct approve)
             $jobRequisition->status = JobRequisition::STATUS_APPROVED;
             $jobRequisition->approved_by = Auth::id();
             $jobRequisition->approved_at = now();
@@ -363,6 +412,7 @@ class JobRequisitionController extends Controller
 
     /**
      * Reject job requisition
+     * Supports both workflow-based and legacy signature-based rejection.
      */
     public function reject(Request $request, $id)
     {
@@ -378,6 +428,18 @@ class JobRequisitionController extends Controller
             if (!$jobRequisition->canReject()) {
                 return redirect()->route('jobRequisition.index')
                     ->with('error', 'This job requisition cannot be rejected in its current status.');
+            }
+
+            // Workflow-based rejection
+            if ($jobRequisition->requiresApproval()) {
+                $currentStep = $jobRequisition->currentApprovalStep();
+                if ($currentStep) {
+                    $jobRequisition->recordApprovalAction(
+                        $currentStep,
+                        'rejected',
+                        $request->rejection_reason
+                    );
+                }
             }
 
             $jobRequisition->status = JobRequisition::STATUS_REJECTED;

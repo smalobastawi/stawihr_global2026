@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use App\Traits\HasApprovalWorkflow;
+
 class JobRequisition extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, HasApprovalWorkflow;
 
     protected $table = 'job_requisitions';
     protected $primaryKey = 'job_requisition_id';
@@ -394,10 +396,73 @@ class JobRequisition extends Model
 
     /**
      * Check if requisition can be approved
+     * Supports both workflow-based and legacy signature-based approval
      */
     public function canApprove()
     {
+        // If a generic approval workflow is configured, use workflow status
+        if ($this->requiresApproval()) {
+            return $this->status === self::STATUS_PENDING_APPROVAL
+                && $this->currentApprovalStep() !== null;
+        }
+
+        // Legacy: signature-based approval
         return $this->status === self::STATUS_PENDING_APPROVAL;
+    }
+
+    /**
+     * Check if requisition can be rejected
+     * Supports both workflow-based and legacy signature-based approval
+     */
+    public function canReject()
+    {
+        // If a generic approval workflow is configured, use workflow status
+        if ($this->requiresApproval()) {
+            return $this->status === self::STATUS_PENDING_APPROVAL
+                && $this->currentApprovalStep() !== null;
+        }
+
+        // Legacy: signature-based approval
+        return $this->status === self::STATUS_PENDING_APPROVAL;
+    }
+
+    /**
+     * Check if requisition is fully approved
+     * Supports both workflow-based and legacy signature-based approval
+     */
+    public function isFullyApproved()
+    {
+        // If a generic approval workflow is configured, use workflow completion
+        if ($this->requiresApproval()) {
+            return parent::isFullyApproved();
+        }
+
+        // Legacy: signature-based approval
+        // HOD approval is always required
+        if (empty($this->hod_approval_signature)) {
+            return false;
+        }
+
+        // HR approval is always required
+        if (empty($this->hr_approval_signature)) {
+            return false;
+        }
+
+        // Check salary thresholds for additional approvals
+        $salary = $this->maximum_salary ?? $this->minimum_salary ?? 0;
+        $thresholds = RecruitmentSetting::getApprovalThresholds();
+
+        // Finance approval required for high salaries
+        if ($salary >= $thresholds['finance'] && empty($this->finance_approval_signature)) {
+            return false;
+        }
+
+        // MD approval required for very high salaries
+        if ($salary >= $thresholds['md'] && empty($this->md_approval_signature)) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

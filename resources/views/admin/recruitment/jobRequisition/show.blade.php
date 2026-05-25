@@ -46,6 +46,11 @@
                         <i class="fa fa-times" aria-hidden="true"></i> @lang('common.reject')
                     </a>
                 @endif
+                @if ($result->requiresApproval() && $result->status == $result::STATUS_PENDING_APPROVAL)
+                    <span class="label label-warning pull-right m-l-10" style="margin-top: 6px;">
+                        <i class="fa fa-sitemap"></i> Workflow Approval Active
+                    </span>
+                @endif
                 @if ($result->canConvertToJob())
                     <form method="POST" action="{{ route('jobRequisition.convert', $result->job_requisition_id) }}"
                         style="display: inline-block;">
@@ -425,6 +430,51 @@
                                                     @endif
                                                 </td>
                                             </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            @endif
+
+                            @if ($result->requiresApproval())
+                                <!-- Workflow Approval Status -->
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <h4 class="text-info"><i class="fa fa-sitemap"></i> Approval Workflow Status</h4>
+                                        <hr class="m-t-0 m-b-10">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <table class="table table-bordered">
+                                            <tr class="bg-warning">
+                                                <td colspan="3"><strong><i class="fa fa-info-circle"></i> This requisition uses workflow-based approval.</strong></td>
+                                            </tr>
+                                            @foreach ($result->approvalLogs()->with('approvalStep')->get() as $log)
+                                                <tr>
+                                                    <td width="30%"><strong>{{ $log->approvalStep->title ?? 'Step' }}</strong></td>
+                                                    <td width="20%">
+                                                        @if ($log->action == 'pending')
+                                                            <span class="label label-warning"><i class="fa fa-clock-o"></i> Pending</span>
+                                                        @elseif ($log->action == 'approved')
+                                                            <span class="label label-success"><i class="fa fa-check"></i> Approved</span>
+                                                        @elseif ($log->action == 'rejected')
+                                                            <span class="label label-danger"><i class="fa fa-times"></i> Rejected</span>
+                                                        @else
+                                                            <span class="label label-default">{{ ucfirst($log->action) }}</span>
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if ($log->action_date)
+                                                            {{ date('d M Y H:i', strtotime($log->action_date)) }}
+                                                            @if ($log->user)
+                                                                by {{ $log->user->first_name }} {{ $log->user->last_name }}
+                                                            @endif
+                                                        @else
+                                                            <span class="text-muted">Waiting...</span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforeach
                                         </table>
                                     </div>
                                 </div>

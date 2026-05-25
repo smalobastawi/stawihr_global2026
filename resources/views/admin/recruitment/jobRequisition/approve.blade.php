@@ -83,7 +83,7 @@
                             <hr>
 
                             <!-- Approval Form -->
-                            <form class="form-horizontal" id="approveForm"> @csrf
+                            <form class="form-horizontal" id="approveForm" method="POST" action="{{ route('jobRequisition.approve', $result->job_requisition_id) }}"> @csrf
 
                             <div class="form-body">
                                 <div class="row">

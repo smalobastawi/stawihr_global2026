@@ -83,7 +83,7 @@
                             <hr>
 
                             <!-- Rejection Form -->
-                            <form class="form-horizontal" id="rejectForm"> @csrf
+                            <form class="form-horizontal" id="rejectForm" method="POST" action="{{ route('jobRequisition.reject', $result->job_requisition_id) }}"> @csrf
 
                             <div class="form-body">
                                 <div class="row">
