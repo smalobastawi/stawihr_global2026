@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\LeaveApiController;
 use App\Http\Controllers\Api\Leave\LeaveApplicationApiController;
 use App\Http\Controllers\Api\DisciplinaryController;
 use App\Http\Controllers\Api\PipController;
+use App\Http\Controllers\Api\NotificationController;
 
 
 /*
@@ -407,6 +408,13 @@ Route::middleware('auth:sanctum')->prefix('disciplinary')->group(function () {
 Route::middleware('auth:sanctum')->prefix('pip')->group(function () {
     Route::get('/plans', [PipController::class, 'index']);
     Route::get('/plans/{id}', [PipController::class, 'show']);
+});
+
+Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
+    Route::get('/', [NotificationController::class, 'index']);
+    Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
+    Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::delete('/{id}', [NotificationController::class, 'destroy']);
 });
 
 // Feedback API Routes
