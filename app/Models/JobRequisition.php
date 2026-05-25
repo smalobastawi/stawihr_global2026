@@ -466,51 +466,11 @@ class JobRequisition extends Model
     }
 
     /**
-     * Check if requisition can be rejected
-     */
-    public function canReject()
-    {
-        return $this->status === self::STATUS_PENDING_APPROVAL;
-    }
-
-    /**
      * Check if requisition can be converted to job
      */
     public function canConvertToJob()
     {
         return $this->status === self::STATUS_APPROVED && !$this->is_converted_to_job;
-    }
-
-    /**
-     * Check if all required approvals are complete based on salary
-     */
-    public function isFullyApproved()
-    {
-        // HOD approval is always required
-        if (empty($this->hod_approval_signature)) {
-            return false;
-        }
-
-        // HR approval is always required
-        if (empty($this->hr_approval_signature)) {
-            return false;
-        }
-
-        // Check salary thresholds for additional approvals
-        $salary = $this->maximum_salary ?? $this->minimum_salary ?? 0;
-        $thresholds = RecruitmentSetting::getApprovalThresholds();
-
-        // Finance approval required for high salaries
-        if ($salary >= $thresholds['finance'] && empty($this->finance_approval_signature)) {
-            return false;
-        }
-
-        // MD approval required for very high salaries
-        if ($salary >= $thresholds['md'] && empty($this->md_approval_signature)) {
-            return false;
-        }
-
-        return true;
     }
 
     /**
