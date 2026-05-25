@@ -1976,4 +1976,201 @@ class EssIndexController extends Controller
             return redirect()->back()->with('error', $e->getMessage());
         }
     }
+       public function trainings(Request $request)
+    {
+
+        $login_employee = employeeInfo();
+        if ($login_employee) {
+            if ($request->training_id) {
+                $trainingTypeList = TrainingType::all();
+                $facilitatorList = TrainingFacilitator::all();
+                $training = Training::whereId($request->training_id)->first();
+
+                // Get invitation status for this training
+                $invitationStatus = null;
+                if ($login_employee->trainingInvites()->where('training_id', $request->training_id)->exists()) {
+                    $invitationStatus = $this->employee->trainingInvites()
+                        ->where('training_id', $request->training_id)
+                        ->first()
+                        ->status;
+                }
+
+                return view('admin.training.employeeTraining.form')->with([
+                    'trainingTypeList' => $trainingTypeList,
+                    'facilitatorList' => $facilitatorList,
+                    'ess' => 'ess',
+                    'editModeData' => $training,
+                    'showOnly' => 1,
+                    'invitationStatus' => $invitationStatus
+                ]);
+            }
+
+            // Get all training invites with their status
+            $invitations = $login_employee->trainingInvites()
+                ->with(['training', 'training.trainingType'])
+                ->orderBy('id', 'DESC')
+                ->get();
+
+            // Get pending invitations
+            $send_invitations = $login_employee->trainingInvites()
+                ->where('status', TrainingInvitationStatus::SENT)
+                ->orderBy('id', 'DESC')
+                ->get();
+
+            // Get all attended trainings
+            $attendances = $login_employee->trainingAttendances()
+                ->with(['training', 'training.trainingType'])
+                ->orderBy('id', 'DESC')
+                ->get();
+
+            // Create a collection with all trainings (invited + attended)
+            $all_trainings = $invitations->merge($attendances)
+                ->unique('training_id')
+                ->sortByDesc('id');
+
+
+            return view('admin.ess.trainings.index')->with([
+                'all_trainings' => $all_trainings,
+                'invitations' => $invitations,
+                'invitations_sent' => $send_invitations,
+                'attendances' => $attendances,
+                'employee' => $login_employee,
+            ]);
+        }
+    }
+     public function showTraining($id)
+    {
+        $training = Training::with(['trainingType', 'facilitator'])
+            ->findOrFail($id);
+
+        // Check if the current employee is invited to this training
+        $invitationStatus = null;
+        $login_employee = employeeInfo();
+        $employee = [];
+        if ($login_employee) {
+            $invitationStatus = TrainingInvitee::where('training_id', $id)
+                ->where('employee_id',  $login_employee->employee_id)
+                ->first();
+            $employee =  $login_employee;
+        }
+        return view('admin.ess.trainings.view', [
+            'employeeList' => $this->commonRepository->employeeList(),
+            'trainingTypeList' => $this->commonRepository->trainingTypeList(),
+            'facilitatorList' => $this->commonRepository->trainingFacilitorList(),
+            'showOnly' => true, // Force showOnly mode
+            'editModeData' => $training,
+            'start_date' => $training->start_date ? Carbon::parse($training->start_date)->format('Y-m-d') : null,
+            'end_date' => $training->end_date ? Carbon::parse($training->end_date)->format('Y-m-d') : null,
+            'invitationStatus' => $invitationStatus, // Pass invitation status to view
+            'ess' => 'ess',
+            'employee' => $employee
+        ]);
+    }
+ public function handleInvitationResponse(Request $request, Training $training, Employee $employee, string $status)
+    {
+        // Validate the status (optional but recommended)
+        if (!in_array($status, ['accepted', 'declined'])) {
+            return redirect()->route('ess.trainings.index')->with('error', 'Invalid invitation response status.');
+        }
+
+        // Parse with the same timezone (e.g., 'Africa/Nairobi' or your local TZ)
+        $startDate = Carbon::parse($training->start_date)->timezone(config('app.timezone'))->startOfDay();
+
+        $today = Carbon::now(config('app.timezone'))->startOfDay();
+
+        // Check if training has started
+        if ($today->gt($startDate)) {
+            return redirect()->route('ess.trainings.index')->with('error', 'This invitation is no longer active');
+        }
+
+        // Check if already responded
+        // $invite = TrainingInvitee::where([
+        //     'training_id' => $training->id,
+        //     'employee_id' => $employee->employee_id
+        // ])->firstOrFail();
+
+        // if ($invite && $invite->responded_at) {
+        //     return redirect()->route('ess.trainings.index')->with('error', 'You have already responded to this invitation');
+        // }
+
+        // Process response
+        TrainingInvitee::updateOrCreate(
+            [
+                'training_id' => $training->id,
+                'employee_id' => $employee->employee_id
+            ],
+            [
+                'status' => $status === 'accepted'
+                    ? TrainingInvitationStatus::ACCEPTED
+                    : TrainingInvitationStatus::DECLINED,
+                'responded_at' => now(),
+                'responded_from' => $request->ip()
+            ]
+        );
+
+        // Redirect to attendance confirmation if accepted
+        if ($status === 'accepted') {
+            return redirect()->route('ess.trainings.attendance.confirm', [
+                'training' => $training->id,
+                'employee' => $employee->employee_id
+            ]);
+        }
+
+        return redirect()
+            ->route('ess.trainings.index')
+            ->with([
+                'error' => $training->subject . ' invitation has been declined'
+            ]);
+    }
+
+    public function showTrainingAttendanceConfirmation(Training $training, Employee $employee)
+    {
+        return view('admin.ess.trainings.attendance_confirmation', [
+            'training' => $training,
+            'employee' => $employee
+        ]);
+    }
+
+    public function handleAttendanceResponse(Request $request, Training $training, Employee $employee)
+    {
+        $validated = $request->validate([
+            'status' => 'required|in:confirmed,declined'
+        ]);
+
+        $status = TrainingAttendanceStatus::getValue($validated['status']);
+
+
+        $attendance = TrainingAttendant::updateOrCreate(
+            [
+                'training_id' => $training->id,
+                'employee_id' => $employee->employee_id
+            ],
+            [
+                'status' => $status,
+                'responded_at' => now()
+            ]
+        );
+
+        if ($status === TrainingAttendanceStatus::CONFIRMED) {
+            try {
+                Mail::to($employee->email)
+                    ->send(new TrainingConfirmationMail($training, $employee));
+
+                return redirect()->route('ess.trainings.index')
+                    ->with(['success' => $training->subject . ' attendance has been confirmed']);
+            } catch (\Exception $e) {
+                // Log the error for debugging
+                Log::error('Failed to send training confirmation email: ' . $e->getMessage());
+
+                // Still return success response but notify admin about email failure
+                return redirect()->route('ess.trainings.index')
+                    ->with([
+                        'success' => $training->subject . ' attendance confirmed, but the confirmation email failed to send',
+                        'warning' => 'Please notify the administrator about this issue'
+                    ]);
+            }
+        }
+
+        return redirect()->route('ess.trainings.index')->with(['error' => $training->subject . ' attendance has been declined']);
+    }
 }
