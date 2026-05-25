@@ -1826,6 +1826,93 @@ class EssIndexController extends Controller
     }
 
     /**
+     * Display HR documents for ESS users.
+     */
+    public function documents(Request $request)
+    {
+        $employeeId = $this->employee->employee_id ?? null;
+
+        $documents = HrDocument::with('category')
+            ->whereNotNull('approved_by')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $documentConsents = [];
+        if ($employeeId) {
+            foreach ($documents as $doc) {
+                $documentConsents[$doc->id] = DocumentConsent::hasConsented($doc->id, $employeeId);
+            }
+        }
+
+        if ($request->has('doc_id')) {
+            $document = HrDocument::with('category')
+                ->whereNotNull('approved_by')
+                ->findOrFail($request->doc_id);
+
+            $hasConsented = $employeeId ? DocumentConsent::hasConsented($document->id, $employeeId) : false;
+            $consent = $employeeId ? DocumentConsent::getConsent($document->id, $employeeId) : null;
+
+            return view('admin.ess.docs.view', compact('document', 'hasConsented', 'consent'));
+        }
+
+        return view('admin.ess.docs.index', compact('documents', 'documentConsents'));
+    }
+
+    /**
+     * Acknowledge a document for the logged-in employee.
+     */
+    public function acknowledgeDocument(Request $request, $id)
+    {
+        $employee = $this->employee;
+
+        if (!$employee || !$employee->employee_id) {
+            return response()->json(['status' => 'error', 'message' => 'Employee record not found.'], 400);
+        }
+
+        $document = HrDocument::whereNotNull('approved_by')->findOrFail($id);
+
+        if (DocumentConsent::hasConsented($document->id, $employee->employee_id)) {
+            return response()->json(['status' => 'error', 'message' => 'You have already acknowledged this document.'], 400);
+        }
+
+        try {
+            DocumentConsent::create([
+                'document_id' => $document->id,
+                'employee_id' => $employee->employee_id,
+                'user_id' => auth()->id(),
+                'consented_at' => now(),
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'acknowledgment_text' => $request->input('acknowledgment_text', 'I have read and understood this document and agree to abide by the terms stated therein.'),
+            ]);
+
+            return response()->json(['status' => 'success', 'message' => 'Document acknowledged successfully.']);
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => 'Failed to acknowledge document.'], 500);
+        }
+    }
+
+    /**
+     * Serve an approved document file from storage.
+     */
+    public function serveDocument($id)
+    {
+        $document = HrDocument::whereNotNull('approved_by')->findOrFail($id);
+
+        if (!$document->file_path || !Storage::disk('local')->exists($document->file_path)) {
+            abort(404, 'Document file not found.');
+        }
+
+        $file = Storage::disk('local')->get($document->file_path);
+        $mimeType = Storage::disk('local')->mimeType($document->file_path);
+        $filename = basename($document->file_path);
+
+        return response($file, 200)
+            ->header('Content-Type', $mimeType)
+            ->header('Content-Disposition', 'inline; filename="' . $filename . '"');
+    }
+
+    /**
      * Handle internal job application from ESS.
      */
     public function jobApply(Request $request)
