@@ -140,7 +140,7 @@
                                             <tr>
                                                 <td>{{ ++$key }}</td>
 
-                                                <td>{{ $value->date->format('Y-m-d') }}</td>
+                                                <td>{{ $value->date instanceof \DateTimeInterface ? $value->date->format('Y-m-d') : date('Y-m-d', strtotime($value->date)) }}</td>
                                                 <td>{{ $value->employee->first_name . ' ' . $value->employee->last_name }}
                                                 </td>
                                                 <td>{{ $value->employee->national_id }}</td>

@@ -58,7 +58,16 @@ class Attendance extends Model
         'location_id'
     ];
 
-    protected $dates = ['created_at', 'updated_at', 'date', 'lunch_checkin', 'time_in', 'time_out', 'deleted_at'];
+    protected function casts(): array
+    {
+        return [
+            'date' => 'date',
+            'lunch_checkin' => 'datetime',
+            'time_in' => 'datetime',
+            'time_out' => 'datetime',
+            'deleted_at' => 'datetime',
+        ];
+    }
 
     public function getActivitylogOptions(): LogOptions
     {
