@@ -133,6 +133,15 @@
                              </li>
                          @endcan
 
+                         @can('ess.notices.index')
+                             <li>
+                                 <a href="{{ route('ess.notices.index') }}">
+                                     <i data-icon="/" class="linea-icon linea-basic fa-fw"></i>
+                                     <span class="hideMenu">Notices</span>
+                                 </a>
+                             </li>
+                         @endcan
+
                          @can('ess.documents.index')
                              <li>
                                  <a href="{{ route('ess.documents.index') }}">

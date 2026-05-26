@@ -190,4 +190,9 @@ Route::group(['module' => 'Self Service', 'prefix' => 'ess', 'as' => 'ess.', 'mi
     Route::group(['section' => 'vehicles', 'sub_section' => 'my_vehicle', 'prefix' => 'vehicle', 'as' => 'vehicle.'], function () {
         Route::get('/my-vehicle', [EssIndexController::class, 'myVehicle'])->name('myVehicle');
     });
+
+    Route::group(['section' => 'notices', 'sub_section' => 'notice_board', 'prefix' => 'notices', 'as' => 'notices.'], function () {
+        Route::get('/', [EssIndexController::class, 'noticeBoard'])->name('index');
+        Route::get('/{notice}', [EssIndexController::class, 'showNotice'])->name('show');
+    });
 });

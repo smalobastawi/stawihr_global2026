@@ -2173,4 +2173,46 @@ class EssIndexController extends Controller
 
         return redirect()->route('ess.trainings.index')->with(['error' => $training->subject . ' attendance has been declined']);
     }
+
+    /**
+     * Display published notices targeted at the logged-in employee.
+     */
+    public function noticeBoard()
+    {
+        if (!$this->employee || !$this->employee->employee_id) {
+            return redirect()->route('dashboard')->with('error', 'No employee record found for your account.');
+        }
+
+        $results = Notice::with(['departments', 'regions', 'locations', 'employees'])
+            ->where('status', 'Published')
+            ->whereDate('publish_date', '<=', now()->toDateString())
+            ->orderBy('publish_date', 'desc')
+            ->orderBy('notice_id', 'desc')
+            ->get()
+            ->filter(fn (Notice $notice) => $notice->targetsEmployee($this->employee));
+
+        return view('admin.ess.notice_board.index', compact('results'));
+    }
+
+    /**
+     * View a single notice if it is published and targeted at the employee.
+     */
+    public function showNotice($id)
+    {
+        if (!$this->employee || !$this->employee->employee_id) {
+            return redirect()->route('ess.notices.index')->with('error', 'No employee record found for your account.');
+        }
+
+        $notice = Notice::with(['createdBy', 'departments', 'regions', 'locations', 'employees'])
+            ->where('notice_id', $id)
+            ->where('status', 'Published')
+            ->whereDate('publish_date', '<=', now()->toDateString())
+            ->firstOrFail();
+
+        if (!$notice->targetsEmployee($this->employee)) {
+            abort(403, 'You are not authorized to view this notice.');
+        }
+
+        return view('admin.ess.notice_board.details', ['notice' => $notice]);
+    }
 }

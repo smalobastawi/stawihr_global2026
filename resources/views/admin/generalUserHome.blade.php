@@ -235,6 +235,13 @@
                             </a>
                         </div>
                         @endcan
+                        @can('ess.notices.index')
+                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                            <a style="color:white" href="{{ route('ess.notices.index') }}" class="btn btn-info btn-block" style="white-space: normal;">
+                                <i class="fa fa-bullhorn"></i> Notices
+                            </a>
+                        </div>
+                        @endcan
                         @can('ess.documents.index')
                         <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
                             <a style="color:blue" href="{{ route('ess.documents.index') }}" class="btn btn-default btn-block" style="white-space: normal;">
