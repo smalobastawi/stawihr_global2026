@@ -299,6 +299,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 Route::post('/auth/google-login', [AuthController::class, 'loginWithGoogle']);
+Route::post('/auth/azure-login', [AuthController::class, 'loginWithAzure']);
 
 Route::middleware('auth:sanctum')->group(function () {
 

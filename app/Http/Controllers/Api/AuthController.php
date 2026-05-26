@@ -9,6 +9,7 @@ use App\Models\User;
 use Validator;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\User\LoginController;
+use App\Lib\Enumerations\UserStatus;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
@@ -23,9 +24,11 @@ class AuthController extends Controller
         $azureLogin = env('AZURE_LOGIN');
 
         return response()->json([
-            'passwordLogin' => $passwordLogin,
-            'googleLogin' => $googleLogin,
-            'azureLogin' => $azureLogin
+            'passwordLogin' => (bool) $passwordLogin,
+            'googleLogin' => (bool) $googleLogin,
+            'azureLogin' => (bool) $azureLogin,
+            'azureClientId' => $azureLogin ? env('AZURE_CLIENT_ID') : null,
+            'azureTenantId' => $azureLogin ? env('AZURE_TENANT_ID') : null,
         ]);
     }
 
@@ -163,6 +166,73 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Successfully logged in with Google',
+            'accessToken' => $token,
+            'token_type' => 'Bearer',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'user_name' => $user->user_name,
+                'profile_pic_url' => $profilePicUrl,
+            ],
+            'roles' => $roles,
+            'permissions' => $permissions,
+            'expires_at' => $expirationDate->toDateTimeString()
+        ]);
+    }
+
+    /**
+     * Azure Login - Only authenticate existing users
+     */
+    public function loginWithAzure(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'azure_id' => 'required|string',
+            'name' => 'required|string',
+            'platform' => 'nullable|string|in:web,mobile',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Microsoft Account (' . $request->email . ') not recognized. Contact Admin.'
+            ], 404);
+        }
+
+        if ($user->status != UserStatus::$ACTIVE) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account is not active. Please contact admin.'
+            ], 403);
+        }
+
+        $expirationDate = Carbon::now()->addMinutes(config('sanctum.expiration'));
+        $tokenResult = $user->createToken('API Token', ['*'], $expirationDate);
+        $token = $tokenResult->plainTextToken;
+
+        $roles = $user->roles()->pluck('name');
+        $permissions = $user->getAllPermissions()->pluck('name');
+
+        $defaultPhoto = asset('admin_assets/img/default.png');
+        $profilePicUrl = optional($user->employeeDetails)->photo
+            ? asset('Uploads/employeePhoto/' . $user->employeeDetails->photo)
+            : $defaultPhoto;
+
+        if ($request->filled('platform')) {
+            \Log::info('Azure login', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'platform' => $request->platform,
+                'azure_id' => $request->azure_id,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Successfully logged in with Azure',
             'accessToken' => $token,
             'token_type' => 'Bearer',
             'user' => [
