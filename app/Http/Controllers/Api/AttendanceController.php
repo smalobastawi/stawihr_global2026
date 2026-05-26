@@ -9,7 +9,9 @@ use App\Http\Controllers\Controller;
 use App\Lib\Enumerations\AttendanceEntryType;
 use Illuminate\Http\Request;
 use App\Models\Employee;
+use App\Models\LeaveApplication;
 use App\Models\Attendance;
+use App\Lib\Enumerations\LeaveStatus;
 use App\Models\Department;
 use App\Models\WorkShift;
 use App\Models\EmployeeType;
@@ -184,6 +186,10 @@ class AttendanceController extends Controller
             'can_check_out' => false,
             'show_checkout_button' => false,
             'message' => null,
+            'is_on_leave' => false,
+            'leave_type' => null,
+            'leave_from_date' => null,
+            'leave_to_date' => null,
         ];
 
         if (!$attendanceEnabled) {
@@ -225,6 +231,28 @@ class AttendanceController extends Controller
 
         if ($isCheckedIn && !$isCheckedOut && !$showCheckout) {
             $payload['message'] = 'Check-out will be available during your shift checkout window.';
+        }
+
+        $today = Carbon::today()->format('Y-m-d');
+        $activeLeave = LeaveApplication::with('leaveType')
+            ->where('employee_id', $employee->employee_id)
+            ->where('final_status', LeaveStatus::APPROVE)
+            ->where('application_from_date', '<=', $today)
+            ->where('application_to_date', '>=', $today)
+            ->orderBy('leave_application_id', 'desc')
+            ->first();
+
+        if ($activeLeave) {
+            $leaveTypeName = $activeLeave->leaveType?->leave_type_name;
+            $payload['is_on_leave'] = true;
+            $payload['leave_type'] = $leaveTypeName;
+            $payload['leave_from_date'] = $activeLeave->application_from_date?->format('Y-m-d');
+            $payload['leave_to_date'] = $activeLeave->application_to_date?->format('Y-m-d');
+            $payload['can_check_in'] = false;
+            $payload['can_check_out'] = false;
+            $payload['message'] = $leaveTypeName
+                ? "You are on $leaveTypeName leave today."
+                : 'You are on leave today.';
         }
 
         return $payload;

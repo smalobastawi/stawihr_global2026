@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\Leave\LeaveApplicationApiController;
 use App\Http\Controllers\Api\DisciplinaryController;
 use App\Http\Controllers\Api\PipController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\NoticeController;
 
 
 /*
@@ -416,6 +417,10 @@ Route::middleware('auth:sanctum')->prefix('notifications')->group(function () {
     Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
     Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::delete('/{id}', [NotificationController::class, 'destroy']);
+});
+
+Route::middleware('auth:sanctum')->prefix('notices')->group(function () {
+    Route::get('/', [NoticeController::class, 'index']);
 });
 
 // Feedback API Routes
