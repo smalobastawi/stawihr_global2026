@@ -390,9 +390,20 @@ if (!function_exists('getCurrentPayrollPeriod')) {
     }
 }
 
+if (!function_exists('helper_isBiometricEnabled')) {
+    function helper_isBiometricEnabled(): bool
+    {
+        return (bool) config('app.BIOMETRIC_ENABLED', false);
+    }
+}
+
 if (!function_exists('helper_getBiometricAttendance')) {
     function helper_getBiometricAttendance()
     {
+        if (!helper_isBiometricEnabled()) {
+            return false;
+        }
+
         $employeeinfo = employeeInfo();
         if (!$employeeinfo) {
             return false; // No employee info found

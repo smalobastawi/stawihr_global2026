@@ -246,6 +246,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Check leave balance
     Route::get('leave/balance', [LeaveController::class, 'getEmployeeLeaveBalance']);
+    Route::get('leave/balances', [LeaveController::class, 'getAllLeaveBalances']);
+    Route::get('bootstrap', [App\Http\Controllers\Api\EssBootstrapController::class, 'bootstrap']);
 
     // Calculate leave days 
     Route::post('leave/calculate-days', [LeaveController::class, 'calculateLeaveDays']);

@@ -27,6 +27,11 @@ class updateBiometricRegistrationStatus extends Command
      */
     public function handle()
     {
+        if (!helper_isBiometricEnabled()) {
+            $this->info('Biometric integration is disabled. Skipping biometric registration update.');
+            return Command::SUCCESS;
+        }
+
         $updateBiometricStatus1 = new Biotime_EmployeeController();
         $updateBiometricStatus = $updateBiometricStatus1->updateBiometricCaptureStatus();
 

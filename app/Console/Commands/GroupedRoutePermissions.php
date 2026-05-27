@@ -825,6 +825,16 @@ class GroupedRoutePermissions
                 ],
             ],
             [
+                'permission_group' => 'earnLeaveConfigure',
+                'group_description' => 'Earn Leave Configuration',
+                'permissions' => [
+                    [
+                        'name' => 'earnLeaveConfigure.index',
+                        'description' => 'View Earn Leave Configuration',
+                    ],
+                ],
+            ],
+            [
                 'permission_group' => 'employee',
                 'group_description' => 'Employees',
                 'permissions' => [
@@ -2840,6 +2850,7 @@ class GroupedRoutePermissions
                 'applyForLeave',
                 'leaveManagement',
                 'leaveType',
+                'earnLeaveConfigure',
                 'leaveReport',
                 'allLeaveApplications',
                 'ceoPendingLeaveRequests',

@@ -320,7 +320,7 @@ class RequestedApplicationController extends Controller
     $default_end_date = date('d/m/Y');
 
    if ($currentUser->hasRole('HR Administrator') || $currentUser->hasRole('SuperAdmin')) {
-        $query = LeaveApplication::where('employee_id', 2616)->with(['employee', 'leaveType'])
+        $query = LeaveApplication::with(['employee', 'leaveType'])
             ->orderBy('status', 'asc')
             ->orderBy('leave_application_id', 'desc');
     } else {
@@ -406,7 +406,7 @@ class RequestedApplicationController extends Controller
     }
 
     $supervisor_approval = LeaveApplication::pluck('status');
-    $results = $query->where('leave_application_id', 3336)->get();
+    $results = $query->get();
 
     // Calculate holiday adjustment data for each leave application
     foreach ($results as $result) {

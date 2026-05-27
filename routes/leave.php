@@ -6,6 +6,7 @@ use App\Http\Controllers\Leave\PublicHolidayController;
 use App\Http\Controllers\Leave\WeeklyHolidayController;
 use App\Http\Controllers\Leave\LeaveTypeController;
 use App\Http\Controllers\Leave\ApplyForLeaveController;
+use App\Http\Controllers\Leave\EarnLeaveConfigureController;
 use App\Http\Controllers\Leave\RequestedApplicationController;
 use App\Http\Controllers\Leave\ReportController;
 use App\Http\Controllers\Leave\LeaveScheduleController;
@@ -72,6 +73,7 @@ Route::group(['module' => 'Leave Management', 'prefix' => 'leaveManagement', 'mi
         Route::get('/create', [ApplyForLeaveController::class, 'create'])->name('applyForLeave.create');
         Route::post('/store', [ApplyForLeaveController::class, 'store'])->name('applyForLeave.store');
         Route::post('getEmployeeLeaveBalance', [ApplyForLeaveController::class, 'getEmployeeLeaveBalance'])->name('leave.employee.balance');
+        Route::post('applyForTotalNumberOfDays', [ApplyForLeaveController::class, 'applyForTotalNumberOfDays'])->name('leave.apply.totaldays');
         Route::get('/{applyForLeave}', [RequestedApplicationController::class, 'viewDetails'])->name('applyForLeave.show');
 
         // Apply on behalf routes - properly grouped under Leave Management
@@ -81,6 +83,11 @@ Route::group(['module' => 'Leave Management', 'prefix' => 'leaveManagement', 'mi
         Route::post('applyOnBehalf/totalDays', [ApplyForLeaveController::class, 'applyForTotalNumberOfDays'])->name('applyOnBehalf.totalDays');
         Route::get('applyOnBehalf/employeeDetails/{employeeId}', [ApplyForLeaveController::class, 'getEmployeeDetails'])->name('applyOnBehalf.employeeDetails');
         Route::get('applyOnBehalf/employeeLeaveTypes/{employeeId}', [ApplyForLeaveController::class, 'getEmployeeLeaveTypes'])->name('applyOnBehalf.employeeLeaveTypes');
+    });
+
+    Route::group(['prefix' => 'earnLeaveConfigure'], function () {
+        Route::get('/', [EarnLeaveConfigureController::class, 'index'])->name('earnLeaveConfigure.index');
+        Route::post('updateEarnLeaveConfigure', [EarnLeaveConfigureController::class, 'updateEarnLeaveConfigure'])->name('leave.earnings.configure');
     });
 
     Route::group(['section' => 'leaves', 'sub_section' => 'configure_leave', 'prefix' => 'requestedApplication'], function () {

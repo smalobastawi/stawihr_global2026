@@ -27,6 +27,11 @@ class BiotimeSynchEmployees extends Command
      */
     public function handle()
     {
+        if (!helper_isBiometricEnabled()) {
+            $this->info('Biometric integration is disabled. Skipping Biotime employee upload.');
+            return Command::SUCCESS;
+        }
+
         $synchEmployees = new Biotime_EmployeeController();
         $runSycnh = $synchEmployees->uploadEmployee();
         if ($runSycnh) {

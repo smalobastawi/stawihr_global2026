@@ -290,6 +290,7 @@ return [
     'license_key' => env('LICENSE_KEY', 'null'),
     'morpho_upload_key' => env('MORPHO_UPLOAD_KEY', null),
     'duplicate_clockin_check' => env('DUPLICATE_CLOKCKIN_MINUTES', 5),
+    'BIOMETRIC_ENABLED' => filter_var(env('BIOMETRIC_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
     'BIOTIME_API_URL' => env('BIOTIME_API_URL', 'http://localhost:8003/biotime/api'),
     'BIOTIME_API_TOKEN' => env('BIOTIME_API_TOKEN', 'null'),
 

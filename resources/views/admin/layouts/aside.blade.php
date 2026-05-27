@@ -543,6 +543,14 @@
 
                                          </li>
                                      @endcan
+                                     @can('earnLeaveConfigure.index')
+                                         <li class="">
+                                             <a class="hideMenu" href="{{ route('earnLeaveConfigure.index') }}"> <i
+                                                     data-icon="/" class="linea-icon linea-basic fa-fw"></i>Configure
+                                                 paid leave</a>
+
+                                         </li>
+                                     @endcan
                                     
                                  </ul>
                              </li>

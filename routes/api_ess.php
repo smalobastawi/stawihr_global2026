@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\NoticeController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PayrollController;
 use App\Http\Controllers\Api\PipController;
+use App\Http\Controllers\Api\EssBootstrapController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,6 +20,8 @@ use App\Http\Controllers\Api\PipController;
 */
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('bootstrap', [EssBootstrapController::class, 'bootstrap']);
+
     Route::get('employee/profile', [EmployeeController::class, 'profile']);
     Route::get('employee/supervisor', [LeaveController::class, 'getSupervisor']);
 
@@ -26,6 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('leave')->group(function () {
         Route::get('balance', [LeaveController::class, 'getLeaveBalance']);
+        Route::get('balances', [LeaveController::class, 'getAllLeaveBalances']);
         Route::post('calculate-days', [LeaveController::class, 'calculateLeaveDays']);
         Route::post('apply', [LeaveController::class, 'applyLeave']);
     });

@@ -478,6 +478,83 @@ class LeaveController extends Controller
 
 
 
+
+    /**
+     * Return all leave balances for the authenticated employee in one request.
+     */
+    public function getAllLeaveBalances(Request $request)
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'User not authenticated',
+                ], 401);
+            }
+
+            $employee = Employee::where('user_id', $user->id)->first();
+            if (!$employee) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Employee profile not found',
+                ], 404);
+            }
+
+            $leaveTypes = $employee->applicableLeaveTypes();
+            $leaveGroup = $employee->leaveGroup;
+            if ($leaveGroup) {
+                $leaveGroup->load('settings');
+            }
+
+            $fiscalYear = $this->getCurrentFinancialYear();
+            $balances = [];
+
+            foreach ($leaveTypes as $leaveType) {
+                $balanceData = $this->leaveRepository->calculateEmployeeLeaveBalanceWithAdvanced(
+                    $leaveType->leave_type_id,
+                    $employee->employee_id
+                );
+
+                $annualEntitlement = null;
+                if ($leaveGroup) {
+                    $setting = $leaveGroup->settings
+                        ->where('leave_type_id', $leaveType->leave_type_id)
+                        ->first();
+                    $annualEntitlement = $setting?->annual_entitlement;
+                }
+
+                $balances[] = [
+                    'leave_type' => $leaveType->leave_type_name,
+                    'leave_type_id' => $leaveType->leave_type_id,
+                    'balance' => round($balanceData['regular_balance'], 1),
+                    'regular_balance' => round($balanceData['regular_balance'], 1),
+                    'total_available' => round($balanceData['total_available'], 1),
+                    'advance_available' => round($balanceData['advance_available'], 1),
+                    'annual_entitlement' => $annualEntitlement,
+                    'total_entitlement' => round($balanceData['total_entitlement'], 1),
+                    'earned_days' => round($balanceData['earned_days'], 1),
+                    'used_days' => round($balanceData['used_days'], 1),
+                    'pending_days' => round($balanceData['pending_days'], 1),
+                    'applicable_on' => $balanceData['applicable_on'],
+                    'fiscal_year' => $fiscalYear->year_name ?? $fiscalYear->name ?? date('Y'),
+                ];
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $balances,
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('API: Error fetching all leave balances - ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to fetch leave balances',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
     /**
      * Get leave application form data
      */
@@ -545,6 +622,61 @@ class LeaveController extends Controller
         }
     }
 
+    /**
+     * Get a single leave application for the authenticated employee.
+     */
+    public function show($id)
+    {
+        try {
+            $employee_id = $this->getEmployeeId();
+            if (!$employee_id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Employee not authenticated or invalid employee ID.',
+                ], 401);
+            }
+
+            $leave = LeaveApplication::with([
+                'employee' => function ($query) {
+                    $query->select('employee_id', 'first_name', 'last_name');
+                },
+                'leaveType' => function ($query) {
+                    $query->select('leave_type_id', 'leave_type_name');
+                },
+                'approveBy' => function ($query) {
+                    $query->select('employee_id', 'first_name', 'last_name');
+                },
+                'rejectBy' => function ($query) {
+                    $query->select('employee_id', 'first_name', 'last_name');
+                },
+            ])->findOrFail($id);
+
+            if ((int) $leave->employee_id !== (int) $employee_id) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Leave application not found.',
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $leave,
+            ], 200);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Leave application not found.',
+            ], 404);
+        } catch (\Exception $e) {
+            Log::error('Error fetching leave application: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while fetching the leave application.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+    }
+
     // API: Update a leave application (only when pending)
     public function update(Request $request, $id)
     {
@@ -589,7 +721,7 @@ class LeaveController extends Controller
             'application_from_date' => $from_date,
             'application_to_date' => $to_date,
             'number_of_day' => $numberOfDays,
-            'purpose' => $validated['purpose'] ?? $app->purpose,
+            'purpose' => $request->input('purpose', $app->purpose),
         ]);
 
         return response()->json(['status' => 'success', 'data' => $app], 200);
@@ -1051,15 +1183,15 @@ class LeaveController extends Controller
         try {
             $user = auth()->user();
 
-            if (!$user || !$user->employee_id) {
+            if (!$user) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Authenticated user or employee ID not found.'
+                    'message' => 'Authenticated user not found.'
                 ], 401);
             }
 
-            // Fetch the employee record
-            $employee = Employee::where('employee_id', $user->employee_id)->first();
+            // Fetch the employee record for the authenticated user
+            $employee = Employee::where('user_id', $user->id)->first();
 
             if (!$employee) {
                 return response()->json([

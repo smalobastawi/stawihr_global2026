@@ -368,17 +368,23 @@ class Employee extends Model
         })->get();
     }
 
-    public function getEarnedLeaveDays($leaveTypeId)
+    public function getEarnedLeaveDays($leaveTypeId, $financialYearId = null)
     {
         $today = Carbon::today();
-        $fiscalYear = FinancialYear::where('start_date', '<=', $today)
-            ->where('end_date', '>=', $today)
-            ->first();
+
+        // Use provided financial year or get current
+        if ($financialYearId) {
+            $fiscalYear = FinancialYear::find($financialYearId);
+        } else {
+            $fiscalYear = FinancialYear::where('start_date', '<=', $today)
+                ->where('end_date', '>=', $today)
+                ->first();
+        }
 
         if (!$fiscalYear) {
             return 0; // No fiscal year found
         }
-        $applicationDate = Carbon::now();
+
         $leaveGroup = $this->leaveGroup; // Retrieve the employee's leave group
 
         if (!$leaveGroup) return 0;
@@ -390,26 +396,43 @@ class Employee extends Model
 
         if (!$setting) return 0;
 
-        // Define fiscal year (adjust dates as needed)
+        // Define fiscal year dates
         $dateOfJoining = Carbon::parse($this->date_of_joining);
         $fiscalYearStart = Carbon::parse($fiscalYear->start_date);
         $fiscalYearEnd = Carbon::parse($fiscalYear->end_date);
 
-        if ($applicationDate->lt($fiscalYearStart)) {
-            $fiscalYearStart->subYear();
-        }
-        $fiscalYearEnd = $fiscalYearStart->copy()->addYear()->subDay();
+        // Calculate 12 months before the financial year start
+        $twelveMonthsBeforeFYStart = $fiscalYearStart->copy()->subMonths(12);
 
-        // Calculate relevant period
-        if ($dateOfJoining->greaterThan($fiscalYearEnd)) {
-            return 0; // Employee joined after the fiscal year
+        // Determine the accrual start date based on joining date
+        // If joining date is less than 12 months before FY start, use joining date
+        // If joining date is more than 12 months before FY start, use FY start
+        if ($dateOfJoining->greaterThanOrEqualTo($twelveMonthsBeforeFYStart)) {
+            // Employee joined within 12 months of FY start - use joining date
+            $accrualStartDate = $dateOfJoining;
+        } else {
+            // Employee joined more than 12 months before FY start - use FY start
+            $accrualStartDate = $fiscalYearStart;
         }
 
-        $startDate = max($dateOfJoining, $fiscalYearStart);
-        $daysWorked = $startDate->diffInDays($today);
+        // Ensure the accrual start date is not before the fiscal year start for calculation purposes
+        // and not after the fiscal year end
+        if ($accrualStartDate->lessThan($fiscalYearStart)) {
+            $accrualStartDate = $fiscalYearStart;
+        }
+
+        if ($accrualStartDate->greaterThan($fiscalYearEnd)) {
+            return 0; // Employee joined after the fiscal year ended
+        }
+
+        // Calculate days worked from accrual start date to today (or fiscal year end if past)
+        $calculationEndDate = $today->greaterThan($fiscalYearEnd) ? $fiscalYearEnd : $today;
+        $daysWorked = $accrualStartDate->diffInDays($calculationEndDate);
+
         $annualEntitlement = $setting->annual_entitlement;
         $earning_rate = $setting->earning_rate;
         $earnedDays = 0;
+
         // Calculate accrued days
         switch ($setting->accrual_frequency) {
             case 'daily':
@@ -427,22 +450,21 @@ class Employee extends Model
                 break;
 
             case 'monthly':
-                $monthsWorked = $startDate->diffInMonths($today);
+                $adjustedEndDate = $calculationEndDate->copy()->addDay();
+                $monthsWorked = $accrualStartDate->diffInMonths($adjustedEndDate);
                 $earnedDays = $monthsWorked * $earning_rate;
                 break;
 
             case 'once':
-                $earnedDays =   $annualEntitlement;
+                $earnedDays = $annualEntitlement;
                 break;
             default:
                 $earnedDays = 0; // If accrual frequency is invalid
                 break;
         }
 
-
+        // Cap at annual entitlement
         $earnedDays = min($earnedDays, $annualEntitlement);
-
-
 
         return $earnedDays;
     }

@@ -29,6 +29,9 @@ class Biotime_EmployeeController extends Controller
     // Fetch all employees
     public function uploadEmployee()
     {
+        if (!helper_isBiometricEnabled()) {
+            return response()->json(['message' => 'Biometric integration is disabled'], 200);
+        }
 
         $employees = Employee::where('status', GeneralStatus::ACTIVE)->where('biometric_upload_status', EmployeeBiometricStatus::PENDING)->get();
 
@@ -67,8 +70,9 @@ class Biotime_EmployeeController extends Controller
 
     public  function updateBiometricCaptureStatus()
     {
-
-
+        if (!helper_isBiometricEnabled()) {
+            return 'disabled';
+        }
 
         $response = Http::withOptions([
             'verify' => false, // Disable SSL verification
