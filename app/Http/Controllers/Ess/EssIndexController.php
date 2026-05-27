@@ -1163,28 +1163,6 @@ class EssIndexController extends Controller
         return view('admin.payroll.payslip', compact('payrollRecord'));
     }
 
-    public function noticeBoard()
-    {
-        // Get all published notices with relationships loaded for targeted audience filtering
-        $allNotices = Notice::with(['departments', 'regions', 'branches'])
-            ->where('status', 'Published')
-            ->orderBy('notice_id', 'DESC')
-            ->get();
-
-        // Filter notices that target the current employee
-        $results = $allNotices->filter(function ($notice) {
-            return $notice->targetsEmployee($this->employee);
-        });
-
-        return view('admin.ess.notice_board.index', compact('results'));
-    }
-
-    public function show($id)
-    {
-        $editModeData = Notice::with('createdBy')->where('notice_id', $id)->first();
-        return view('admin.ess.notice_board.details', compact('editModeData'));
-    }
-
     /**
      * Display approval delegation management page
      */
