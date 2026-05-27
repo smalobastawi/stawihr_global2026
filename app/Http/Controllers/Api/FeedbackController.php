@@ -71,7 +71,17 @@ class FeedbackController extends Controller
     public function getEmployeeFeedbackDetails($id)
     {
         try {
+            $employee = Employee::where('user_id', Auth::id())->first();
+
+            if (!$employee) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee not found'
+                ], 404);
+            }
+
             $feedback = EmployeeFeedback::with(['category', 'response', 'employee'])
+                ->where('employee_id', $employee->employee_id)
                 ->findOrFail($id);
 
             return response()->json([
@@ -138,7 +148,17 @@ class FeedbackController extends Controller
     public function deleteEmployeeFeedback($id)
     {
         try {
-            $feedback = EmployeeFeedback::findOrFail($id);
+            $employee = Employee::where('user_id', Auth::id())->first();
+
+            if (!$employee) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee not found'
+                ], 404);
+            }
+
+            $feedback = EmployeeFeedback::where('employee_id', $employee->employee_id)
+                ->findOrFail($id);
 
             // Check if feedback has a response
             $hasResponse = EmployeeFeedbackResponse::where('feedback_id', $id)->count();

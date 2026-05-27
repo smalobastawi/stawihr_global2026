@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PayrollController;
 use App\Http\Controllers\Api\PipController;
 use App\Http\Controllers\Api\EssBootstrapController;
+use App\Http\Controllers\Api\FeedbackController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,6 +19,11 @@ use App\Http\Controllers\Api\EssBootstrapController;
 | Base URL: /api/ess
 | All routes require Sanctum authentication unless noted otherwise.
 */
+
+Route::prefix('feedback')->group(function () {
+    Route::get('categories', [FeedbackController::class, 'getCategories']);
+    Route::post('anonymous', [FeedbackController::class, 'submitAnonymousFeedback']);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('bootstrap', [EssBootstrapController::class, 'bootstrap']);
@@ -77,5 +83,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('notices')->group(function () {
         Route::get('/', [NoticeController::class, 'index']);
         Route::get('{id}', [NoticeController::class, 'show']);
+    });
+
+    Route::prefix('feedback')->group(function () {
+        Route::get('/', [FeedbackController::class, 'getEmployeeFeedback']);
+        Route::get('{id}', [FeedbackController::class, 'getEmployeeFeedbackDetails'])->whereNumber('id');
+        Route::post('/', [FeedbackController::class, 'submitEmployeeFeedback']);
+        Route::delete('{id}', [FeedbackController::class, 'deleteEmployeeFeedback'])->whereNumber('id');
     });
 });
