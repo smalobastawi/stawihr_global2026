@@ -9,6 +9,7 @@ use App\Models\AnonymousFeedback;
 use App\Models\FeedbackCategories;
 use App\Models\Employee;
 use App\Models\Location;
+use App\Lib\Enumerations\GeneralStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -20,7 +21,9 @@ class FeedbackController extends Controller
     public function getCategories()
     {
         try {
-            $categories = FeedbackCategories::where('status', 'active')->get();
+            $categories = FeedbackCategories::where('status', GeneralStatus::ACTIVE)
+                ->orderBy('name')
+                ->get(['id', 'name', 'description', 'status']);
             return response()->json([
                 'success' => true,
                 'data' => $categories
@@ -222,7 +225,9 @@ class FeedbackController extends Controller
     public function getAnonymousCategories()
     {
         try {
-            $categories = FeedbackCategories::where('status', 'active')->get();
+            $categories = FeedbackCategories::where('status', GeneralStatus::ACTIVE)
+                ->orderBy('name')
+                ->get(['id', 'name', 'description', 'status']);
             return response()->json([
                 'success' => true,
                 'data' => $categories
