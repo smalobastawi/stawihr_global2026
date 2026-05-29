@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\FinancialYear;
 use App\Models\LeaveApplication;
 use App\Lib\Enumerations\LeaveStatus;
 use Illuminate\Http\Request;
@@ -79,8 +80,7 @@ class EssApprovalController extends Controller
 
             // Get current financial year for context
             $currentDate = now();
-            $fiscalYear = DB::table('financial_year')
-                ->where('start_date', '<=', $currentDate)
+            $fiscalYear = FinancialYear::where('start_date', '<=', $currentDate)
                 ->where('end_date', '>=', $currentDate)
                 ->first();
 
