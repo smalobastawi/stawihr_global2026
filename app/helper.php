@@ -197,7 +197,7 @@ if (!function_exists('getHolidayAdjustment')) {
         if ($settings && $settings->applicable_on === 'working_days') {
             $affectingHolidays = $leaveGroup->publicHolidays->pluck('holiday_id')->toArray();
 
-        
+
             $holidayDates = HolidayDetails::whereIn('holiday_id', $affectingHolidays)
                 ->where('status', 1)
                 ->get()
@@ -206,13 +206,9 @@ if (!function_exists('getHolidayAdjustment')) {
                 })
                 ->map(fn($date) => $date->format('Y-m-d'))
                 ->toArray();
-                dd($holidayDates);
-
-                
-
             for ($date = $leaveStart->copy(); $date->lte($leaveEnd); $date->addDay()) {
                 if (in_array($date->format('Y-m-d'), $holidayDates)) {
-                   
+
                     $holidayCount++;
                 }
             }
