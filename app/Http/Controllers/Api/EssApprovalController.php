@@ -90,7 +90,7 @@ class EssApprovalController extends Controller
             // Get pending leave applications for supervised employees
             $pendingApprovals = LeaveApplication::with([
                 'employee' => function ($query) {
-                    $query->select('employee_id', 'first_name', 'last_name', 'email', 'designation_id', 'department_id', 'branch_id');
+                    $query->select('employee_id', 'first_name', 'last_name', 'email', 'designation_id', 'department_id', 'location_id');
                 },
                 'employee.designation' => function ($query) {
                     $query->select('designation_id', 'designation_name');
@@ -99,7 +99,7 @@ class EssApprovalController extends Controller
                     $query->select('department_id', 'department_name');
                 },
                 'employee.branch' => function ($query) {
-                    $query->select('branch_id', 'branch_name');
+                    $query->select('location_id', 'location_name');
                 },
                 'leaveType' => function ($query) {
                     $query->select('leave_type_id', 'leave_type_name');
@@ -125,7 +125,7 @@ class EssApprovalController extends Controller
                         'email' => $leave->employee?->email,
                         'designation' => $leave->employee?->designation?->designation_name,
                         'department' => $leave->employee?->department?->department_name,
-                        'branch' => $leave->employee?->branch?->branch_name,
+                        'branch' => $leave->employee?->branch?->location_name,
                     ],
                     'leave_type' => [
                         'leave_type_id' => $leave->leaveType?->leave_type_id,
@@ -184,7 +184,7 @@ class EssApprovalController extends Controller
             // Get the leave application with full details
             $leaveApplication = LeaveApplication::with([
                 'employee' => function ($query) {
-                    $query->select('employee_id', 'first_name', 'last_name', 'email', 'phone', 'designation_id', 'department_id', 'branch_id', 'date_of_joining');
+                    $query->select('employee_id', 'first_name', 'last_name', 'email', 'phone', 'designation_id', 'department_id', 'location_id', 'date_of_joining');
                 },
                 'employee.designation' => function ($query) {
                     $query->select('designation_id', 'designation_name');
@@ -193,7 +193,7 @@ class EssApprovalController extends Controller
                     $query->select('department_id', 'department_name');
                 },
                 'employee.branch' => function ($query) {
-                    $query->select('branch_id', 'branch_name');
+                    $query->select('location_id', 'location_name');
                 },
                 'leaveType' => function ($query) {
                     $query->select('leave_type_id', 'leave_type_name');
@@ -266,7 +266,7 @@ class EssApprovalController extends Controller
                     'phone' => $leaveApplication->employee?->phone,
                     'designation' => $leaveApplication->employee?->designation?->designation_name,
                     'department' => $leaveApplication->employee?->department?->department_name,
-                    'branch' => $leaveApplication->employee?->branch?->branch_name,
+                    'branch' => $leaveApplication->employee?->branch?->location_name,
                     'date_of_joining' => $leaveApplication->employee?->date_of_joining,
                 ],
                 'leave_type' => [

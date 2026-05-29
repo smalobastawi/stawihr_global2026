@@ -29,6 +29,8 @@ class AuthController extends Controller
             'azureLogin' => (bool) $azureLogin,
             'azureClientId' => $azureLogin ? env('AZURE_CLIENT_ID') : null,
             'azureTenantId' => $azureLogin ? env('AZURE_TENANT_ID') : null,
+            'organizationName' => config('app.name'),
+            'applicationTitle' => config('app.name'),
         ]);
     }
 
