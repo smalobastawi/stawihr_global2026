@@ -62,7 +62,8 @@
                         <div class="icon" aria-hidden="true">
                             <i class="fa fa-user" aria-hidden="true"></i>
                         </div>
-                    </a><a href="{{ route('employee.index') }}" class="small-box-footer">view all <i class="fa fa-arrow-circle-right" aria-hidden="true"></i></a>
+                    </a><a href="{{ route('employee.index') }}" class="small-box-footer">view all <i
+                            class="fa fa-arrow-circle-right" aria-hidden="true"></i></a>
                 </div>
 
             </div><!-- ./col -->
@@ -80,7 +81,8 @@
                         <div class="icon" aria-hidden="true">
                             <i class="fa fa-archive"></i>
                         </div>
-                    </a><a href="{{ route('department.index') }}" class="small-box-footer">View all <i class="fa fa-arrow-circle-right" aria-hidden="true"></i></a>
+                    </a><a href="{{ route('department.index') }}" class="small-box-footer">View all <i
+                            class="fa fa-arrow-circle-right" aria-hidden="true"></i></a>
                 </div>
 
             </div><!-- ./col -->
@@ -98,7 +100,8 @@
                         <div class="icon" aria-hidden="true">
                             <i class="fa fa-address-book"></i>
                         </div>
-                    </a><a href="{{ route('dailyAttendance.dailyAttendance') }}" class="small-box-footer">view all <i class="fa fa-arrow-circle-right" aria-hidden="true"></i></a>
+                    </a><a href="{{ route('dailyAttendance.dailyAttendance') }}" class="small-box-footer">view all <i
+                            class="fa fa-arrow-circle-right" aria-hidden="true"></i></a>
                 </div>
 
             </div><!-- ./col -->
@@ -117,7 +120,8 @@
                         <div class="icon" aria-hidden="true">
                             <i class="fa fa-anchor"></i>
                         </div>
-                    </a><a href="{{ route('leave.report.onLeaveToday') }}" class="small-box-footer">view all <i class="fa fa-arrow-circle-right" aria-hidden="true"></i></a>
+                    </a><a href="{{ route('leave.report.onLeaveToday') }}" class="small-box-footer">view all <i
+                            class="fa fa-arrow-circle-right" aria-hidden="true"></i></a>
                 </div>
             </div><!-- ./col -->
 
@@ -126,133 +130,107 @@
 
         {{-- Employee Self Service (ESS) Section --}}
         @if (Auth::user()->hasRole('Employee'))
-        <div class="row">
-            <div class="col-md-12">
-                <div class="panel panel-info">
-                    <div class="panel-heading">
-                        <i class="fa fa-user-circle fa-fw"></i> Employee Self Service
-                    </div>
-                    <div class="panel-wrapper collapse in" aria-expanded="true">
-                        <div class="panel-body">
-                            <div class="row">
-                                @can('ess.leave.index')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.leave.index') }}" class="btn btn-info btn-block" style="white-space: normal;">
-                                        <i class="fa fa-calendar"></i> My Leaves
-                                    </a>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="panel panel-info">
+                        <div class="panel-heading">
+                            <i class="fa fa-user-circle fa-fw"></i> Employee Self Service
+                        </div>
+                        <div class="panel-wrapper collapse in" aria-expanded="true">
+                            <div class="panel-body">
+                                <div class="row">
+                                    @can('ess.leave.index')
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                                            <a href="{{ route('ess.leave.index') }}" class="btn btn-info btn-block"
+                                                style="color: white;">
+                                                <i class="fa fa-calendar"></i> My Leaves
+                                            </a>
+                                        </div>
+                                    @endcan
+                                    @can('ess.leave.form')
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                                            <a href="{{ route('ess.leave.form') }}" class="btn btn-info btn-block"
+                                                style="color: white;">
+                                                <i class="fa fa-calendar-plus-o"></i> Apply Leave
+                                            </a>
+                                        </div>
+                                    @endcan
+                                    @can('ess.payroll.index')
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                                            <a href="{{ route('ess.payroll.index') }}" class="btn btn-success btn-block"
+                                                style="color: white;">
+                                                <i class="fa fa-money"></i> My Payroll
+                                            </a>
+                                        </div>
+                                    @endcan
+
+                                    @can('ess.approval.index')
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                                            <a href="{{ route('ess.approval.index') }}" class="btn btn-warning btn-block"
+                                                style="color: white;">
+                                                <i class="fa fa-check-square-o"></i> My Approvals
+                                            </a>
+                                        </div>
+                                    @endcan
+                                    @can('ess.diciplinary.index')
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                                            <a href="{{ route('ess.diciplinary.index') }}" class="btn btn-danger btn-block"
+                                                style="color: white;">
+                                                <i class="fa fa-gavel"></i> Disciplinary
+                                            </a>
+                                        </div>
+                                    @endcan
+                                    @can('ess.shifts.index')
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                                            <a href="{{ route('ess.shifts.index') }}" class="btn btn-primary btn-block"
+                                                style="white-space: normal;">
+                                                <i class="fa fa-clock-o"></i> My Shifts
+                                            </a>
+                                        </div>
+                                    @endcan
+                                    @can('ess.trainings.index')
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                                            <a href="{{ route('ess.trainings.index') }}" class="btn btn-primary btn-block"
+                                                style="color: white;">
+                                                <i class="fa fa-graduation-cap"></i> Trainings
+                                            </a>
+                                        </div>
+                                    @endcan
+
+
+
+
+                                    @can('ess.subordinates.index')
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                                            <a href="{{ route('ess.subordinates.index') }}" class="btn btn-primary btn-block"
+                                                style="color: white;">
+                                                <i class="fa fa-sitemap"></i> My Team
+                                            </a>
+                                        </div>
+                                    @endcan
+                                    @can('ess.performance.myAppraisals')
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                                            <a href="{{ route('ess.performance.myAppraisals') }}"
+                                                class="btn btn-warning btn-block" style="color: white;">
+                                                <i class="fa fa-star"></i> Performance
+                                            </a>
+                                        </div>
+                                    @endcan
+                                    @can('ess.pip.myPlans')
+                                        <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
+                                            <a href="{{ route('ess.pip.myPlans') }}" class="btn btn-danger btn-block"
+                                                style="color: white;">
+                                                <i class="fa fa-tasks"></i> My PIP
+                                            </a>
+                                        </div>
+                                    @endcan
+
                                 </div>
-                                @endcan
-                                @can('ess.leave.form')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.leave.form') }}" class="btn btn-info btn-block" style="white-space: normal;">
-                                        <i class="fa fa-calendar-plus-o"></i> Apply Leave
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.payroll.index')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.payroll.index') }}" class="btn btn-success btn-block" style="white-space: normal;">
-                                        <i class="fa fa-money"></i> My Payroll
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.loans.index')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.loans.index') }}" class="btn btn-success btn-block" style="white-space: normal;">
-                                        <i class="fa fa-university"></i> My Loans
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.approval.index')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.approval.index') }}" class="btn btn-warning btn-block" style="white-space: normal;">
-                                        <i class="fa fa-check-square-o"></i> My Approvals
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.diciplinary.index')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.diciplinary.index') }}" class="btn btn-danger btn-block" style="white-space: normal;">
-                                        <i class="fa fa-gavel"></i> Disciplinary
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.shifts.index')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.shifts.index') }}" class="btn btn-primary btn-block" style="white-space: normal;">
-                                        <i class="fa fa-clock-o"></i> My Shifts
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.trainings.index')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.trainings.index') }}" class="btn btn-primary btn-block" style="white-space: normal;">
-                                        <i class="fa fa-graduation-cap"></i> Trainings
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.awards.index')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.awards.index') }}" class="btn btn-success btn-block" style="white-space: normal;">
-                                        <i class="fa fa-trophy"></i> My Awards
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.documents.index')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.documents.index') }}" class="btn btn-default btn-block" style="white-space: normal;">
-                                        <i class="fa fa-file-text"></i> Documents
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.feedback.index')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.feedback.index') }}" class="btn btn-info btn-block" style="white-space: normal;">
-                                        <i class="fa fa-comments"></i> Feedback
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.recruitment.job.posts')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.recruitment.job.posts') }}" class="btn btn-success btn-block" style="white-space: normal;">
-                                        <i class="fa fa-briefcase"></i> Jobs
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.subordinates.index')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.subordinates.index') }}" class="btn btn-primary btn-block" style="white-space: normal;">
-                                        <i class="fa fa-sitemap"></i> Subordinates
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.performance.myAppraisals')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.performance.myAppraisals') }}" class="btn btn-warning btn-block" style="white-space: normal;">
-                                        <i class="fa fa-star"></i> Performance
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.pip.myPlans')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.pip.myPlans') }}" class="btn btn-danger btn-block" style="white-space: normal;">
-                                        <i class="fa fa-tasks"></i> My PIP
-                                    </a>
-                                </div>
-                                @endcan
-                                @can('ess.vehicle.myVehicle')
-                                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12 m-b-10">
-                                    <a href="{{ route('ess.vehicle.myVehicle') }}" class="btn btn-default btn-block" style="white-space: normal;">
-                                        <i class="fa fa-car"></i> My Vehicle
-                                    </a>
-                                </div>
-                                @endcan
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
         @endif
 
         <div class="row">
@@ -262,14 +240,16 @@
         <div class="row">
             <div class="col-lg-3 col-sm-6 col-xs-12">
                 <div class="white-box analytics-info">
-                    <h3 class="box-title"> <a href="{{ route('employee.index') }}" target="_blank"> Manage Employees<i class="ti-arrow-top-right"></i></a></h3>
+                    <h3 class="box-title"> <a href="{{ route('employee.index') }}" target="_blank"> Manage Employees<i
+                                class="ti-arrow-top-right"></i></a></h3>
 
                 </div>
             </div>
             @can('payrollIndex')
                 <div class="col-lg-3 col-sm-6 col-xs-12">
                     <div class="white-box analytics-info">
-                        <h3 class="box-title"><a href="{{ route('payrollIndex') }}" target="_blank">Payroll<i class="ti-arrow-top-right"></i></a> </h3>
+                        <h3 class="box-title"><a href="{{ route('payrollIndex') }}" target="_blank">Payroll<i
+                                    class="ti-arrow-top-right"></i></a> </h3>
 
                     </div>
                 </div>
@@ -277,21 +257,23 @@
             @can('dailyAttendance.dailyAttendance')
                 <div class="col-lg-3 col-sm-6 col-xs-12">
                     <div class="white-box analytics-info">
-                        <h3 class="box-title"> <a href="{{ route('dailyAttendance.dailyAttendance') }}" target="_blank">Attendance<i class="ti-arrow-top-right"></i></a></h3>
+                        <h3 class="box-title"> <a href="{{ route('dailyAttendance.dailyAttendance') }}"
+                                target="_blank">Attendance<i class="ti-arrow-top-right"></i></a></h3>
                     </div>
                 </div>
             @endcan
             <div class="col-lg-3 col-sm-6 col-xs-12">
                 <div class="white-box analytics-info">
-                    <h3 class="box-title"> <a href="{{ route('allLeaveApplications.allLeaveApplications') }}" target="_blank">Leave Management<i class="ti-arrow-top-right"></i></a></h3>
+                    <h3 class="box-title"> <a href="{{ route('allLeaveApplications.allLeaveApplications') }}"
+                            target="_blank">Leave Management<i class="ti-arrow-top-right"></i></a></h3>
 
                 </div>
             </div>
         </div>
 
-       
 
-       
+
+
 
         <div class="row">
 
@@ -310,7 +292,8 @@
                                 <div class="alert alert-success alert-dismissable">
                                     <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×
                                     </button>
-                                    <i class="cr-icon glyphicon glyphicon-ok"></i>&nbsp;<strong>{{ session()->get('success') }}</strong>
+                                    <i
+                                        class="cr-icon glyphicon glyphicon-ok"></i>&nbsp;<strong>{{ session()->get('success') }}</strong>
                                 </div>
                             @endif
                             @if (session()->has('error'))
@@ -322,7 +305,7 @@
                             @endif
                             <form action="{{ route('ess.attendance.create') }}" method="POST">
                                 {{ csrf_field() }}
-                               
+
                                 <input type="hidden" name="employee_id" value="{{ $logged_user->employee_id }}">
 
                                 <input type="hidden" name="ip_check_status" value="{{ $ip_check_status }}">
@@ -352,7 +335,7 @@
                         </div>
                     </div>
                 </div>
-                
+
 
                 <!-- end attendance  -->
             @endif
@@ -372,11 +355,13 @@
                                 <div class="comment-center p-t-10">
                                     <div class="comment-body">
 
-                                        <div class="user-img"><i style="font-size: 31px" class="fa fa-flag-checkered text-info"></i></div>
+                                        <div class="user-img"><i style="font-size: 31px"
+                                                class="fa fa-flag-checkered text-info"></i></div>
 
 
                                         <div class="mail-contnet">
-                                            <h5 class="text-danger">{{ substr($row->title, 0, 70) }}..</h5><span class="time">Published Date: {{ date(' d M Y ', $noticeDate) }}</span>
+                                            <h5 class="text-danger">{{ substr($row->title, 0, 70) }}..</h5><span
+                                                class="time">Published Date: {{ date(' d M Y ', $noticeDate) }}</span>
                                             <br /><span class="mail-desc">
                                                 @if ($row->createdBy?->first_name)
                                                     {{ $row->createdBy->first_name }}
@@ -386,7 +371,8 @@
                                                 @endif
                                                 @lang('notice.description'): {!! substr($row->description, 0, 80) !!}..
                                             </span>
-                                            <a href="{{ url('notice/' . $row->notice_id) }}" class="btn m-r-5 btn-rounded btn-outline btn-info">@lang('common.read_more')</a>
+                                            <a href="{{ url('notice/' . $row->notice_id) }}"
+                                                class="btn m-r-5 btn-rounded btn-outline btn-info">@lang('common.read_more')</a>
                                         </div>
                                     </div>
                                 </div>
@@ -396,144 +382,152 @@
                 </div>
             @endif
             <div class="col-md-12 col-sm-12 col-lg-12">
-            <div class="panel">
-                <div class="panel-heading" style="text-transform: uppercase">
-                    My {{date('F Y')}}, Attendance
+                <div class="panel">
+                    <div class="panel-heading" style="text-transform: uppercase">
+                        My {{ date('F Y') }}, Attendance
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover manage-u-table">
+                            <thead>
+                                <tr>
+                                    <th class="text-center"> # </th>
+                                    <th> @lang('common.date') </th>
+                                    <th> @lang('dashboard.in_time') </th>
+                                    <th> @lang('dashboard.out_time')</th>
+
+                                    <th> @lang('common.status') </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (count($attendanceDataUser) > 0)
+                                    {{ $dailyAttendanceSl = null }}
+                                    @foreach ($attendanceDataUser as $dailyAttendance)
+                                        <tr>
+                                            <td class="text-center">{{ ++$dailyAttendanceSl }}</td>
+
+
+                                            <td>{{ date('Y-m-d', strtotime($dailyAttendance['date'])) }}</td>
+                                            <td>
+                                                @if ($dailyAttendance['in_time'] != '')
+                                                    {{ date('Y-m-d h:i a', strtotime($dailyAttendance['in_time'])) }}
+                                                @else
+                                                    {{ '--' }}
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @php
+                                                    if ($dailyAttendance['out_time'] != '') {
+                                                        echo date(
+                                                            'Y-m-d h:i a',
+                                                            strtotime($dailyAttendance['out_time']),
+                                                        );
+                                                    } else {
+                                                        echo '--';
+                                                    }
+                                                @endphp
+                                            </td>
+
+
+                                            <td>
+                                                @php
+                                                    if ($dailyAttendance['action'] == 'Absence') {
+                                                        echo "<span class='label label-danger'>Absence</span>";
+                                                    } elseif ($dailyAttendance['action'] == 'Leave') {
+                                                        echo "<span class='label label-info'>Leave</span></p>";
+                                                    } else {
+                                                        echo "<span class='label label-success'>Present</span>";
+                                                    }
+                                                @endphp
+                                            </td>
+
+                                        </tr>
+                                    @endforeach
+                                @else
+                                    <tr>
+                                        <td colspan="8">@lang('common.no_data_available')</td>
+                                    </tr>
+                                @endif
+
+                            </tbody>
+                        </table>
+                    </div>
+                    <!--/.table-responsive -->
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover manage-u-table">
-                        <thead>
-                            <tr>
-                                <th class="text-center"> # </th>
-                                <th> @lang('common.date') </th>
-                                <th> @lang('dashboard.in_time') </th>
-                                <th> @lang('dashboard.out_time')</th>
-
-                                <th> @lang('common.status') </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @if(count($attendanceDataUser) > 0)
-                            {{$dailyAttendanceSl =null }}
-                            @foreach($attendanceDataUser as $dailyAttendance)
-                            <tr>
-                                <td class="text-center">{{ ++$dailyAttendanceSl }}</td>
-
-
-                                <td>{{ date('Y-m-d', strtotime($dailyAttendance['date'])) }}</td>
-                                <td>
-                                    @if($dailyAttendance['in_time'] !='')
-                                    {{ date('Y-m-d h:i a', strtotime($dailyAttendance['in_time']))}}
-                                    @else
-                                    {{ "--"}}
-                                    @endif
-                                </td>
-                                <td>
-                                    @php
-                                    if($dailyAttendance['out_time'] !=''){
-                                    echo date('Y-m-d h:i a', strtotime($dailyAttendance['out_time']));
-                                    }else{
-                                    echo "--";
-                                    }
-                                    @endphp
-                                </td>
-
-
-                                <td>
-                                    @php
-                                    if($dailyAttendance['action'] =='Absence'){
-                                    echo "<span class='label label-danger'>Absence</span>";
-                                    }elseif($dailyAttendance['action'] =='Leave'){
-                                    echo "<span class='label label-info'>Leave</span></p>";
-                                    }else{
-                                    echo "<span class='label label-success'>Present</span>";
-                                    }
-                                    @endphp
-                                </td>
-
-                            </tr>
-                            @endforeach
-                            @else
-                            <tr>
-                                <td colspan="8">@lang('common.no_data_available')</td>
-                            </tr>
-                            @endif
-
-                        </tbody>
-                    </table>
-                </div>
-                <!--/.table-responsive -->
             </div>
-        </div>
 
             @if (Auth::user()->hasRole('HR Administrator'))
-            @if (count($upcoming_birtday) > 0)
-                <div class="col-md-6">
-                    <div class="white-box" style="color: #0a0c0d">
-                        <span class="box-title">@lang('dashboard.upcoming_birthday')</span>
-                        <hr>
-                        <div class="leaveApplication">
-                            @foreach ($upcoming_birtday as $employee_birthdate)
-                                <div class="comment-center p-t-10">
-                                    <div class="comment-body">
-                                        @if (isset($employee_birthdate->photo))
-                                            )
-                                            <div class="user-img"><img src="{!! asset('uploads/employeePhoto/' . $employee_birthdate->photo) !!}" alt="user" class="img-circle"></div>
-                                        @else
-                                            <div class="user-img"><img src="{!! asset('admin_assets/img/default.png') !!}" alt="user" class="img-circle"></div>
-                                        @endif
-                                        <div class="mail-contnet">
+                @if (count($upcoming_birtday) > 0)
+                    <div class="col-md-6">
+                        <div class="white-box" style="color: #0a0c0d">
+                            <span class="box-title">@lang('dashboard.upcoming_birthday')</span>
+                            <hr>
+                            <div class="leaveApplication">
+                                @foreach ($upcoming_birtday as $employee_birthdate)
+                                    <div class="comment-center p-t-10">
+                                        <div class="comment-body">
+                                            @if (isset($employee_birthdate->photo))
+                                                )
+                                                <div class="user-img"><img src="{!! asset('uploads/employeePhoto/' . $employee_birthdate->photo) !!}" alt="user"
+                                                        class="img-circle"></div>
+                                            @else
+                                                <div class="user-img"><img src="{!! asset('admin_assets/img/default.png') !!}" alt="user"
+                                                        class="img-circle"></div>
+                                            @endif
+                                            <div class="mail-contnet">
 
-                                            @php
-                                                $date_of_birth = $employee_birthdate->date_of_birth;
-                                                $separate_date = explode('-', $date_of_birth);
+                                                @php
+                                                    $date_of_birth = $employee_birthdate->date_of_birth;
+                                                    $separate_date = explode('-', $date_of_birth);
 
-                                                $date_current_year = date('Y') . '-' . $separate_date[1] . '-' . $separate_date[2];
+                                                    $date_current_year =
+                                                        date('Y') . '-' . $separate_date[1] . '-' . $separate_date[2];
 
-                                                $create_date = date_create($date_current_year);
-                                            @endphp
+                                                    $create_date = date_create($date_current_year);
+                                                @endphp
 
-                                            <p>{{ $employee_birthdate->first_name }} {{ $employee_birthdate->last_name }}
-                                            </p>
-                                            <span class="time">{{ date_format(date_create($employee_birthdate->date_of_birth), 'D dS F Y') }}</span>
-                                            <br />
+                                                <p>{{ $employee_birthdate->first_name }}
+                                                    {{ $employee_birthdate->last_name }}
+                                                </p>
+                                                <span
+                                                    class="time">{{ date_format(date_create($employee_birthdate->date_of_birth), 'D dS F Y') }}</span>
+                                                <br />
 
-                                            <span class="mail-desc">
-                                                @if ($date_current_year == date('Y-m-d'))
-                                                    <b>Today is
-                                                        @if ($employee_birthdate->gender == 'Male')
-                                                            His
-                                                        @else
-                                                            Her
-                                                        @endif
-                                                        Birtday Wish
+                                                <span class="mail-desc">
+                                                    @if ($date_current_year == date('Y-m-d'))
+                                                        <b>Today is
+                                                            @if ($employee_birthdate->gender == 'Male')
+                                                                His
+                                                            @else
+                                                                Her
+                                                            @endif
+                                                            Birtday Wish
+                                                            @if ($employee_birthdate->gender == 'Male')
+                                                                Him
+                                                            @else
+                                                                Her
+                                                            @endif
+                                                        </b>
+                                                    @else
+                                                        Wish
                                                         @if ($employee_birthdate->gender == 'Male')
                                                             Him
                                                         @else
                                                             Her
                                                         @endif
-                                                    </b>
-                                                @else
-                                                    Wish
-                                                    @if ($employee_birthdate->gender == 'Male')
-                                                        Him
-                                                    @else
-                                                        Her
+                                                        on {{ date_format($create_date, 'D dS F Y') }}
                                                     @endif
-                                                    on {{ date_format($create_date, 'D dS F Y') }}
-                                                @endif
-                                            </span>
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            @endforeach
+                                @endforeach
+                            </div>
                         </div>
                     </div>
-                </div>
-            @endif
+                @endif
             @endif
 
-          
+
         </div>
     </div>
 

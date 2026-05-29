@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\PayrollController;
 use App\Http\Controllers\Api\PipController;
 use App\Http\Controllers\Api\EssBootstrapController;
 use App\Http\Controllers\Api\FeedbackController;
+use App\Http\Controllers\Api\EssApprovalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -90,5 +91,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('{id}', [FeedbackController::class, 'getEmployeeFeedbackDetails'])->whereNumber('id');
         Route::post('/', [FeedbackController::class, 'submitEmployeeFeedback']);
         Route::delete('{id}', [FeedbackController::class, 'deleteEmployeeFeedback'])->whereNumber('id');
+    });
+
+    // ESS Approvals routes (for supervisors)
+    Route::prefix('approvals')->group(function () {
+        Route::get('leave/pending', [EssApprovalController::class, 'getPendingLeaveApprovals']);
+        Route::get('leave/history', [EssApprovalController::class, 'getApprovedLeaveHistory']);
+        Route::get('leave/{id}', [EssApprovalController::class, 'getLeaveApprovalDetails'])->whereNumber('id');
+        Route::post('leave/{id}/approve', [EssApprovalController::class, 'approveLeave'])->whereNumber('id');
+        Route::post('leave/{id}/reject', [EssApprovalController::class, 'rejectLeave'])->whereNumber('id');
     });
 });
