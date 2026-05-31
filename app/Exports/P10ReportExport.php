@@ -5,9 +5,9 @@ namespace App\Exports;
 use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\FromView;
 
-class PayeReportExport implements FromView
+class P10ReportExport implements FromView
 {
-    protected $data;
+    protected array $data;
 
     public function __construct(array $data)
     {
@@ -16,7 +16,7 @@ class PayeReportExport implements FromView
 
     public function view(): View
     {
-        return view('admin.payroll.reports.paye.export', [
+        return view('admin.payroll.reports.paye.p10_export', [
             'dataExport' => $this->data,
         ]);
     }

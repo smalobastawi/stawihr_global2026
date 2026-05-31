@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Payroll;
 
 use App\Http\Controllers\Controller;
+use App\Exports\PayeReportExport;
+use App\Exports\P10ReportExport;
+use App\Lib\Enumerations\ResidencyStatus;
 use App\Models\Payroll\PayrollRecord;
 use App\Models\Payroll\PayrollPeriod;
 use App\Models\Payroll\EmployeePayroll;
@@ -10,6 +13,8 @@ use App\Models\Employee;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 
 
@@ -47,35 +52,49 @@ class ReportsController extends Controller
     {
         $request->validate([
             'period_id' => 'required|exists:payroll_periods,id',
-            'format' => 'required|in:pdf,excel,csv'
+            'format' => 'nullable|in:pdf,excel,csv',
         ]);
 
-        $period = PayrollPeriod::findOrFail($request->period_id);
+        $reportData = $this->buildPayeReportData($request->period_id);
+
+        if ($request->filled('format')) {
+            if ($request->format === 'pdf') {
+                return $this->generatePayePdf($reportData);
+            }
+            if ($request->format === 'excel') {
+                return $this->generatePayeExcel($reportData);
+            }
+
+            return $this->generatePayeCsv($reportData);
+        }
+
+        return view('admin.payroll.reports.paye.report', $reportData);
+    }
+
+    /**
+     * Build PAYE report data for a payroll period.
+     */
+    private function buildPayeReportData(int $periodId): array
+    {
+        $period = PayrollPeriod::findOrFail($periodId);
         $records = PayrollRecord::with(['employeePayroll.employee'])
             ->where('payroll_period_id', $period->id)
             ->where('paye_tax', '>', 0)
+            ->orderBy('created_at')
             ->get();
 
         $totalPaye = $records->sum('paye_tax');
         $totalGross = $records->sum('gross_salary');
 
-        $reportData = [
+        return [
             'period' => $period,
             'records' => $records,
             'totals' => [
                 'employees' => $records->count(),
                 'total_gross' => $totalGross,
-                'total_paye' => $totalPaye
-            ]
+                'total_paye' => $totalPaye,
+            ],
         ];
-
-        if ($request->format === 'pdf') {
-            return $this->generatePayePdf($reportData);
-        } elseif ($request->format === 'excel') {
-            return $this->generatePayeExcel($reportData);
-        } else {
-            return $this->generatePayeCsv($reportData);
-        }
     }
 
     /**
@@ -125,12 +144,15 @@ class ReportsController extends Controller
     /**
      * Generate P10 Monthly Return
      */
-    public function generateP10(PayrollPeriod $period)
+    public function generateP10(Request $request, PayrollPeriod $period)
     {
-        $records = PayrollRecord::with(['employeePayroll.employee'])
+        $records = PayrollRecord::with(['employeePayroll.employee', 'employee.employeeType', 'details'])
             ->where('payroll_period_id', $period->id)
             ->where('paye_tax', '>', 0)
+            ->orderBy('created_at')
             ->get();
+
+        $p10Rows = $records->map(fn ($record) => $this->buildP10Row($record))->values();
 
         $summary = [
             'total_employees' => $records->count(),
@@ -138,10 +160,77 @@ class ReportsController extends Controller
             'total_paye' => $records->sum('paye_tax'),
             'total_nssf' => $records->sum('nssf_contribution'),
             'total_shif' => $records->sum('shif_contribution'),
-            'total_housing_levy' => $records->sum('housing_levy')
+            'total_housing_levy' => $records->sum('housing_levy'),
         ];
 
-        return view('admin.payroll.reports.paye.p10', compact('period', 'records', 'summary'));
+        if ($request->query('format') === 'excel') {
+            $filename = str_replace(' ', '_', $period->name) . '_p10_return.xlsx';
+
+            return Excel::download(
+                new P10ReportExport(['p10Rows' => $p10Rows, 'period' => $period, 'summary' => $summary]),
+                $filename
+            );
+        }
+
+        return view('admin.payroll.reports.paye.p10', compact('period', 'records', 'summary', 'p10Rows'));
+    }
+
+    /**
+     * Build a KRA P10 row from a payroll record.
+     */
+    private function buildP10Row(PayrollRecord $record): array
+    {
+        $employee = $record->employee;
+        $employeePayroll = $record->employeePayroll;
+
+        return [
+            'PIN of Employee' => $employeePayroll->kra_pin ?? $employee->KRA_Pin ?? '',
+            'Name of Employee' => trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')),
+            'Resident Status' => ResidencyStatus::getName($employee->residential_status ?? ''),
+            'Type of Employee' => $employee->employeeType->name ?? '',
+            'Basic Salary' => $record->basic_salary ?? 0,
+            'Housing Allowance' => $record->house_allowance ?? $this->sumDetailAmount($record, ['Housing Allowance', 'House Allowance']),
+            'Transport Allowance' => $record->transport_allowance ?? $this->sumDetailAmount($record, ['Transport Allowance', 'Travelling Allowance']),
+            'Over Time Allowance' => $record->total_overtime_amount ?? $this->sumDetailAmount($record, ['Overtime', 'Over Time Allowance', 'Overtime Totals']),
+            'Other Allowance' => $record->total_allowances ?? $this->sumOtherAllowances($record),
+            'Social Health Insurance Fund (J)' => $record->shif_contribution ?? 0,
+            'Affordable Housing Levy (N)' => $record->housing_levy ?? 0,
+            'Actual Pension Contribution (K)' => $record->pension_contribution ?? 0,
+            'Amount of Insurance Relief (Ksh) (S)' => $record->insurance_relief ?? 0,
+            'PAYE Tax' => $record->paye_tax ?? 0,
+        ];
+    }
+
+    private function sumDetailAmount(PayrollRecord $record, array $names): float
+    {
+        if (!$record->relationLoaded('details') || $record->details->isEmpty()) {
+            return 0;
+        }
+
+        return (float) $record->details
+            ->whereIn('type', ['allowance', 'earning'])
+            ->filter(fn ($detail) => in_array($detail->name, $names, true))
+            ->sum('amount');
+    }
+
+    private function sumOtherAllowances(PayrollRecord $record): float
+    {
+        if (!$record->relationLoaded('details') || $record->details->isEmpty()) {
+            return (float) ($record->total_allowances ?? 0);
+        }
+
+        $excluded = [
+            'Basic Income', 'Housing Allowance', 'House Allowance',
+            'Transport Allowance', 'Travelling Allowance',
+            'Overtime', 'Over Time Allowance', 'Overtime Totals',
+        ];
+
+        $fromDetails = (float) $record->details
+            ->whereIn('type', ['allowance', 'earning'])
+            ->reject(fn ($detail) => in_array($detail->name, $excluded, true))
+            ->sum('amount');
+
+        return $fromDetails > 0 ? $fromDetails : (float) ($record->total_allowances ?? 0);
     }
 
     /**
@@ -349,36 +438,86 @@ class ReportsController extends Controller
     /**
      * Generate PAYE PDF Report
      */
-    private function generatePayePdf($data)
+    private function generatePayePdf(array $data)
     {
-        // PDF generation logic would go here
-        return response()->json([
-            'message' => 'PAYE PDF report generated',
-            'data' => $data
-        ]);
+        return view('admin.payroll.reports.paye.print', $data);
     }
 
     /**
      * Generate PAYE Excel Report
      */
-    private function generatePayeExcel($data)
+    private function generatePayeExcel(array $data)
     {
-        // Excel generation logic would go here
-        return response()->json([
-            'message' => 'PAYE Excel report generated',
-            'data' => $data
-        ]);
+        $filename = str_replace(' ', '_', $data['period']->name) . '_paye_report.xlsx';
+
+        return Excel::download(new PayeReportExport($data), $filename);
     }
 
     /**
      * Generate PAYE CSV Report
      */
-    private function generatePayeCsv($data)
+    private function generatePayeCsv(array $data): StreamedResponse
     {
-        // CSV generation logic would go here
-        return response()->json([
-            'message' => 'PAYE CSV report generated',
-            'data' => $data
+        $filename = str_replace(' ', '_', $data['period']->name) . '_paye_report.csv';
+
+        return response()->streamDownload(function () use ($data) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, [
+                '#',
+                'Employee Code',
+                'Employee Name',
+                'KRA PIN',
+                'Basic Salary',
+                'Gross Salary',
+                'NSSF',
+                'SHIF',
+                'Housing Levy',
+                'Pension',
+                'PAYE Tax',
+                'Net Salary',
+            ]);
+
+            foreach ($data['records'] as $index => $record) {
+                $employee = $record->employee;
+                $employeePayroll = $record->employeePayroll;
+                $kraPin = $employeePayroll->kra_pin ?? $employee->KRA_Pin ?? '';
+                $employeeName = trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''));
+
+                fputcsv($handle, [
+                    $index + 1,
+                    $employee->staff_no ?? $employeePayroll->payroll_number ?? '',
+                    $employeeName,
+                    $kraPin,
+                    $record->basic_salary ?? 0,
+                    $record->gross_salary ?? 0,
+                    $record->nssf_contribution ?? 0,
+                    $record->shif_contribution ?? 0,
+                    $record->housing_levy ?? 0,
+                    $record->pension_contribution ?? 0,
+                    $record->paye_tax ?? 0,
+                    $record->net_salary ?? 0,
+                ]);
+            }
+
+            fputcsv($handle, [
+                '',
+                '',
+                '',
+                'Totals',
+                $data['records']->sum('basic_salary'),
+                $data['totals']['total_gross'],
+                $data['records']->sum('nssf_contribution'),
+                $data['records']->sum('shif_contribution'),
+                $data['records']->sum('housing_levy'),
+                $data['records']->sum('pension_contribution'),
+                $data['totals']['total_paye'],
+                $data['records']->sum('net_salary'),
+            ]);
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv',
         ]);
     }
 

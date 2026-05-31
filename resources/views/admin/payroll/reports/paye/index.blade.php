@@ -45,7 +45,7 @@
                             <div class="col-md-12">
                                 <div class="white-box">
                                     <h3 class="box-title">Generate PAYE Report</h3>
-                                    <p class="text-muted">Select a payroll period to generate PAYE tax reports in various formats</p>
+                                    <p class="text-muted">Select a payroll period to preview the PAYE report, then download in your preferred format</p>
                                     
                                     <form action="{{ route('reports.paye.generate') }}" method="POST">
                                         @csrf
@@ -65,21 +65,10 @@
                                             </div>
                                             <div class="col-md-3">
                                                 <div class="form-group">
-                                                    <label for="format">Report Format <span class="text-danger">*</span></label>
-                                                    <select name="format" id="format" class="form-control" required>
-                                                        <option value="">Select Format</option>
-                                                        <option value="pdf">PDF Report</option>
-                                                        <option value="excel">Excel File</option>
-                                                        <option value="csv">CSV File</option>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="form-group">
                                                     <label>&nbsp;</label>
                                                     <div>
                                                         <button type="submit" class="btn btn-success">
-                                                            <i class="fa fa-download"></i> Generate Report
+                                                            <i class="fa fa-eye"></i> View Report
                                                         </button>
                                                     </div>
                                                 </div>
@@ -202,13 +191,8 @@
                                                                 </button>
                                                                 <ul class="dropdown-menu" role="menu">
                                                                     <li>
-                                                                        <a href="javascript:void(0)" onclick="generateReport('{{ $period->id }}', 'pdf')">
-                                                                            <i class="fa fa-file-pdf-o"></i> PAYE PDF
-                                                                        </a>
-                                                                    </li>
-                                                                    <li>
-                                                                        <a href="javascript:void(0)" onclick="generateReport('{{ $period->id }}', 'excel')">
-                                                                            <i class="fa fa-file-excel-o"></i> PAYE Excel
+                                                                        <a href="javascript:void(0)" onclick="viewReport('{{ $period->id }}')">
+                                                                            <i class="fa fa-eye"></i> View PAYE Report
                                                                         </a>
                                                                     </li>
                                                                     <li>
@@ -272,8 +256,8 @@ $(document).ready(function() {
         }
     });
 
-    // Function to generate reports via AJAX for dropdown links
-    window.generateReport = function(periodId, format) {
+    // Function to preview reports for dropdown links
+    window.viewReport = function(periodId) {
         var form = $('<form>', {
             method: 'POST',
             action: '{{ route("reports.paye.generate") }}'
@@ -289,12 +273,6 @@ $(document).ready(function() {
             type: 'hidden',
             name: 'period_id',
             value: periodId
-        }));
-        
-        form.append($('<input>', {
-            type: 'hidden',
-            name: 'format',
-            value: format
         }));
         
         $('body').append(form);

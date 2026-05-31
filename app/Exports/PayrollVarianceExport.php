@@ -254,7 +254,7 @@ class VarianceByTotalsSheet implements FromCollection, WithHeadings, WithMapping
         }
 
         // Fetch all active Non-Statutory Deduction Types
-        $allNonStatutoryDeductionTypes = DeductionType::where('is_statutory', false)->orderBy('deduction_name')->get();
+        $allNonStatutoryDeductionTypes = DeductionType::where('is_statutory', false)->orderBy('name')->get();
         // Initialize all non-statutory deduction types to 0
         foreach ($allNonStatutoryDeductionTypes as $deductionType) {
             $displayName = $this->generateCodeFromName($deductionType->name) . ' - ' . $deductionType->name;
