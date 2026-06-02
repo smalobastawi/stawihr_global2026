@@ -174,6 +174,32 @@
 		color: red;
 	}
 
+	.password-input-group {
+		width: 100%;
+	}
+
+	.password-input-group .form-control {
+		border-right: 0;
+	}
+
+	.password-input-group .input-group-addon {
+		background: #fff;
+		cursor: pointer;
+		padding: 6px 12px;
+	}
+
+	.password-input-group .input-group-addon:hover {
+		background: #f5f5f5;
+	}
+
+	.password-input-group .input-group-addon .glyphicon {
+		color: #555;
+	}
+
+	#generatePassword {
+		margin-top: 6px;
+	}
+
 
 </style>
 </head>
@@ -233,7 +259,12 @@
 									<div class="form-group">
 										<label class="control-label col-md-4">@lang('passwords.old_password')<span class="validateRq">*</span></label>
 										<div class="col-md-8">
-											<input type="password" name="oldPassword" id="oldPassword" class="form-control required oldPassword" placeholder="{{ __('passwords.old_password') }}">
+											<div class="input-group password-input-group">
+												<input type="password" name="oldPassword" id="oldPassword" class="form-control required oldPassword" placeholder="{{ __('passwords.old_password') }}" autocomplete="current-password">
+												<span class="input-group-addon toggle-password" data-target="#oldPassword" title="Show password" role="button" tabindex="0" aria-label="Toggle old password visibility">
+													<span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+												</span>
+											</div>
 										</div>
 									</div>
 								</div>
@@ -242,12 +273,17 @@
 								<div class="col-md-8">
 									<div class="form-group">
 										<label class="control-label col-md-4">Password rules:</label>
-										<label class="control-label col-md-4">
-											<br>At least 6 Characters
-											<br>At least 1 special character
-											<br>At least 1 number
-										</label>
-
+										<div class="col-md-4">
+											<p class="control-label" style="margin-bottom: 0;">
+												At least 6 Characters<br>
+												At least 1 uppercase &amp; 1 lowercase<br>
+												At least 1 special character<br>
+												At least 1 number
+											</p>
+											<button type="button" class="btn btn-warning btn-sm" id="generatePassword" title="Generate a random password that meets the rules">
+												<span class="glyphicon glyphicon-refresh"></span> Generate Password
+											</button>
+										</div>
 									</div>
 								</div>
 							</div>
@@ -256,7 +292,12 @@
 									<div class="form-group">
 										<label class="control-label col-md-4">@lang('passwords.new_password')<span class="validateRq">*</span></label>
 										<div class="col-md-8">
-											<input type="password" name="password" id="password" class="form-control required password" placeholder="{{ __('passwords.new_password') }}">
+											<div class="input-group password-input-group">
+												<input type="password" name="password" id="password" class="form-control required password" placeholder="{{ __('passwords.new_password') }}" autocomplete="new-password">
+												<span class="input-group-addon toggle-password" data-target="#password" title="Show password" role="button" tabindex="0" aria-label="Toggle new password visibility">
+													<span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+												</span>
+											</div>
 										</div>
 									</div>
 								</div>
@@ -266,7 +307,12 @@
 									<div class="form-group">
 										<label class="control-label col-md-4">@lang('passwords.confirm_password')<span class="validateRq">*</span></label>
 										<div class="col-md-8">
-											<input type="password" name="password_confirmation" id="password_confirmation" class="form-control required password_confirmation" placeholder="{{ __('passwords.confirm_password') }}">
+											<div class="input-group password-input-group">
+												<input type="password" name="password_confirmation" id="password_confirmation" class="form-control required password_confirmation" placeholder="{{ __('passwords.confirm_password') }}" autocomplete="new-password">
+												<span class="input-group-addon toggle-password" data-target="#password_confirmation" title="Show password" role="button" tabindex="0" aria-label="Toggle confirm password visibility">
+													<span class="glyphicon glyphicon-eye-open" aria-hidden="true"></span>
+												</span>
+											</div>
 										</div>
 									</div>
 								</div>
@@ -311,7 +357,70 @@
 	</div>
 </div>
 <script>
+    function generateCompliantPassword(length) {
+        length = length || 12;
+        var upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        var lower = 'abcdefghjkmnpqrstuvwxyz';
+        var numbers = '23456789';
+        var special = '#?!@$%^&*-';
+        var all = upper + lower + numbers + special;
+        var password = '';
+        var i;
+
+        password += upper.charAt(Math.floor(Math.random() * upper.length));
+        password += lower.charAt(Math.floor(Math.random() * lower.length));
+        password += numbers.charAt(Math.floor(Math.random() * numbers.length));
+        password += special.charAt(Math.floor(Math.random() * special.length));
+
+        for (i = password.length; i < length; i++) {
+            password += all.charAt(Math.floor(Math.random() * all.length));
+        }
+
+        return password.split('').sort(function () {
+            return Math.random() - 0.5;
+        }).join('');
+    }
+
+    function setPasswordFieldType($input, visible) {
+        $input.attr('type', visible ? 'text' : 'password');
+    }
+
+    function updateToggleIcon($toggle, visible) {
+        var $icon = $toggle.find('.glyphicon');
+        $icon.removeClass('glyphicon-eye-open glyphicon-eye-close');
+        $icon.addClass(visible ? 'glyphicon-eye-close' : 'glyphicon-eye-open');
+        $toggle.attr('title', visible ? 'Hide password' : 'Show password');
+    }
+
     $(document).ready(function(){
+        $('.toggle-password').on('click keypress', function (e) {
+            if (e.type === 'keypress' && e.which !== 13 && e.which !== 32) {
+                return;
+            }
+            e.preventDefault();
+
+            var $toggle = $(this);
+            var $input = $($toggle.data('target'));
+            var visible = $input.attr('type') === 'password';
+
+            setPasswordFieldType($input, visible);
+            updateToggleIcon($toggle, visible);
+        });
+
+        $('#generatePassword').on('click', function () {
+            var generated = generateCompliantPassword(12);
+
+            $('#password').val(generated);
+            $('#password_confirmation').val(generated);
+
+            $('#password, #password_confirmation').each(function () {
+                var $input = $(this);
+                var $toggle = $input.closest('.password-input-group').find('.toggle-password');
+                setPasswordFieldType($input, true);
+                updateToggleIcon($toggle, true);
+            });
+        });
+
         $('#changePassword').submit(function(e){
             var password = $('#password').val();
             var password_confirmation = $('#password_confirmation').val();

@@ -1,44 +1,67 @@
-/* Mobile responsive: Make top bar scrollable on small screens */
+/* Mobile responsive: top bar layout without clipping header dropdowns */
 @media (max-width: 768px) {
+    /* Keep header above page content (do not reset to position:relative / z-index:auto) */
     .fix-header .navbar-static-top {
-        position: relative;
-        z-index: auto
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        z-index: 1030;
     }
 
     .fix-header #page-wrapper {
-        margin-top: 0
+        margin-top: 60px;
+    }
+
+    .navbar-default {
+        overflow: visible;
     }
 
     .navbar-header {
-        position: relative
+        position: relative;
+        overflow: visible;
     }
 
-    /* Allow navbar content to scroll horizontally on small screens */
-    .navbar-header {
-        overflow-x: auto;
-        white-space: nowrap;
-        -webkit-overflow-scrolling: touch;
-    }
-
-    /* Ensure the lists inside navbar-header stay inline */
+    /* Allow top links to wrap instead of clipping dropdowns with overflow scroll */
     .navbar-header .nav.navbar-top-links {
-        display: inline-flex;
+        display: block;
         float: none;
-        white-space: nowrap;
+        white-space: normal;
+        max-width: 100%;
+    }
+
+    .navbar-header .nav.navbar-top-links.navbar-right {
+        float: right;
+        text-align: right;
+    }
+
+    .navbar-header .nav.navbar-top-links.navbar-left {
+        float: left;
     }
 
     .navbar-header .nav.navbar-top-links > li {
         float: none;
         display: inline-block;
+        vertical-align: top;
         white-space: nowrap;
     }
 
-    /* Hide scrollbar for cleaner look */
-    .navbar-header::-webkit-scrollbar {
-        display: none;
+    /* Open dropdowns must stack above dashboard cards and sidebar */
+    .navbar-top-links > li.dropdown {
+        position: relative;
     }
-    .navbar-header {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
+
+    .navbar-top-links > li.dropdown.open {
+        z-index: 1036;
+    }
+
+    .navbar-top-links .dropdown-menu {
+        z-index: 1037;
+    }
+
+    .navbar-top-links .dropdown-menu.dropdown-user {
+        right: 0;
+        left: auto;
     }
 }
