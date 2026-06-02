@@ -22,6 +22,8 @@
         <button onclick="window.print()">Print / Save as PDF</button>
     </div>
 
+    @include('admin.partials.company_report_header')
+
     <h2>PAYE Report</h2>
     <div class="summary">
         <p><strong>Period:</strong> {{ $period->name }}</p>

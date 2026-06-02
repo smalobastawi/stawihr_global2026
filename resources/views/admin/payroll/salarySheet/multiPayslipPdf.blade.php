@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 @php
-    $front_setting = getFrontData();
+    $companyLogo = companyLogoUrl();
+    $companyName = companyDisplayName();
 @endphp
 <html lang="en">
 <head>
@@ -105,12 +106,15 @@
                         <div class=" companyAddress">
                             <div class="row" style="margin-left: 30%">
                                 <div class="">
-                                    <img src="{{ asset('storage/uploads/front/'.$front_setting->logo) }}" alt=""
-                                         class="logo-light"
-                                         style="height: 70px;width: 150px;"/>
+                                    @if($companyLogo)
+                                        <img src="{{ $companyLogo }}" alt="{{ $companyName }}"
+                                             class="logo-light"
+                                             style="height: 70px;width: 150px; object-fit: contain;"/>
+                                    @endif
                                 </div>
 
-                                <h3 style="text-align: center;  margin-left: -30%;"><strong>Phone Number
+                                <h3 style="text-align: center;  margin-left: -30%;"><strong>{{ $companyName }}
+                                        @if(companyDisplayPhone())<br>{{ companyDisplayPhone() }}@endif
 
                                         <hr>
                                         Payslip: {{convartMonthAndYearToWord($salaryDetails['salaryDetails']->month_of_salary)}}

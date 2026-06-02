@@ -4,6 +4,7 @@ namespace App\Helpers;
 
 use Carbon\Carbon;
 use App\Models\HolidayDetails;
+use App\Models\WeeklyHoliday;
 use App\Models\LeaveGroupSetting;
 
 trait LeaveCalculator
@@ -44,23 +45,9 @@ trait LeaveCalculator
             return $overlapStart->diffInDays($overlapEnd) + 1;
         }
 
-        // For working_days, exclude weekends and holidays
-        $affectingHolidays = $leaveGroup->publicHolidays->pluck('holiday_id')->toArray();
-
-        // Fetch and expand holiday date ranges into individual dates
-        $holidays = HolidayDetails::whereIn('holiday_id', $affectingHolidays)
-            ->where('status', 1)
-            ->get()
-            ->flatMap(function ($holiday) {
-                return Carbon::parse($holiday->from_date)->toPeriod($holiday->to_date)->toArray();
-            })
-            ->map(fn($date) => $date->format('Y-m-d'))
-            ->toArray();
-
-        // Get weekly holidays (weekends)
-        $weekendDays = $leaveGroup->weeklyHolidays->pluck('day_name')->map(function ($day) {
-            return strtolower($day);
-        })->toArray();
+        // For working_days, exclude globally configured weekends and public holidays
+        $holidays = HolidayDetails::activeDatesBetween($overlapStart, $overlapEnd);
+        $weekendDays = WeeklyHoliday::activeDayNames();
 
         // Count individual days within the fiscal year overlap period
         $leaveDays = 0;
@@ -91,19 +78,10 @@ trait LeaveCalculator
 
         $holidayCount = 0;
         if ($settings && $settings->applicable_on === 'working_days') {
-            $affectingHolidays = $leaveGroup->publicHolidays->pluck('holiday_id')->toArray();
-
-            $holidayDates = HolidayDetails::whereIn('holiday_id', $affectingHolidays)
-                ->where('status', 1)
-                ->get()
-                ->flatMap(function ($holiday) {
-                    return Carbon::parse($holiday->from_date)->toPeriod($holiday->to_date)->toArray();
-                })
-                ->map(fn($date) => $date->format('Y-m-d'))
-                ->toArray();
+            $holidayDates = HolidayDetails::activeDatesBetween($leaveStart, $leaveEnd);
 
             for ($date = $leaveStart->copy(); $date->lte($leaveEnd); $date->addDay()) {
-                if (in_array($date->format('Y-m-d'), $holidayDates)) {
+                if (in_array($date->format('Y-m-d'), $holidayDates, true)) {
                     $holidayCount++;
                 }
             }

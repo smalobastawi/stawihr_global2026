@@ -44,7 +44,7 @@ class Kernel extends HttpKernel
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \Inspector\Laravel\Middleware\WebRequestMonitoring::class,
             \App\Http\Middleware\EnsureUserHasCompany::class,
-            'active.company' => \App\Http\Middleware\SetActiveCompany::class,
+            \App\Http\Middleware\SetActiveCompany::class,
             \App\Http\Middleware\PreventSearchIndexing::class,
 
         ],
@@ -84,5 +84,6 @@ class Kernel extends HttpKernel
         //'approvals.intercept' => \App\Http\Middleware\ApprovalsInterceptMiddleware::class,
         'training.invitation.response' => \App\Http\Middleware\ValidateTrainingInvitation::class,
         'google.tokens' => \App\Http\Middleware\CheckGoogleTokens::class,
+        'active.company' => \App\Http\Middleware\SetActiveCompany::class,
     ];
 }

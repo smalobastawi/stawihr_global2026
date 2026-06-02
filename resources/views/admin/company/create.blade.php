@@ -22,7 +22,7 @@
                     <div class="panel-heading"><i class="mdi mdi-plus fa-fw"></i>@yield('title')</div>
                     <div class="panel-wrapper collapse in" aria-expanded="true">
                         <div class="panel-body">
-                            <form method="POST" action="{{ route('company.store') }}" class="form-horizontal">
+                            <form method="POST" action="{{ route('company.store') }}" class="form-horizontal" enctype="multipart/form-data">
 @csrf
                             <div class="form-body">
                                 <div class="row">
@@ -73,6 +73,14 @@
                                             <option value="active">Active</option>
                                             <option value="inactive">Inactive</option>
                                         </select>
+                                    </div>
+                                </div>
+
+                                <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-6">
+                                        <label class="control-label">Company Logo</label>
+                                        <input type="file" class="form-control" name="logo" accept="image/*">
+                                        <small class="text-muted">Upload a logo for payslips and reports (PNG, JPG, GIF, WEBP, SVG — max 2MB)</small>
                                     </div>
                                 </div>
 

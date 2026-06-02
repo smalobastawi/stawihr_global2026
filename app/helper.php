@@ -118,19 +118,19 @@ if (!function_exists('permissionCheck')) {
 if (!function_exists('getActiveCompaniesForSuperAdmin')) {
     function getActiveCompaniesForSuperAdmin()
     {
-        $user = Auth::user();
-        if (!$user || !$user->hasRole('SuperAdmin')) {
-            return ['activeCompanies' => [], 'currentCompany' => null];
+        $selectedCompanyId = \App\Support\CompanyContext::sessionCompanyId();
+        $currentCompany = $selectedCompanyId
+            ? \App\Models\Company::find($selectedCompanyId)
+            : null;
+
+        if (!\App\Support\CompanyContext::canSwitchCompanies()) {
+            return ['activeCompanies' => collect(), 'currentCompany' => $currentCompany];
         }
 
-        $activeCompanies = \App\Models\Company::where('status', 'active')->get();
-        $currentCompanyId = session('active_company_id');
-        $currentCompany = null;
-        if ($currentCompanyId) {
-            $currentCompany = \App\Models\Company::find($currentCompanyId);
-        }
-
-        return ['activeCompanies' => $activeCompanies, 'currentCompany' => $currentCompany];
+        return [
+            'activeCompanies' => \App\Support\CompanyContext::switchableCompanies(),
+            'currentCompany' => $currentCompany,
+        ];
     }
 }
 
@@ -358,6 +358,97 @@ if (!function_exists('helper_companyInfo')) {
     {
         $settings = CompanySettings::orderBy('id', 'desc')->first();
         return $settings;
+    }
+}
+
+if (!function_exists('getActiveCompany')) {
+    function getActiveCompany()
+    {
+        if ($company = \App\Support\CompanyContext::activeCompany()) {
+            return $company;
+        }
+
+        if (\App\Support\CompanyContext::isAllCompaniesMode()) {
+            return null;
+        }
+
+        $permittedIds = \App\Support\CompanyContext::permittedCompanyIds();
+        if (count($permittedIds) === 1) {
+            return \App\Models\Company::find($permittedIds[0]);
+        }
+
+        return \App\Models\Company::where('status', 'active')->orderBy('id')->first();
+    }
+}
+
+if (!function_exists('companyLogoUrl')) {
+    function companyLogoUrl($company = null)
+    {
+        $company = $company ?? getActiveCompany();
+
+        if ($company?->logo && file_exists(public_path('uploads/company_logos/' . $company->logo))) {
+            return asset('uploads/company_logos/' . $company->logo);
+        }
+
+        $front = getFrontData();
+        if ($front?->logo) {
+            return asset('storage/uploads/front/' . $front->logo);
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('companyLogoPath')) {
+    function companyLogoPath($company = null)
+    {
+        $company = $company ?? getActiveCompany();
+
+        if ($company?->logo && file_exists(public_path('uploads/company_logos/' . $company->logo))) {
+            return public_path('uploads/company_logos/' . $company->logo);
+        }
+
+        $front = getFrontData();
+        if ($front?->logo && file_exists(storage_path('app/public/uploads/front/' . $front->logo))) {
+            return storage_path('app/public/uploads/front/' . $front->logo);
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('companyDisplayName')) {
+    function companyDisplayName($company = null)
+    {
+        $company = $company ?? getActiveCompany();
+        $settings = helper_companyInfo();
+
+        if ($company?->name) {
+            return $company->name;
+        }
+
+        return $settings?->legal_Name ?? config('app.name', 'STAWIHR');
+    }
+}
+
+if (!function_exists('companyDisplayAddress')) {
+    function companyDisplayAddress()
+    {
+        return helper_companyInfo()?->legal_Address;
+    }
+}
+
+if (!function_exists('companyDisplayEmail')) {
+    function companyDisplayEmail()
+    {
+        return helper_companyInfo()?->official_email;
+    }
+}
+
+if (!function_exists('companyDisplayPhone')) {
+    function companyDisplayPhone()
+    {
+        return helper_companyInfo()?->official_contact_number;
     }
 }
 

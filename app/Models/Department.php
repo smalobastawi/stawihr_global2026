@@ -11,10 +11,8 @@ use App\Traits\BelongsToCompany;
 
 class Department extends Model
 {
-    //use BelongsToCompany;
-
     use SoftDeletes;
-    //use BelongsToCompany;
+    use BelongsToCompany;
 
     protected $table = 'department';
     protected $primaryKey = 'department_id';

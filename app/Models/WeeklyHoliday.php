@@ -16,6 +16,20 @@ class WeeklyHoliday extends Model
         'week_holiday_id', 'day_name','status'
     ];
 
+    /**
+     * Active weekly non-working days configured under Leave Management > Weekly Holiday.
+     */
+    public static function activeDayNames(): array
+    {
+        return static::query()
+            ->where('status', 1)
+            ->pluck('day_name')
+            ->map(fn ($day) => strtolower($day))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function departments()
     {
         return $this->belongsToMany(Department::class, 'weekly_holiday_departments', 'holiday_id', 'department_id');

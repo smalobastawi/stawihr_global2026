@@ -32,19 +32,6 @@ class UserSeeder extends Seeder
                 'first_name' => 'Super',
                 'last_name' => 'Admin'
             ],
-            [
-                'user_name' => 'SuperAdmin',
-                'email' => 'admin@testrunner.co.ke',
-                'password' => bcrypt('94opAsT@UM'),
-                'remember_token' => Str::random(10),
-                'status' => 1,
-                'created_by' => 1,
-                'updated_by' => 1,
-                'created_at' => $time,
-                'updated_at' => $time,
-                'first_name' => 'Super',
-                'last_name' => 'Admin'
-            ],
         ]);
     }
 }

@@ -268,12 +268,15 @@
         <div class="header">
             <div class="logo-section">
                 <div class="logo-placeholder">
-                    <img src="{{ asset('storage/uploads/front/' . getFrontData()->logo) }}" alt=""
-                        class="logo-light" style="height:80px; width: auto; max-width: 200px;" />
+                    @if(companyLogoUrl())
+                        <img src="{{ companyLogoUrl() }}" alt="{{ companyDisplayName() }}"
+                            class="logo-light" style="height:80px; width: auto; max-width: 200px;" />
+                    @endif
                 </div>
             </div>
             <div class="payslip-title">
                 <h1>Payslip</h1>
+                <div class="company-name">{{ companyDisplayName() }}</div>
                 <div class="period">Pay Period: {{ $payrollRecord->payrollPeriod->name ?? 'N/A' }}</div>
             </div>
         </div>
@@ -285,19 +288,19 @@
                     <div class="details-title">Company Details</div>
                     <div class="detail-item">
                         <span class="detail-label">Company:</span>
-                        <span class="detail-value">{{ config('app.name', 'STAWIHR') }}</span>
+                        <span class="detail-value">{{ companyDisplayName() }}</span>
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Address:</span>
-                        <span class="detail-value">P.O. Box 1234-00100, Nairobi, Kenya</span>
+                        <span class="detail-value">{{ companyDisplayAddress() ?? 'N/A' }}</span>
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Tel:</span>
-                        <span class="detail-value">_________________</span>
+                        <span class="detail-value">{{ companyDisplayPhone() ?? 'N/A' }}</span>
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Email:</span>
-                        <span class="detail-value">info@stawihr.org</span>
+                        <span class="detail-value">{{ companyDisplayEmail() ?? 'N/A' }}</span>
                     </div>
                 </div>
                 <div class="employee-details">

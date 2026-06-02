@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Http\Requests\StoreCompanyRequest;
 use App\Http\Requests\UpdateCompanyRequest;
+use App\Support\CompanyContext;
 use Illuminate\Http\Request;
 
 class CompanyController extends Controller
@@ -32,7 +33,10 @@ class CompanyController extends Controller
      */
     public function store(StoreCompanyRequest $request)
     {
-        $company = Company::create($request->validated());
+        $data = $request->validated();
+        $data['logo'] = $this->handleLogoUpload($request);
+
+        Company::create($data);
 
         return redirect()->route('company.index')->with('success', 'Company created successfully.');
     }
@@ -62,7 +66,14 @@ class CompanyController extends Controller
      */
     public function update(UpdateCompanyRequest $request, Company $company)
     {
-        $company->update($request->validated());
+        $data = $request->validated();
+        $logo = $this->handleLogoUpload($request, $company);
+
+        if ($logo !== null) {
+            $data['logo'] = $logo;
+        }
+
+        $company->update($data);
 
         return redirect()->route('company.index')->with('success', 'Company updated successfully.');
     }
@@ -118,18 +129,63 @@ class CompanyController extends Controller
         ]);
 
         $user = auth()->user();
-        if (!$user->hasRole('SuperAdmin')) {
+        if (!CompanyContext::canSwitchCompanies()) {
             abort(403, 'Unauthorized');
         }
 
-        if ($request->company_id) {
-            session(['active_company_id' => $request->company_id]);
+        $permittedCompanyIds = CompanyContext::permittedCompanyIds();
+
+        // Read from the raw POST bag so middleware/request merges cannot override the selection.
+        $submittedCompanyId = $request->request->has('company_id')
+            ? $request->request->get('company_id')
+            : null;
+
+        if ($submittedCompanyId !== null && $submittedCompanyId !== '') {
+            $companyId = (int) $submittedCompanyId;
+
+            if (!in_array($companyId, $permittedCompanyIds, true)) {
+                abort(403, 'You do not have access to this company.');
+            }
+
+            $request->session()->put([
+                'active_company_id' => $companyId,
+                'active_company_name' => Company::find($companyId)?->name,
+            ]);
             $message = 'Company switched successfully.';
         } else {
-            session()->forget('active_company_id');
-            $message = 'Switched to SuperAdmin mode - accessing all companies.';
+            $request->session()->forget(['active_company_id', 'active_company_name']);
+            $message = CompanyContext::isSuperAdmin()
+                ? 'Switched to SuperAdmin mode - accessing all companies.'
+                : 'Switched to all permitted companies.';
         }
 
-        return redirect()->back()->with('success', $message);
+        $request->session()->save();
+
+        return redirect()
+            ->route('home.dashboard')
+            ->with('success', $message);
+    }
+
+    private function handleLogoUpload(Request $request, ?Company $company = null): ?string
+    {
+        if (!$request->hasFile('logo')) {
+            return $company?->logo;
+        }
+
+        $logo = $request->file('logo');
+        $logoName = md5(time() . '_' . $logo->getClientOriginalName()) . '.' . $logo->getClientOriginalExtension();
+        $uploadDir = public_path('uploads/company_logos');
+
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        if ($company?->logo && file_exists($uploadDir . DIRECTORY_SEPARATOR . $company->logo)) {
+            unlink($uploadDir . DIRECTORY_SEPARATOR . $company->logo);
+        }
+
+        $logo->move($uploadDir, $logoName);
+
+        return $logoName;
     }
 }

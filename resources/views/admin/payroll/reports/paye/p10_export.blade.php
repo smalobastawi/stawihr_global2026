@@ -25,6 +25,7 @@
     }
 </style>
 <body>
+    @include('admin.partials.company_report_header')
     <h3>P10 Monthly PAYE Return - {{ $dataExport['period']->name ?? '' }}</h3>
     <p>
         Period: {{ $dataExport['period']->start_date->format('d M Y') ?? '' }}

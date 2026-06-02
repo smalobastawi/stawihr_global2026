@@ -6,6 +6,7 @@
 				<th>@lang('employee.name')</th>
 				<th>Work Email</th>
 				<th>@lang('employee.department')</th>
+				<th>Company</th>
 
 				<th>Payroll No</th>
 				<th>Supervisor</th>
@@ -47,6 +48,11 @@
                         @if (isset($value->designation->designation_name)) {!! $value->designation->designation_name!!} @endif
 					</span>
 
+                </td>
+                <td>
+                    <span class="font-medium">
+                        {{ $value->company->name ?? 'N/A' }}
+                    </span>
                 </td>
                 <td>
                     <span class="font-medium">

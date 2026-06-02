@@ -33,7 +33,7 @@ class Employee extends Model
     use SoftDeletes;
     use  LogsActivity;
     use Notifiable;
-    //use BelongsToCompany;
+    use BelongsToCompany;
     //use   WithlocationPermissions; comented out because of the error in the trait. To be replaced with regional mapping. 
     //use WithSupervisorPermissions;
     protected $table = 'employee';
@@ -502,35 +502,19 @@ class Employee extends Model
             return 0; // No leave settings found
         }
 
-        // Get public holidays linked to the leave group
-        $affectingHolidays = $leaveGroup->publicHolidays->pluck('holiday_id')->toArray();
-        $holidays = HolidayDetails::whereIn('holiday_id', $affectingHolidays)
-            ->where('status', 1)
-            ->get()
-            ->flatMap(function ($holiday) {
-                return Carbon::parse($holiday->from_date)->toPeriod($holiday->to_date)->toArray();
-            })
-            ->map(fn($date) => $date->format('Y-m-d'))
-            ->toArray();
+        if ($settings->applicable_on === 'calendar_days') {
+            return $start->diffInDays($end) + 1;
+        }
 
-        // Get weekends for this leave group from WeeklyHoliday model
-        $weekendDays = $leaveGroup->weeklyHolidays->pluck('day_name')->map(function ($day) {
-            return strtolower($day); // Convert to lowercase for comparison
-        })->toArray();
+        $holidays = HolidayDetails::activeDatesBetween($start, $end);
+        $weekendDays = WeeklyHoliday::activeDayNames();
 
         $leaveDays = 0;
         for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
-            $dayName = strtolower($date->format('l')); // Get day name (e.g., 'saturday')
+            $dayName = strtolower($date->format('l'));
 
-            if ($settings->applicable_on === 'calendar_days') {
-                // All days are counted
+            if (!in_array($date->format('Y-m-d'), $holidays, true) && !in_array($dayName, $weekendDays, true)) {
                 $leaveDays++;
-            } else {
-                // Exclude weekends and public holidays
-
-                if (!in_array($date->format('Y-m-d'), $holidays) && !in_array($dayName, $weekendDays)) {
-                    $leaveDays++;
-                }
             }
         }
 

@@ -114,6 +114,7 @@ class EmployeeController extends Controller
             'workLocation',
             'supervisor',
             'hourlySalaries',
+            'company',
         ])->where('status', 1);
 
 
@@ -121,11 +122,11 @@ class EmployeeController extends Controller
             if ($request->role_id != '') {
                 $results = Employee::whereHas('userName', function ($q) use ($request) {
                     $q->with('roles')->where('role_id', $request->role_id);
-                })->where('status', 1)->with('department', 'designation', 'workLocation', 'supervisor', 'hourlySalaries')->orderBy('employee_id', 'DESC');
+                })->where('status', 1)->with('department', 'designation', 'workLocation', 'supervisor', 'hourlySalaries', 'company')->orderBy('employee_id', 'DESC');
             } else {
                 $results = Employee::with(['userName' => function ($q) use ($request) {
                     $q->with('roles')->where('role_id', $request->role_id);
-                }, 'department', 'designation', 'workLocation', 'supervisor', 'hourlySalaries'])->where('status', 1)->orderBy('employee_id', 'DESC');
+                }, 'department', 'designation', 'workLocation', 'supervisor', 'hourlySalaries', 'company'])->where('status', 1)->orderBy('employee_id', 'DESC');
             }
 
             if ($request->department_id != '') {
@@ -200,6 +201,7 @@ class EmployeeController extends Controller
             'workLocation',
             'supervisor',
             'hourlySalaries',
+            'company',
         ])->where('status', '!=', GeneralStatus::ACTIVE);
 
 
@@ -207,11 +209,11 @@ class EmployeeController extends Controller
             if ($request->role_id != '') {
                 $results = Employee::whereHas('userName', function ($q) use ($request) {
                     $q->with('roles')->where('role_id', $request->role_id);
-                })->where('status', 1)->with('department', 'designation', 'workLocation', 'supervisor', 'hourlySalaries')->orderBy('employee_id', 'DESC');
+                })->where('status', 1)->with('department', 'designation', 'workLocation', 'supervisor', 'hourlySalaries', 'company')->orderBy('employee_id', 'DESC');
             } else {
                 $results = Employee::with(['userName' => function ($q) use ($request) {
                     $q->with('roles')->where('role_id', $request->role_id);
-                }, 'department', 'designation', 'workLocation', 'supervisor', 'hourlySalaries'])->where('status', 1)->orderBy('employee_id', 'DESC');
+                }, 'department', 'designation', 'workLocation', 'supervisor', 'hourlySalaries', 'company'])->where('status', 1)->orderBy('employee_id', 'DESC');
             }
 
             if ($request->department_id != '') {
@@ -621,7 +623,7 @@ class EmployeeController extends Controller
         $fiscal_end_date = $currentFinancialYear->end_date;
 
         $employeeInfo = Employee::where('employee.employee_id', $id)
-            ->with(['workLocation', 'case', 'employeeSection', 'employeeGroup', 'employeeType', 'workShifts', 'employeeDocuments', 'contractDetails', 'projectAllocations.project', 'payrollEarnings'])
+            ->with(['workLocation', 'case', 'employeeSection', 'employeeGroup', 'employeeType', 'workShifts', 'employeeDocuments', 'contractDetails', 'projectAllocations.project', 'payrollEarnings', 'company', 'department', 'designation', 'supervisor'])
             ->first();
 
 

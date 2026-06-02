@@ -444,12 +444,18 @@
                                                      class="fa fa-circle-o"></i>Leavers report</a>
                                          </li>
                                      @endcan
-                                     @can('employee.masterRoll')
-                                         <li class="">
-                                             <a class="hideMenu" href="{{ route('employee.masterRoll') }}"> <i
-                                                     class="fa fa-circle-o"></i>Master Roll</a>
-                                         </li>
-                                     @endcan
+                                    @can('employee.masterRoll')
+                                        <li class="">
+                                            <a class="hideMenu" href="{{ route('employee.masterRoll') }}"> <i
+                                                    class="fa fa-circle-o"></i>Master Roll</a>
+                                        </li>
+                                    @endcan
+                                    @canany(['employee.turnoverReport', 'employee.joinersReport'])
+                                        <li class="">
+                                            <a class="hideMenu" href="{{ route('employee.turnoverReport') }}"> <i
+                                                    class="fa fa-circle-o"></i>Employee Turnover Report</a>
+                                        </li>
+                                    @endcanany
                                  </ul>
                              </li>
                          @endcan

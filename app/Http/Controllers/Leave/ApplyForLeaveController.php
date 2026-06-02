@@ -119,18 +119,8 @@ class ApplyForLeaveController extends Controller
         $leaveTypeId = $request->leave_type_id;
         $application_from_date = dateConvertFormtoDB($request->application_from_date);
         $application_to_date = dateConvertFormtoDB($request->application_to_date);
-        $employeeId = $request->employee_id;
 
-        if (empty($leaveTypeId) || empty($application_from_date) || empty($application_to_date)) {
-            return 0;
-        }
-
-        return $this->leaveRepository->calculateTotalNumberOfLeaveDays(
-            $application_from_date,
-            $application_to_date,
-            $leaveTypeId,
-            $employeeId
-        );
+        return $this->leaveRepository->calculateTotalNumberOfLeaveDays($application_from_date, $application_to_date, $leaveTypeId);
     }
 
 

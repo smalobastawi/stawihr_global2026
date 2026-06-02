@@ -52,9 +52,6 @@
             @can('disciplinary.cases.index')
                 <li><a data-toggle="tab" href="#employee_cases">Cases</a></li>
             @endcan
-            @can('vehicle.assignment.employee_history')
-                <li><a data-toggle="tab" href="#vehicle_history">Vehicle History</a></li>
-            @endcan
 
         </ul>
 
@@ -817,136 +814,6 @@
 
         </div>
 
-        @can('vehicle.assignment.employee_history')
-        @php
-            $vehicleAssignments = \App\Models\Vehicle\VehicleAssignment::where('employee_id', $employeeInfo->employee_id)
-                ->with(['vehicle', 'assignedBy', 'returnedBy'])
-                ->orderBy('assigned_from', 'desc')
-                ->get();
-            $currentVehicleAssignment = $vehicleAssignments->where('assigned_to', null)->first();
-        @endphp
-        <div id="vehicle_history" class="tab-pane fade in">
-            <section class="content">
-                <div class="row">
-                    <div class="col-xs-12">
-                        <!-- Current Assignment -->
-                        @if($currentVehicleAssignment)
-                        <div class="panel panel-success">
-                            <div class="panel-heading">
-                                <h3 class="panel-title">
-                                    <i class="fa fa-car"></i> @lang('vehicle.currently_assigned_vehicle')
-                                </h3>
-                            </div>
-                            <div class="panel-body">
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <strong>@lang('vehicle.registration_number'):</strong><br>
-                                        <a href="{{ route('vehicle.show', $currentVehicleAssignment->vehicle_id) }}">
-                                            {{ $currentVehicleAssignment->vehicle->registration_number }}
-                                        </a>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <strong>@lang('vehicle.vehicle'):</strong><br>
-                                        {{ $currentVehicleAssignment->vehicle->make }} {{ $currentVehicleAssignment->vehicle->model }}
-                                    </div>
-                                    <div class="col-md-3">
-                                        <strong>@lang('vehicle.assigned_since'):</strong><br>
-                                        {{ $currentVehicleAssignment->assigned_from->format('d/m/Y') }}
-                                    </div>
-                                    <div class="col-md-3">
-                                        <strong>@lang('vehicle.duration'):</strong><br>
-                                        {{ $currentVehicleAssignment->durationInDays() }} @lang('vehicle.days')
-                                    </div>
-                                </div>
-                                @if($currentVehicleAssignment->assignment_reason)
-                                <div class="row m-t-10">
-                                    <div class="col-md-12">
-                                        <strong>@lang('vehicle.assignment_reason'):</strong> {{ $currentVehicleAssignment->assignment_reason }}
-                                    </div>
-                                </div>
-                                @endif
-                            </div>
-                        </div>
-                        @else
-                        <div class="panel panel-warning">
-                            <div class="panel-heading">
-                                <h3 class="panel-title">
-                                    <i class="fa fa-exclamation-triangle"></i> @lang('vehicle.no_current_assignment')
-                                </h3>
-                            </div>
-                            <div class="panel-body">
-                                @lang('vehicle.employee_not_assigned_to_any_vehicle')
-                            </div>
-                        </div>
-                        @endif
-
-                        <!-- Assignment History -->
-                        <div class="panel panel-info">
-                            <div class="panel-heading">
-                                <h3 class="panel-title">
-                                    <i class="fa fa-history"></i> @lang('vehicle.assignment_history')
-                                    <span class="badge bg-primary">{{ $vehicleAssignments->count() }} @lang('vehicle.assignments')</span>
-                                </h3>
-                            </div>
-                            <div class="panel-body">
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-hover">
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>@lang('vehicle.registration_number')</th>
-                                                <th>@lang('vehicle.vehicle')</th>
-                                                <th>@lang('vehicle.assigned_from')</th>
-                                                <th>@lang('vehicle.assigned_to')</th>
-                                                <th>@lang('vehicle.duration')</th>
-                                                <th>@lang('vehicle.assignment_reason')</th>
-                                                <th>@lang('vehicle.return_reason')</th>
-                                                <th>@lang('vehicle.assigned_by')</th>
-                                                <th>@lang('vehicle.returned_by')</th>
-                                                <th>@lang('common.status')</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @forelse($vehicleAssignments as $index => $assignment)
-                                                <tr class="{{ $assignment->isCurrent() ? 'success' : '' }}">
-                                                    <td>{{ $index + 1 }}</td>
-                                                    <td>
-                                                        <a href="{{ route('vehicle.show', $assignment->vehicle_id) }}">
-                                                            {{ $assignment->vehicle->registration_number }}
-                                                        </a>
-                                                    </td>
-                                                    <td>{{ $assignment->vehicle->make }} {{ $assignment->vehicle->model }}</td>
-                                                    <td>{{ $assignment->assigned_from->format('d/m/Y') }}</td>
-                                                    <td>{{ $assignment->assigned_to ? $assignment->assigned_to->format('d/m/Y') : '-' }}</td>
-                                                    <td>{{ $assignment->durationInDays() }} @lang('vehicle.days')</td>
-                                                    <td>{{ $assignment->assignment_reason ?? '-' }}</td>
-                                                    <td>{{ $assignment->return_reason ?? '-' }}</td>
-                                                    <td>{{ $assignment->assignedBy->name ?? 'N/A' }}</td>
-                                                    <td>{{ $assignment->returnedBy->name ?? '-' }}</td>
-                                                    <td>
-                                                        @if($assignment->isCurrent())
-                                                            <span class="label label-success">@lang('vehicle.current_assignment')</span>
-                                                        @else
-                                                            <span class="label label-default">@lang('vehicle.past_assignment')</span>
-                                                        @endif
-                                                    </td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="11" class="text-center">@lang('vehicle.no_assignments_found')</td>
-                                                </tr>
-                                            @endforelse
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-        @endcan
-
         <div class="row tab-pane fade in active" id="profile">
             <div class="col-sm-12">
                 <div class="panel panel-info">
@@ -1173,6 +1040,13 @@
                                         </div>
                                         <div class="row">
                                             <div class="personal_info">
+                                                <div class="item">
+                                                    <div class="col-xs-2 col-sm-2 col-md-3">Company</div>
+                                                    <div class="col-xs-10 col-sm-10 col-md-9">
+                                                        :&nbsp;&nbsp;&nbsp;&nbsp;{{ $employeeInfo->company->name ?? 'N/A' }}
+                                                    </div>
+                                                </div>
+
                                                 <div class="item">
                                                     <div class="col-xs-2 col-sm-2 col-md-3">Department/Group</div>
                                                     <div class="col-xs-10 col-sm-10 col-md-9">

@@ -36,11 +36,6 @@
             if ($employeeInfo && $employeeInfo->employeeDetails) {
                 $employeeInfo = $employeeInfo->employeeDetails;
             }
-
-            // For SuperAdmin, fetch active companies and current company
-            $companyData = getActiveCompaniesForSuperAdmin();
-            $activeCompanies = $companyData['activeCompanies'];
-            $currentCompany = $companyData['currentCompany'];
         @endphp
         <div>
             <!-- ============================================================== -->

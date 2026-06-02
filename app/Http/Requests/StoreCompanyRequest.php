@@ -33,6 +33,7 @@ class StoreCompanyRequest extends FormRequest
             'employer_number' => 'nullable|string|max:50',
             'nita_registration_number' => 'nullable|string|max:50',
             'ecitizen_identifier' => 'nullable|string|max:50',
+            'logo' => 'nullable|image|mimes:jpeg,jpg,png,gif,webp,svg|max:2048',
         ];
     }
 }

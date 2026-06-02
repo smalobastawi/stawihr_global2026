@@ -35,6 +35,17 @@
                                             <td>{{ $company->name }}</td>
                                         </tr>
                                         <tr>
+                                            <th>Logo</th>
+                                            <td>
+                                                @if($company->logo)
+                                                    <img src="{{ companyLogoUrl($company) }}" alt="{{ $company->name }} logo"
+                                                        style="max-height: 80px; max-width: 200px; object-fit: contain;">
+                                                @else
+                                                    N/A
+                                                @endif
+                                            </td>
+                                        </tr>
+                                        <tr>
                                             <th>Domain</th>
                                             <td>{{ $company->domain }}</td>
                                         </tr>

@@ -28,6 +28,8 @@
                 <div class="panel-heading"><i class="mdi mdi-table fa-fw"></i> PAYE Report - {{ $period->name }}</div>
                 <div class="panel-wrapper collapse in" aria-expanded="true">
                     <div class="panel-body">
+                        @include('admin.partials.company_report_header')
+
                         <div class="row m-b-20">
                             <div class="col-md-4">
                                 <p><strong>Period:</strong> {{ $period->name }}</p>

@@ -185,6 +185,7 @@ class MenuSeeder extends Seeder
                 ['parent_id' => 85, 'action' => NULL, 'name' => 'Leavers Report', 'menu_url' => 'employee.leaversReport', 'module_id' => '2', 'status' => '1'],
                 ['parent_id' => 85, 'action' => NULL, 'name' => 'Joiners Report', 'menu_url' => 'employee.joinersReport', 'module_id' => '2', 'status' => '1'],
                 ['parent_id' => 85, 'action' => NULL, 'name' => 'Movement Report', 'menu_url' => 'employee.movementReport', 'module_id' => '2', 'status' => '1'],
+                ['parent_id' => 85, 'action' => NULL, 'name' => 'Employee Turnover Report', 'menu_url' => 'employee.turnoverReport', 'module_id' => '2', 'status' => '1'],
 
                 //manual leave upload
                 ['parent_id' => 0, 'action' => NULL, 'name' => 'Manual Upload', 'menu_url' => 'leaveManagement.manualUpload', 'module_id' => '3', 'status' => '1'],

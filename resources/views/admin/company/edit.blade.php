@@ -22,7 +22,7 @@
                     <div class="panel-heading"><i class="mdi mdi-pencil fa-fw"></i>@yield('title')</div>
                     <div class="panel-wrapper collapse in" aria-expanded="true">
                         <div class="panel-body">
-                            <form method="POST" action="{{ route('company.update', $company) }}" class="form-horizontal">
+                            <form method="POST" action="{{ route('company.update', $company) }}" class="form-horizontal" enctype="multipart/form-data">
 @csrf
 @method('PUT')
                             <div class="form-body">
@@ -80,6 +80,20 @@
                                                 {{ old('status', $company->status) == 'inactive' ? 'selected' : '' }}>
                                                 Inactive</option>
                                         </select>
+                                    </div>
+                                </div>
+
+                                <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-6">
+                                        <label class="control-label">Company Logo</label>
+                                        @if($company->logo)
+                                            <div style="margin-bottom: 10px;">
+                                                <img src="{{ companyLogoUrl($company) }}" alt="{{ $company->name }} logo"
+                                                    style="max-height: 80px; max-width: 200px; object-fit: contain; border: 1px solid #eee; padding: 5px;">
+                                            </div>
+                                        @endif
+                                        <input type="file" class="form-control" name="logo" accept="image/*">
+                                        <small class="text-muted">Upload a logo for payslips and reports (PNG, JPG, GIF, WEBP, SVG — max 2MB)</small>
                                     </div>
                                 </div>
 

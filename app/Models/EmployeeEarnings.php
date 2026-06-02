@@ -20,9 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EmployeeEarnings extends Model
 {
-    //use BelongsToCompany;
-
-    use HasFactory,  LogsActivity,  HasApprovalWorkflow, ProvidesApprovalDetails;
+    use HasFactory, LogsActivity, HasApprovalWorkflow, ProvidesApprovalDetails;
+    use BelongsToCompany;
 
     protected $table = 'employee_earnings';
 

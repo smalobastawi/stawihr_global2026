@@ -27,14 +27,16 @@ class ProcessPayrollJob implements ShouldQueue
     protected $userId;
     protected $userEmail;
     protected $recalculateExisting;
+    protected $companyIds;
 
-    public function __construct($periodId, $batchId, $userId, $userEmail, $recalculateExisting = false)
+    public function __construct($periodId, $batchId, $userId, $userEmail, $recalculateExisting = false, $companyIds = null)
     {
         $this->periodId = $periodId;
         $this->batchId = $batchId;
         $this->userId = $userId;
         $this->userEmail = $userEmail;
         $this->recalculateExisting = $recalculateExisting;
+        $this->companyIds = $companyIds;
     }
 
     public function handle(KenyanPayrollCalculationService $payrollCalculationService)
@@ -46,13 +48,18 @@ class ProcessPayrollJob implements ShouldQueue
             $errorCount = 0;
             $processed = 0;
 
-            // Get active employees with payroll
-            $employees = Employee::where('status', GeneralStatus::ACTIVE)
+            // Get active employees with payroll, optionally filtered by company
+            $employeesQuery = Employee::where('status', GeneralStatus::ACTIVE)
                 ->whereHas('employeePayroll', function ($query) {
                     $query->where('status', GeneralStatus::ACTIVE);
                 })
-                ->with('employeePayroll')
-                ->get();
+                ->with('employeePayroll');
+
+            if (!empty($this->companyIds)) {
+                $employeesQuery->whereIn('company_id', $this->companyIds);
+            }
+
+            $employees = $employeesQuery->get();
 
             $totalEmployees = $employees->count();
 

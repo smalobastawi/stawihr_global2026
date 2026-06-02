@@ -578,7 +578,7 @@ class EssIndexController extends Controller
             ->get();
 
         // Get pending leave applications where current user is the supervisor
-        $pendingLeaveApprovals = [];
+        $pendingLeaveApprovals = collect();
         $loggedInEmployee = employeeInfo();
         if ($loggedInEmployee) {
             $supervisorId = $loggedInEmployee->employee_id;

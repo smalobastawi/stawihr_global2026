@@ -11,9 +11,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Designation extends Model
 {
-    //use BelongsToCompany;
-
     use softDeletes;
+    use BelongsToCompany;
     protected $table = 'designation';
     protected $primaryKey = 'designation_id';
 

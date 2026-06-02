@@ -883,6 +883,10 @@ class GroupedRoutePermissions
                         'description' => 'View Employee Leavers Report',
                     ],
                     [
+                        'name' => 'employee.turnoverReport',
+                        'description' => 'View Employee Turnover Report',
+                    ],
+                    [
                         'name' => 'employee.movementReport',
                         'description' => 'View Employee Movement Report',
                     ],

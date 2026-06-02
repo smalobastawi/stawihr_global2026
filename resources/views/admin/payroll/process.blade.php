@@ -68,6 +68,31 @@
                     </div>
 
                     <div class="form-group">
+                        <label class="col-md-3 control-label">Companies</label>
+                        <div class="col-md-9">
+                            <div class="">
+                                <label>
+                                    <input type="checkbox" name="process_all_companies" id="process_all_companies" value="1" checked>
+                                    Process all companies
+                                </label>
+                            </div>
+                            <select name="company_ids[]" id="company_ids" class="form-control select2" multiple
+                                disabled style="width: 100%;">
+                                @foreach ($companies as $company)
+                                    <option value="{{ $company->id }}">{{ $company->name }}</option>
+                                @endforeach
+                            </select>
+                            <p class="help-block text-muted">
+                                Uncheck "Process all companies" to run payroll for specific companies only.
+                            </p>
+                            <p class="help-block">
+                                <strong><span id="selectedCompanyEmployeeCount">{{ $totalEmployees }}</span></strong>
+                                employee(s) will be processed based on the current company selection.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
                         <label class="col-md-3 control-label">@lang('payroll.processing_options')</label>
                         <div class="col-md-9">
 
@@ -284,6 +309,7 @@
                                 <thead>
                                     <tr>
                                         <th>@lang('payroll.employee')</th>
+                                        <th>Company</th>
                                         <th>@lang('payroll.payroll_number')</th>
                                         <th>@lang('payroll.department')</th>
                                         <th>@lang('payroll.basic_salary')</th>
@@ -296,10 +322,11 @@
                                 <tbody>
                                     @if ($employees->count() > 0)
                                         @foreach ($employees as $employee)
-                                            <tr>
+                                            <tr data-company-id="{{ $employee->company_id ?? '' }}">
                                                 <td>
                                                     <strong>{{ $employee->fullName() }}</strong><br>
                                                 </td>
+                                                <td>{{ $employee->company->name ?? 'N/A' }}</td>
                                                 <td>{{ $employee->payroll_number }}</td>
                                                 <td>{{ $employee->department->department_name ?? 'N/A' }}</td>
                                                 <td>
@@ -369,11 +396,100 @@
             $(document).ready(function() {
                 var progressInterval;
                 var batchId;
+                var employeeTable = $('#myTable').DataTable();
+
+                $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+                    if (settings.nTable.id !== 'myTable') {
+                        return true;
+                    }
+
+                    var selectedCompanyIds = getSelectedCompanyIds();
+                    if (selectedCompanyIds === null) {
+                        return true;
+                    }
+
+                    var row = employeeTable.row(dataIndex).node();
+                    var companyId = String($(row).data('company-id') || '');
+
+                    return selectedCompanyIds.map(String).includes(companyId);
+                });
+
+                function getSelectedCompanyIds() {
+                    if ($('#process_all_companies').is(':checked')) {
+                        return null;
+                    }
+
+                    return $('#company_ids').val() || [];
+                }
+
+                function filterEmployeeTable() {
+                    employeeTable.draw();
+                    updateSelectedEmployeeCount();
+                }
+
+                function updateSelectedEmployeeCount() {
+                    var count = employeeTable.rows({ search: 'applied' }).count();
+                    $('#selectedCompanyEmployeeCount').text(count);
+                }
+
+                function toggleCompanySelector() {
+                    var processAll = $('#process_all_companies').is(':checked');
+                    var $companySelect = $('#company_ids');
+
+                    if (processAll) {
+                        $companySelect.prop('disabled', true);
+                        if ($.fn.select2) {
+                            $companySelect.val(null).trigger('change');
+                        } else {
+                            $companySelect.val([]);
+                        }
+                    } else {
+                        $companySelect.prop('disabled', false);
+                    }
+
+                    if ($.fn.select2) {
+                        $companySelect.trigger('change.select2');
+                    }
+
+                    filterEmployeeTable();
+                }
+
+                $('#process_all_companies').on('change', toggleCompanySelector);
+                $('#company_ids').on('change', filterEmployeeTable);
+
+                if ($.fn.select2) {
+                    $('#company_ids').select2({
+                        placeholder: 'Select one or more companies',
+                        allowClear: true,
+                        width: '100%'
+                    });
+                }
+
+                toggleCompanySelector();
 
                 $('#payrollForm').on('submit', function(e) {
                     e.preventDefault();
 
+                    if (!$('#process_all_companies').is(':checked')) {
+                        var selectedCompanies = $('#company_ids').val();
+                        if (!selectedCompanies || selectedCompanies.length === 0) {
+                            alert('Please select at least one company or choose "Process all companies".');
+                            return;
+                        }
+                    }
+
+                    var companySelect = $('#company_ids');
+                    companySelect.prop('disabled', false);
+
                     var formData = new FormData(this);
+
+                    if ($('#process_all_companies').is(':checked')) {
+                        formData.delete('company_ids[]');
+                    }
+
+                    if ($('#process_all_companies').is(':checked')) {
+                        companySelect.prop('disabled', true);
+                    }
                     var btn = $('#processBtn');
                     var originalText = btn.html();
 

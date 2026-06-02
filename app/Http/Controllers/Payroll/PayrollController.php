@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Lib\Enumerations\GeneralStatus;
 use App\Lib\Enumerations\PayrollStatus;
 use App\Models\Employee;
+use App\Models\Company;
 use App\Models\Payroll\PayrollPeriod;
 use App\Models\Payroll\PayrollRecord;
 use App\Models\Payroll\EmployeePayroll;
@@ -24,6 +25,7 @@ use App\Models\Department;
 use App\Models\LeaveAdjustment;
 use App\Models\FinancialYear;
 use App\Models\LeaveType;
+use App\Support\CompanyContext;
 
 class PayrollController extends Controller
 {
@@ -114,14 +116,12 @@ class PayrollController extends Controller
             ->orderBy('start_date', 'desc')
             ->get();
 
-        $totalEmployees = Employee::active()->count();
-        $employees = Employee::where('status', GeneralStatus::ACTIVE)
-            ->whereHas('employeePayroll', function ($query) {
-                $query->where('status', GeneralStatus::ACTIVE);
-            })
-            ->with(['employeePayroll', 'currentPayrollRecord'])
-            //->where('employee_id', 74)
+        $companies = $this->getPayrollCompanies();
+        $employees = $this->employeesReadyForPayrollQuery()
+            ->with(['employeePayroll', 'currentPayrollRecord', 'company'])
             ->get();
+
+        $totalEmployees = $employees->count();
 
         // Calculate period statistics
         $periodStats = null;
@@ -135,7 +135,15 @@ class PayrollController extends Controller
             $payrollStats = $this->calculatePayrollStatusStatistics($currentPeriod);
         }
 
-        return view('admin.payroll.process', compact('currentPeriod', 'periods', 'employees', 'totalEmployees', 'periodStats', 'payrollStats'));
+        return view('admin.payroll.process', compact(
+            'currentPeriod',
+            'periods',
+            'employees',
+            'totalEmployees',
+            'periodStats',
+            'payrollStats',
+            'companies'
+        ));
     }
 
     /**
@@ -144,13 +152,24 @@ class PayrollController extends Controller
     public function processPayroll(Request $request)
     {
         $request->validate([
-            'period_id' => 'required|exists:payroll_periods,id'
+            'period_id' => 'required|exists:payroll_periods,id',
+            'process_all_companies' => 'nullable|boolean',
+            'company_ids' => 'nullable|array',
+            'company_ids.*' => 'integer|exists:companies,id',
         ]);
 
         $period = PayrollPeriod::findOrFail($request->period_id);
 
         if (!$period->canBeProcessed()) {
             return redirect()->back()->with('error', 'This payroll period cannot be processed.');
+        }
+
+        $companyIds = $this->resolvePayrollCompanyIds($request);
+        if ($companyIds === false) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please select at least one company to process payroll for.',
+            ], 422);
         }
 
         try {
@@ -163,12 +182,17 @@ class PayrollController extends Controller
                 $batchId,
                 auth()->id(),
                 auth()->user()->email,
-                $request->has('recalculate_existing')
+                $request->has('recalculate_existing'),
+                $companyIds
             );
+
+            $companyMessage = $companyIds === null
+                ? 'all companies'
+                : count($companyIds) . ' selected ' . (count($companyIds) === 1 ? 'company' : 'companies');
 
             return response()->json([
                 'success' => true,
-                'message' => 'Payroll processing started in background. You will receive an email notification when complete.',
+                'message' => 'Payroll processing started in background for ' . $companyMessage . '. You will receive an email notification when complete.',
                 'batch_id' => $batchId
             ]);
         } catch (Exception $e) {
@@ -950,5 +974,55 @@ class PayrollController extends Controller
             'success' => false,
             'message' => 'Progress not found'
         ], 404);
+    }
+
+    private function getPayrollCompanies()
+    {
+        $companies = CompanyContext::switchableCompanies();
+
+        if ($companies->isNotEmpty()) {
+            return $companies;
+        }
+
+        $permittedIds = CompanyContext::permittedCompanyIds();
+        if (!empty($permittedIds)) {
+            return Company::whereIn('id', $permittedIds)->where('status', 'active')->orderBy('name')->get();
+        }
+
+        return collect();
+    }
+
+    /**
+     * @return array|null|false  null = all allowed companies, array = specific IDs, false = invalid selection
+     */
+    private function resolvePayrollCompanyIds(Request $request)
+    {
+        if ($request->boolean('process_all_companies')) {
+            return CompanyContext::isSuperAdmin() ? null : CompanyContext::permittedCompanyIds();
+        }
+
+        $allowedCompanyIds = $this->getPayrollCompanies()->pluck('id')->all();
+        $selectedCompanyIds = array_values(array_unique(array_map('intval', (array) $request->input('company_ids', []))));
+        $companyIds = array_values(array_intersect($selectedCompanyIds, $allowedCompanyIds));
+
+        if (empty($companyIds)) {
+            return false;
+        }
+
+        return $companyIds;
+    }
+
+    private function employeesReadyForPayrollQuery(?array $companyIds = null)
+    {
+        $query = Employee::where('status', GeneralStatus::ACTIVE)
+            ->whereHas('employeePayroll', function ($query) {
+                $query->where('status', GeneralStatus::ACTIVE);
+            });
+
+        if ($companyIds !== null) {
+            $query->whereIn('company_id', $companyIds);
+        }
+
+        return $query;
     }
 }

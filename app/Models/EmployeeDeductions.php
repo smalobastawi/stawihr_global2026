@@ -20,9 +20,8 @@ use App\Traits\ProvidesApprovalDetails;
 
 class EmployeeDeductions extends Model
 {
-    //use BelongsToCompany;
-
-    use HasFactory,  LogsActivity,  HasApprovalWorkflow, ProvidesApprovalDetails, SoftDeletes;
+    use HasFactory, LogsActivity, HasApprovalWorkflow, ProvidesApprovalDetails, SoftDeletes;
+    use BelongsToCompany;
 
     protected $table = 'employee_deductions';
 

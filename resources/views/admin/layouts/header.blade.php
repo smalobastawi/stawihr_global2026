@@ -3,27 +3,43 @@
 
          <ul class="nav navbar-top-links navbar-right pull-right">
 
-             @if (isset($activeCompanies) && count($activeCompanies) > 0)
+             @if (\App\Support\CompanyContext::canSwitchCompanies())
+                 @php
+                     $activeCompanies = \App\Support\CompanyContext::switchableCompanies();
+                     $selectedCompanyId = \App\Support\CompanyContext::sessionCompanyId();
+                     $allCompaniesLabel = auth()->user()?->hasRole('SuperAdmin')
+                         ? 'All Companies (SuperAdmin)'
+                         : 'All Companies';
+                     $headerCompanyLabel = $allCompaniesLabel;
+
+                     if ($selectedCompanyId !== null) {
+                         $headerCompanyLabel = $activeCompanies
+                             ->first(fn ($company) => (int) $company->id === $selectedCompanyId)
+                             ?->name ?? \App\Support\CompanyContext::selectedCompanyName();
+                     }
+                 @endphp
+                 @if ($activeCompanies->isNotEmpty())
                  <li class="dropdown">
                      <a class="dropdown-toggle profile-pic" data-toggle="dropdown" href="#" style="color:#fff">
                          <i class="fa fa-building fa-fw" style="color: #fff !important;"></i>
-                         Company: {{ $currentCompany ? $currentCompany->name : 'SuperAdmin Mode' }}
+                         Company: {{ $headerCompanyLabel }}
                          <span class="caret"></span>
                      </a>
                      <ul class="dropdown-menu dropdown-user animated flipInY">
-                         @if ($currentCompany)
-                             <li>
-                                 <form method="POST" action="{{ route('company.switch') }}" style="display: inline;">
-                                     @csrf
-                                     <button type="submit" class="dropdown-item"
-                                         style="border: none; background: none; width: 100%; text-align: left; ">
-                                         <i class="fa fa-globe mr-2"></i>
-                                         Switch to SuperAdmin Mode (All Companies)
-                                     </button>
-                                 </form>
-                             </li>
-                             <li role="separator" class="divider"></li>
-                         @endif
+                         <li>
+                             <form method="POST" action="{{ route('company.switch') }}" style="display: inline;">
+                                 @csrf
+                                 <button type="submit" class="dropdown-item"
+                                     style="border: none; background: none; width: 100%; text-align: left; padding: 10px 20px;">
+                                     <i class="fa fa-globe mr-2"></i>
+                                     {{ $allCompaniesLabel }}
+                                     @if ($selectedCompanyId === null)
+                                         <span class="badge badge-success">Current</span>
+                                     @endif
+                                 </button>
+                             </form>
+                         </li>
+                         <li role="separator" class="divider"></li>
                          @foreach ($activeCompanies as $company)
                              <li>
                                  <form method="POST" action="{{ route('company.switch') }}" style="display: inline;">
@@ -33,7 +49,7 @@
                                          style="border: none; background: none; width: 100%; text-align: left; padding: 10px 20px;">
                                          <i class="fa fa-building mr-2"></i>
                                          {{ $company->name }}
-                                         @if ($currentCompany && $currentCompany->id == $company->id)
+                                         @if ($selectedCompanyId !== null && $selectedCompanyId === (int) $company->id)
                                              <span class="badge badge-success">Current</span>
                                          @endif
                                      </button>
@@ -42,6 +58,7 @@
                          @endforeach
                      </ul>
                  </li>
+                 @endif
              @endif
              <li>
                  <a href="javascript:void(0)" class="waves-effect waves-light" style="color:#fff;">

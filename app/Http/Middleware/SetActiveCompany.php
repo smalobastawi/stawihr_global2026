@@ -2,9 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\CompanyContext;
 use Closure;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Company;
 
 class SetActiveCompany
 {
@@ -16,16 +16,19 @@ class SetActiveCompany
             return $next($request);
         }
 
-        // If SuperAdmin, use session-selected company
-        if ($user->hasRole('SuperAdmin')) {
-            $activeCompanyID = session('active_company_id');
+        // Do not inject the current session company into the switch POST body —
+        // that would overwrite the newly selected company_id from the form.
+        if ($request->routeIs('company.switch')) {
+            return $next($request);
+        }
 
-            if ($activeCompanyID) {
-                $request->attributes->set('company', Company::find($activeCompanyID));
+        $activeCompany = CompanyContext::activeCompany();
+        if ($activeCompany) {
+            $request->attributes->set('company', $activeCompany);
+
+            if (!$request->has('company_id')) {
+                $request->merge(['company_id' => $activeCompany->id]);
             }
-        } else {
-            // Normal user uses assigned company_id
-            $request->attributes->set('company', $user->company);
         }
 
         return $next($request);

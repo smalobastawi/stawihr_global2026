@@ -57,7 +57,7 @@
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <a href="{{ route('company.show', $company) }}"
+                                                    <a style="color: white;" href="{{ route('company.show', $company) }}"
                                                         class="btn btn-info btn-sm"><i class="fa fa-eye"></i> View</a>
                                                     <a href="{{ route('company.edit', $company) }}"
                                                         class="btn btn-warning btn-sm"><i class="fa fa-edit"></i> Edit</a>

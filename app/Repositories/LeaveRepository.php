@@ -16,6 +16,7 @@ use App\Models\Employee;
 use App\Models\FinancialYear;
 use App\Models\Holiday;
 use App\Models\HolidayDetails;
+use App\Models\WeeklyHoliday;
 use App\Models\AdvancedLeaveRecord;
 use App\Models\LeaveGroupSetting;
 use Carbon\Carbon;
@@ -26,34 +27,12 @@ use PhpOffice\PhpSpreadsheet\Calculation\Financial;
 class LeaveRepository
 {
 
-    public function calculateTotalNumberOfLeaveDays($application_from_date, $application_to_date, $leaveTypeId, $employeeId = null)
+    public function calculateTotalNumberOfLeaveDays($application_from_date, $application_to_date, $leaveTypeId)
     {
-        if ($employeeId) {
-            $employee = Employee::with(['leaveGroup.publicHolidays', 'leaveGroup.weeklyHolidays'])
-                ->where('employee_id', $employeeId)
-                ->first();
-        } else {
-            $user = Auth::user();
-            if (!$user) {
-                return 0;
-            }
-
-            $employee = Employee::with(['leaveGroup.publicHolidays', 'leaveGroup.weeklyHolidays'])
-                ->where('user_id', $user->id)
-                ->first();
-
-            if (!$employee && method_exists($user, 'employeeDetails')) {
-                $employee = $user->employeeDetails;
-                if ($employee) {
-                    $employee->load(['leaveGroup.publicHolidays', 'leaveGroup.weeklyHolidays']);
-                }
-            }
-        }
-
-        if (!$employee) {
-            return 0;
-        }
-
+        $user = Auth::user();
+        $employee = $user->employeeDetails;
+        $totalDays1 =       $employee->appliedLeaveDays($application_from_date, $application_to_date, $leaveTypeId);
+      
         return $employee->appliedLeaveDays($application_from_date, $application_to_date, $leaveTypeId);
     }
 
@@ -117,20 +96,9 @@ class LeaveRepository
             return $overlapStart->diffInDays($overlapEnd) + 1;
         }
 
-        // For working_days, exclude weekends and holidays
-        $affectingHolidays = $leaveGroup->publicHolidays->pluck('holiday_id')->toArray();
-        $holidays = HolidayDetails::whereIn('holiday_id', $affectingHolidays)
-            ->where('status', 1)
-            ->get()
-            ->flatMap(function ($holiday) {
-                return Carbon::parse($holiday->from_date)->toPeriod($holiday->to_date)->toArray();
-            })
-            ->map(fn($date) => $date->format('Y-m-d'))
-            ->toArray();
-
-        $weekendDays = $leaveGroup->weeklyHolidays->pluck('day_name')->map(function ($day) {
-            return strtolower($day);
-        })->toArray();
+        // For working_days, exclude globally configured weekends and public holidays
+        $holidays = HolidayDetails::activeDatesBetween($overlapStart, $overlapEnd);
+        $weekendDays = WeeklyHoliday::activeDayNames();
 
         $leaveDays = 0;
         $countedDates = []; // Track what we're counting

@@ -114,8 +114,8 @@ Route::group(['module' => 'Administration', 'middleware' => ['prevent-back-histo
     });
 
     Route::group(['section' => 'company', 'sub_section' => 'company'], function () {
-        Route::resource('company', CompanyController::class);
         Route::post('company/switch', [CompanyController::class, 'switch'])->name('company.switch');
+        Route::resource('company', CompanyController::class);
     });
 
 

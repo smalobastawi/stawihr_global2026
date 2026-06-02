@@ -14,11 +14,14 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 date_default_timezone_set("Africa/Nairobi");
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use App\Traits\BelongsToCompany;
+
 class LeaveApplication extends Model
 {
     use softDeletes;
-    use  LogsActivity;
+    use LogsActivity;
     use WithSupervisorPermissions;
+    use BelongsToCompany;
 
     protected $table = 'leave_application';
     protected $primaryKey = 'leave_application_id';

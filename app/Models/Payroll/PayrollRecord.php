@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\HasApprovalWorkflow;
 use App\Traits\ProvidesApprovalDetails;
+use App\Traits\BelongsToCompany;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\Facades\LogBatch;
 use Spatie\Activitylog\LogOptions;
 
 class PayrollRecord extends Model
 {
-    use HasFactory, SoftDeletes, HasApprovalWorkflow, ProvidesApprovalDetails, LogsActivity;
+    use HasFactory, SoftDeletes, HasApprovalWorkflow, ProvidesApprovalDetails, LogsActivity, BelongsToCompany;
 
     protected $fillable = [
         'employee_payroll_id',

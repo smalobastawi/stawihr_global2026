@@ -8,5 +8,5 @@ return [
   'add_department' => 'Add Department',
   'view_department' => 'View Department',
   'edit_department' => 'Edit Department',
-
+  'department_head' => 'Department Head',
 ];

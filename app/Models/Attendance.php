@@ -21,9 +21,8 @@ use App\Traits\WithSupervisorPermissions;
 
 class Attendance extends Model
 {
-    //use BelongsToCompany;
-
     use HasFactory, LogsActivity, softDeletes;
+    use BelongsToCompany;
     use WithSupervisorPermissions;
 
     protected $table = 'attendances';

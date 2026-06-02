@@ -156,6 +156,10 @@ Route::group(['module' => 'Employee Management', 'section' => 'General', 'prefix
         Route::get('/leaversReport', [EmployeeReportsController::class, 'leaversReport'])->name('employee.leaversReport');
         Route::get('/movementReport', [EmployeeReportsController::class, 'movementReport'])->name('employee.movementReport');
         Route::get('/userReport1', [EmployeeController::class, 'userReportDownload'])->name('employee.downloadReport');
+        Route::get('/turnoverReport', [EmployeeReportsController::class, 'turnoverReport'])
+            ->name('employee.turnoverReport')
+            ->withoutMiddleware([\App\Http\Middleware\PermissionMiddleware::class])
+            ->middleware('permission:employee.turnoverReport|employee.joinersReport');
         Route::get('/masterRoll', [EmployeeController::class, 'masterRoll'])->name('employee.masterRoll');
     });
     //employeeSection and Group

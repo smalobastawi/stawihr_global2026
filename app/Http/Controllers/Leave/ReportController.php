@@ -28,6 +28,7 @@ use App\Lib\Enumerations\LeaveStatus;
 use App\Models\FinancialYear;
 use App\Models\LeaveGroupSetting;
 use App\Models\HolidayDetails;
+use App\Models\WeeklyHoliday;
 use App\Models\LeaveAdjustment;
 use App\Repositories\LeaveRepository;
 use Illuminate\Database\Eloquent\Builder;
@@ -89,24 +90,9 @@ class ReportController extends Controller
             return $overlapStart->diffInDays($overlapEnd) + 1;
         }
 
-        // For working_days, exclude weekends and holidays
-        // Get all public holidays that affect this leave group
-        $affectingHolidays = $leaveGroup->publicHolidays->pluck('holiday_id')->toArray();
-
-        // Fetch and expand holiday date ranges into individual dates
-        $holidays = HolidayDetails::whereIn('holiday_id', $affectingHolidays)
-            ->where('status', 1)
-            ->get()
-            ->flatMap(function ($holiday) {
-                return Carbon::parse($holiday->from_date)->toPeriod($holiday->to_date)->toArray();
-            })
-            ->map(fn($date) => $date->format('Y-m-d'))
-            ->toArray();
-
-        // Get weekly holidays (weekends)
-        $weekendDays = $leaveGroup->weeklyHolidays->pluck('day_name')->map(function ($day) {
-            return strtolower($day);
-        })->toArray();
+        // For working_days, exclude globally configured weekends and public holidays
+        $holidays = HolidayDetails::activeDatesBetween($overlapStart, $overlapEnd);
+        $weekendDays = WeeklyHoliday::activeDayNames();
 
         // Count individual days within the fiscal year overlap period
         $leaveDays = 0;
