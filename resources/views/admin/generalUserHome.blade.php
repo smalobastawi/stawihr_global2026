@@ -378,7 +378,7 @@
                                 {{$employeeInfo->first_name}} {{$employeeInfo->last_name}}
                             </h2>
                             <h4>
-                                {{$employeeInfo->designation->designation_name}}
+                                {{ $employeeInfo->designation?->designation_name ?? 'N/A' }}
                             </h4>
                             <a href="{{url('profile')}}" class="btn btn-rounded btn-success">
                                 <i class="ti-user m-r-5"></i> PROFILE
@@ -390,7 +390,7 @@
                     <div class="row text-center m-t-30">
                         <div class="col-xs-6 b-r">
                             <h2 style="color: black">
-                                {{$employeeTotalLeave->totalNumberOfDays}}
+                                {{ $employeeTotalLeave?->totalNumberOfDays ?? 0 }}
                             </h2>
                             <h4 style="color: black">
                                 LEAVES USED
@@ -398,7 +398,7 @@
                         </div>
                         <div class="col-xs-6">
                             <h2 style="color: black">
-                                {{$employeeTotalAward->totalAward}}
+                                {{ $employeeTotalAward?->totalAward ?? 0 }}
                             </h2>
                             <h4 style="color: black">
                                 AWARD
