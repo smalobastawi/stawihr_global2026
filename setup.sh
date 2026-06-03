@@ -31,9 +31,10 @@ mkdir -p storage/logs
 chmod -R 775 storage
 chmod -R 775 bootstrap/cache
 
-# Step 5: Copy .env.example to .env and generate application key
+# Step 5: Copy .env.example to .env , .htaccess.example to public/.htaccess and generate application key
 echo "Setting up environment..."
 cp .env.example .env
+cp public/.htaccess.example public/.htaccess
 php artisan key:generate
 
 # Step 6: Run database migrations and seeders
