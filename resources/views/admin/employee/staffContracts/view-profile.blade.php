@@ -123,7 +123,14 @@
                                     <div class="col-md-offset-2 col-xs-6 col-sm-6 col-md-6">
                                         <div class="text-right">
 
-                                            @if ($employeeInfo->status == 0)
+                                            @if (!empty($isRestorable) && $isRestorable)
+                                                <a href="{!! route('employee.restore', $employeeInfo->employee_id) !!}" data-token="{!! csrf_token() !!}"
+                                                    data-id="{!! $employeeInfo->employee_id !!}"
+                                                    data-redirect="{{ route('employee.index') }}"
+                                                    class="restore-anonymized btn-xs deleteBtn btnColor">
+                                                    <button class="btn btn-warning">Restore</button>
+                                                    <i class="fa fa-undo" aria-hidden="true"></i></a>
+                                            @elseif ($employeeInfo->status == 0)
                                                 <a href="{!! route('employee.enable', $employeeInfo->employee_id) !!}" data-token="{!! csrf_token() !!}"
                                                     data-id="{!! $employeeInfo->employee_id !!}"
                                                     class="enable btn-xs deleteBtn btnColor">
@@ -136,14 +143,17 @@
                                                     <button class="btn btn-warning">Disable</button>
                                                     <i class="fa fa-trash-o" aria-hidden="true"></i></a>
                                             @endif
+                                            @if (empty($isRestorable) || !$isRestorable)
                                             <a href="{!! route('employee.edit', $employeeInfo->employee_id) !!}">
                                                 <button class="btn btn-primary">Edit User</button>
                                             </a>
                                             <a href="{!! route('employee.delete', $employeeInfo->employee_id) !!}" data-token="{!! csrf_token() !!}"
                                                 data-id="{!! $employeeInfo->employee_id !!}"
-                                                class="delete btn-xs deleteBtn btnColor">
+                                                data-redirect="{{ route('employee.inactive.index') }}"
+                                                class="anonymize-delete btn-xs deleteBtn btnColor">
                                                 <button class="btn btn-danger">Delete</button>
                                                 <i class="fa fa-trash-o" aria-hidden="true"></i></a>
+                                            @endif
                                         </div>
                                         <div class="applicant_pic text-right">
                                             <?php

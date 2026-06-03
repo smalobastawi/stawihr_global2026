@@ -69,6 +69,9 @@ use App\Http\Requests\StoreEmployeeExperienceRequest;
 use App\Http\Requests\StoreEmployeePayoutChannelRequest;
 use App\Models\Payroll\DeductionType;
 use Illuminate\Support\Facades\Validator;
+use App\Services\AnonymizedDeletionService;
+use App\Models\AnonymizedRecordBackup;
+
 
 class EmployeeController extends Controller
 {
@@ -76,12 +79,17 @@ class EmployeeController extends Controller
 
     protected $employeeRepositories;
     protected $leaveRepository;
+    protected $anonymizedDeletionService;
     private $baseApiUrl, $token;
 
-    public function __construct(EmployeeRepository $employeeRepositories,  LeaveRepository $leaveRepository)
-    {
+    public function __construct(
+        EmployeeRepository $employeeRepositories,
+        LeaveRepository $leaveRepository,
+        AnonymizedDeletionService $anonymizedDeletionService
+    ) {
         $this->employeeRepositories = $employeeRepositories;
         $this->leaveRepository = $leaveRepository;
+        $this->anonymizedDeletionService = $anonymizedDeletionService;
        // $this->baseApiUrl = config('app.BIOTIME_API_URL', 'https://102.37.21.7:8003'); // Default if not set in .env
        // $this->token = config('app.BIOTIME_API_TOKEN'); // Extract token
     }
@@ -169,13 +177,13 @@ class EmployeeController extends Controller
     public function inactive(Request $request)
     {
         $user = Auth::user();
-        // if($request->get('location'))
-        // {
-        //     $branchId = $request->get('location');
-        // }
         $branchId = $user->location;
 
         $this->authorize('viewAny', [Employee::class, $branchId]);
+
+        $restorableEmployeeIds = AnonymizedRecordBackup::restorable()
+            ->whereNotNull('employee_id')
+            ->pluck('employee_id');
 
         $signed_in_user_role = User::select('role_id')->where('id', session('logged_session_data.id'))->pluck('role_id')->first();
         $leaveTypes = LeaveType::where('status', 1)->get();
@@ -186,34 +194,21 @@ class EmployeeController extends Controller
         $threeMonthsToCome = Carbon::today()->addMonth(3);
 
         $activeContracts =  StaffContract::whereDate('end_date', '>=', $today)->count();
-        $expiringContracts =  StaffContract::whereDate('end_date', '<=', $threeMonthsToCome)->count(); // contracts expiring within the next 3 months.
+        $expiringContracts =  StaffContract::whereDate('end_date', '<=', $threeMonthsToCome)->count();
 
-        $staffByGender = Employee::where('status', '!=', GeneralStatus::ACTIVE)->selectRaw('gender, COUNT(*) as count')
+        $staffByGender = Employee::withTrashed()
+            ->where('status', '!=', GeneralStatus::ACTIVE)
+            ->selectRaw('gender, COUNT(*) as count')
             ->groupBy('gender')
             ->pluck('count', 'gender');
 
-        $results = Employee::with([
-            'userName' => function ($q) {
-                $q->with('roles');
-            },
-            'department',
-            'designation',
-            'workLocation',
-            'supervisor',
-            'hourlySalaries',
-            'company',
-        ])->where('status', '!=', GeneralStatus::ACTIVE);
-
+        $results = $this->inactiveEmployeeQuery($restorableEmployeeIds);
 
         if (request()->ajax()) {
             if ($request->role_id != '') {
-                $results = Employee::whereHas('userName', function ($q) use ($request) {
-                    $q->with('roles')->where('role_id', $request->role_id);
-                })->where('status', 1)->with('department', 'designation', 'workLocation', 'supervisor', 'hourlySalaries', 'company')->orderBy('employee_id', 'DESC');
-            } else {
-                $results = Employee::with(['userName' => function ($q) use ($request) {
-                    $q->with('roles')->where('role_id', $request->role_id);
-                }, 'department', 'designation', 'workLocation', 'supervisor', 'hourlySalaries', 'company'])->where('status', 1)->orderBy('employee_id', 'DESC');
+                $results->whereHas('userName', function ($q) use ($request) {
+                    $q->withTrashed()->with('roles')->where('role_id', $request->role_id);
+                });
             }
 
             if ($request->department_id != '') {
@@ -232,11 +227,17 @@ class EmployeeController extends Controller
                 });
             }
 
+            $results = $results->orderBy('employee_id', 'DESC')->paginate(10000);
 
-            $results = $results->paginate(10000);
-            return view('admin.employee.employee.pagination')->with(['signed_in_user_role' => $signed_in_user_role, 'results' => $results, 'activeContracts' => $activeContracts, 'expiredContracts' => $expiringContracts]);
+            return view('admin.employee.employee.pagination')->with([
+                'signed_in_user_role' => $signed_in_user_role,
+                'results' => $results,
+                'activeContracts' => $activeContracts,
+                'expiredContracts' => $expiringContracts,
+                'restorableEmployeeIds' => $restorableEmployeeIds->all(),
+                'isInactiveList' => true,
+            ]);
         }
-
 
         $results = $results->orderBy('employee_id', 'DESC')->paginate(10000);
 
@@ -250,7 +251,29 @@ class EmployeeController extends Controller
             'activeContracts' => $activeContracts,
             'expiringContracts' => $expiringContracts,
             'genderCounts' => $staffByGender,
+            'restorableEmployeeIds' => $restorableEmployeeIds->all(),
+            'isInactiveList' => true,
         ]);
+    }
+
+    private function inactiveEmployeeQuery($restorableEmployeeIds)
+    {
+        return Employee::withTrashed()
+            ->with([
+                'userName' => function ($q) {
+                    $q->withTrashed()->with('roles');
+                },
+                'department',
+                'designation',
+                'workLocation',
+                'supervisor',
+                'hourlySalaries',
+                'company',
+            ])
+            ->where(function ($query) use ($restorableEmployeeIds) {
+                $query->where('status', '!=', GeneralStatus::ACTIVE)
+                    ->orWhereIn('employee_id', $restorableEmployeeIds);
+            });
     }
 
     public function create()
@@ -622,12 +645,11 @@ class EmployeeController extends Controller
         $fiscal_start_date = $currentFinancialYear->start_date;
         $fiscal_end_date = $currentFinancialYear->end_date;
 
-        $employeeInfo = Employee::where('employee.employee_id', $id)
+        $employeeInfo = Employee::withTrashed()->where('employee.employee_id', $id)
             ->with(['workLocation', 'case', 'employeeSection', 'employeeGroup', 'employeeType', 'workShifts', 'employeeDocuments', 'contractDetails', 'projectAllocations.project', 'payrollEarnings', 'company', 'department', 'designation', 'supervisor'])
-            ->first();
+            ->firstOrFail();
 
-
-
+        $isRestorable = $this->anonymizedDeletionService->hasRestorableBackupByEmployee((int) $id);
         $employeeExperience = EmployeeExperience::where('employee_id', $id)->get();
         $employeeEducation = EmployeeEducationQualification::where('employee_id', $id)->get();
         $supervisor = Employee::where('employee.employee_id', $employeeInfo->supervisor_id)->first();
@@ -741,6 +763,7 @@ class EmployeeController extends Controller
             'employeeDeductions' => $employeeDeductions,
             'allDeductionTypes' => $allDeductionTypes,
             'overtimeAmount' => $overtimeAmount,
+            'isRestorable' => $isRestorable,
         ]);
     }
 
@@ -785,46 +808,29 @@ class EmployeeController extends Controller
 
     public function destroy($id)
     {
-
         try {
-            DB::beginTransaction();
-            $data = Employee::withTrashed()->FindOrFail($id);
+            $employee = Employee::withTrashed()->findOrFail($id);
+            $this->anonymizedDeletionService->anonymizeEmployee($employee);
 
-            if (!is_null($data->photo)) {
-                if (file_exists('uploads/employeePhoto/' . $data->photo) and !empty($data->photo)) {
-                    unlink('uploads/employeePhoto/' . $data->photo);
-                }
-            }
-            $result = $data->forceDelete();
-            if ($result) {
-                User::withTrashed()->FindOrFail($data->user_id)->forceDelete();
-                EmployeeEducationQualification::where('employee_id', $data->employee_id)->forceDelete();
-                EmployeeExperience::where('employee_id', $data->employee_id)->forceDelete();
-                Attendance::where('employee_id', $data->employee_id)->forceDelete();
-                EmployeeAward::where('employee_id', $data->employee_id)->forceDelete();
-                EmployeeBonus::where('employee_id', $data->employee_id)->forceDelete();
-                Promotion::where('employee_id', $data->employee_id)->forceDelete();
-                SalaryDetails::where('employee_id', $data->employee_id)->forceDelete();
-                TrainingInfo::where('employee_id', $data->employee_id)->forceDelete();
-                Warning::where('warning_to', $data->employee_id)->forceDelete();
-                LeaveApplication::where('employee_id', $data->employee_id)->forceDelete();
-                Termination::where('terminate_to', $data->employee_id)->forceDelete();
-                Attendance::where('payroll_number', $data->payroll_number)->forceDelete();
-            }
-            DB::commit();
-            $bug = 0;
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Employee and linked user anonymized successfully. Original email and staff details can now be reused.',
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 422);
         } catch (\Exception $e) {
-            DB::rollback();
-            $bug = $e->getMessage();
-            \Log::info($e->getMessage());
-        }
+            Log::error('Employee anonymized deletion failed', [
+                'employee_id' => $id,
+                'message' => $e->getMessage(),
+            ]);
 
-        if ($bug == 0) {
-            echo "success";
-        } elseif ($bug == 1451) {
-            echo 'hasForeignKey';
-        } else {
-            echo 'error';
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Some error found. Please try again.',
+            ], 500);
         }
     }
 
@@ -976,21 +982,25 @@ class EmployeeController extends Controller
     }
     public function enable($id)
     {
-        $employee = Employee::withTrashed()->FindOrFail($id);
-        $user = User::withTrashed()->FindOrFail($employee->user_id);
+        $employee = Employee::withTrashed()->findOrFail($id);
+
         try {
-            $results = $employee->update([
-                'status' => 1,
-                'deleted_at' => null,
-                'updated_at' => now()
-            ]);
-            $results1 = $user->update([
-                'status' => 1,
-                'deleted_at' => null,
-                'updated_at' => now()
-            ]);
+            if ($this->anonymizedDeletionService->hasRestorableBackupByEmployee((int) $id)) {
+                $this->anonymizedDeletionService->restoreEmployee((int) $id);
+            } else {
+                $user = User::withTrashed()->findOrFail($employee->user_id);
+                $employee->update([
+                    'status' => 1,
+                    'deleted_at' => null,
+                    'updated_at' => now(),
+                ]);
+                $user->update([
+                    'status' => 1,
+                    'deleted_at' => null,
+                    'updated_at' => now(),
+                ]);
+            }
         } catch (\Exception $e) {
-            // DB::rollback();
             $bug = $e->getMessage();
             \Log::info($e->getMessage());
         }
@@ -999,49 +1009,24 @@ class EmployeeController extends Controller
 
     public function restore($id)
     {
-
-        $employee = Employee::withTrashed()->FindOrFail($id);
-        $user = User::withTrashed()->FindOrFail($employee->user_id);
         try {
-            $employee->restore();
-            $user->restore();
-            $results = $employee->update([
-                'status' => 1,
-            ]);
-
-            $results = $user->update([
-                'status' => 1,
-
-            ]);
+            $this->anonymizedDeletionService->restoreEmployee((int) $id);
+            return 'success';
+        } catch (\RuntimeException $e) {
+            return $e->getMessage();
         } catch (\Exception $e) {
-            // DB::rollback();
-            $bug = $e->getMessage();
-            \Log::info($e->getMessage());
+            \Log::error('Employee restore failed', [
+                'employee_id' => $id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return 'error';
         }
-        return 'success';
     }
 
     public function delete($id)
     {
-        $employee = Employee::withTrashed()->FindOrFail($id);
-        $user = User::withTrashed()->FindOrFail($employee->user_id);
-        try {
-            $employee->delete();
-            $user->delete();
-            $results = $employee->update([
-                'status' => 0,
-            ]);
-
-            $results = $user->update([
-                'status' => 0,
-
-            ]);
-        } catch (\Exception $e) {
-            // DB::rollback();
-            $bug = $e->getMessage();
-            \Log::info($e->getMessage());
-        }
-        return 'success';
+        return $this->destroy($id);
     }
 
     public function storeOrUpdatePayoutChannel(StoreEmployeePayoutChannelRequest $request, $userId)

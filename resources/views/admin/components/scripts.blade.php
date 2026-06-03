@@ -148,6 +148,111 @@
          $(this).datepicker('hide');
      });
 
+     $(document).on('click', '.anonymize-delete', function() {
+         var actionTo = $(this).attr('href');
+         var token = $(this).attr('data-token');
+         var redirectTo = $(this).attr('data-redirect');
+         swal({
+             title: "Anonymize and deactivate?",
+             text: "Personal details will be anonymized, the linked user account deactivated, and records soft-deleted. Payroll and history stay linked by ID. Original email and staff details can be reused.",
+             type: "warning",
+             showCancelButton: true,
+             confirmButtonColor: "#DD6B55",
+             confirmButtonText: "Yes, anonymize",
+             closeOnConfirm: false
+         }, function(isConfirm) {
+             if (isConfirm) {
+                 $.ajax({
+                     url: actionTo,
+                     type: 'post',
+                     data: {
+                         _method: 'delete',
+                         _token: token
+                     },
+                     dataType: 'json',
+                     success: function(data) {
+                         if (data.status === 'success') {
+                             swal({
+                                 title: "Anonymized!",
+                                 text: data.message,
+                                 type: "success"
+                             }, function() {
+                                 if (redirectTo) {
+                                     window.location.href = redirectTo;
+                                 } else {
+                                     location.reload();
+                                 }
+                             });
+                         } else {
+                             swal("Error!", data.message || "Some error found. Please try again.", "error");
+                         }
+                     },
+                     error: function(jqXHR) {
+                         var errorMessage = "Some error found. Please try again.";
+                         if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                             errorMessage = jqXHR.responseJSON.message;
+                         } else if (jqXHR.responseText) {
+                             errorMessage = $.trim(jqXHR.responseText);
+                         }
+                         swal("Error!", errorMessage, "error");
+                     }
+                 });
+             } else {
+                 swal("Cancelled", "No changes were made.", "error");
+             }
+         });
+         return false;
+     });
+
+     $(document).on('click', '.restore-anonymized', function() {
+         var actionTo = $(this).attr('href');
+         var token = $(this).attr('data-token');
+         var redirectTo = $(this).attr('data-redirect');
+         swal({
+             title: "Restore employee?",
+             text: "This will restore the employee and linked user from the anonymized backup.",
+             type: "warning",
+             showCancelButton: true,
+             confirmButtonColor: "#DD6B55",
+             confirmButtonText: "Yes, restore",
+             closeOnConfirm: false
+         }, function(isConfirm) {
+             if (isConfirm) {
+                 $.ajax({
+                     url: actionTo,
+                     type: 'post',
+                     data: {
+                         _token: token
+                     },
+                     success: function(data) {
+                         if (data == 'success') {
+                             swal({
+                                 title: "Restored!",
+                                 text: "Employee and linked user restored successfully.",
+                                 type: "success"
+                             }, function() {
+                                 if (redirectTo) {
+                                     window.location.href = redirectTo;
+                                 } else {
+                                     location.reload();
+                                 }
+                             });
+                         } else {
+                             swal("Error!", data || "Some error found. Please try again.", "error");
+                         }
+                     },
+                     error: function(jqXHR) {
+                         var errorMessage = jqXHR.responseText ? $.trim(jqXHR.responseText) : "Some error found. Please try again.";
+                         swal("Error!", errorMessage, "error");
+                     }
+                 });
+             } else {
+                 swal("Cancelled", "No changes were made.", "error");
+             }
+         });
+         return false;
+     });
+
      $(document).on('click', '.delete', function() {
          var actionTo = $(this).attr('href');
          var token = $(this).attr('data-token');

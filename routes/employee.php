@@ -71,6 +71,7 @@ Route::group(['module' => 'Employee Management', 'section' => 'General', 'prefix
         Route::get('/{employee}', [EmployeeController::class, 'show'])->name('employee.show');
         Route::put('/{employee}', [EmployeeController::class, 'update'])->name('employee.update');
         Route::delete('/{employee}/delete', [EmployeeController::class, 'destroy'])->name('employee.delete');
+        Route::post('/{employee}/restore', [EmployeeController::class, 'restore'])->name('employee.restore');
         Route::get('/{employee}/disable', [EmployeeController::class, 'disable'])->name('employee.disable');
         Route::get('/{employee}/enable', [EmployeeController::class, 'enable'])->name('employee.enable');
         Route::get('/{employee}/updateBiometricCaptureStatus', [EmployeeController::class, 'updateBiometricCaptureStatus'])->name('employee.updateBiometricCaptureStatus');

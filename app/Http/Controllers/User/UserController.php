@@ -30,16 +30,22 @@ use App\Models\LeaveApplication;
 use App\Models\Termination;
 use App\Models\Warning;
 use App\Models\Company;
+use App\Models\AnonymizedRecordBackup;
+use App\Services\AnonymizedDeletionService;
 
 
 class UserController extends Controller
 {
 
     protected $commonRepository;
+    protected $anonymizedDeletionService;
 
-    public function __construct(CommonRepository $commonRepository)
-    {
+    public function __construct(
+        CommonRepository $commonRepository,
+        AnonymizedDeletionService $anonymizedDeletionService
+    ) {
         $this->commonRepository = $commonRepository;
+        $this->anonymizedDeletionService = $anonymizedDeletionService;
     }
 
     public function index()
@@ -51,19 +57,34 @@ class UserController extends Controller
 
         $signed_in_user_role = User::select('role_id')->where('id', session('logged_session_data.id'))->pluck('role_id')->first();
 
-        return view('admin.user.user.index', ['data' => $allUsers, 'signed_in_user_role' => $signed_in_user_role]);
+        return view('admin.user.user.index', [
+            'data' => $allUsers,
+            'signed_in_user_role' => $signed_in_user_role,
+            'restorableUserIds' => [],
+        ]);
     }
 
     public function indexInactive()
     {
-        $allUsers = User::where('status', '!=', GeneralStatus::ACTIVE)->with('roles', 'employeeDetails')
+        $restorableUserIds = AnonymizedRecordBackup::restorable()->pluck('user_id');
+
+        $allUsers = User::withTrashed()
+            ->where(function ($query) use ($restorableUserIds) {
+                $query->where('status', '!=', GeneralStatus::ACTIVE)
+                    ->orWhereIn('id', $restorableUserIds);
+            })
+            ->with('roles', 'employeeDetails')
             ->orderBy('id', 'desc')
             ->get();
 
 
         $signed_in_user_role = User::select('role_id')->where('id', session('logged_session_data.id'))->pluck('role_id')->first();
 
-        return view('admin.user.user.index', ['data' => $allUsers, 'signed_in_user_role' => $signed_in_user_role]);
+        return view('admin.user.user.index', [
+            'data' => $allUsers,
+            'signed_in_user_role' => $signed_in_user_role,
+            'restorableUserIds' => $restorableUserIds->all(),
+        ]);
     }
     public function indexActive()
     {
@@ -74,7 +95,11 @@ class UserController extends Controller
 
         $signed_in_user_role = User::select('role_id')->where('id', session('logged_session_data.id'))->pluck('role_id')->first();
 
-        return view('admin.user.user.index', ['data' => $allUsers, 'signed_in_user_role' => $signed_in_user_role]);
+        return view('admin.user.user.index', [
+            'data' => $allUsers,
+            'signed_in_user_role' => $signed_in_user_role,
+            'restorableUserIds' => [],
+        ]);
     }
 
     public function create()
@@ -167,50 +192,46 @@ class UserController extends Controller
 
     public function destroy($id)
     {
-        $user = User::withTrashed()->FindOrFail($id);
+        $user = User::withTrashed()->findOrFail($id);
 
         try {
-            // Check if user has an employee profile
-            $employee = Employee::where('user_id', $user->id)->first();
-
-            if ($employee) {
-                // User has employee profile - deactivate instead of delete
-                $user->status = 0;
-                $user->updated_by = Auth::user()->id;
-                $user->save();
-
-                echo "deactivated";
-            } else {
-                // User has no employee profile - safe to delete
-                $user->forceDelete();
-                echo "success";
-            }
+            $this->anonymizedDeletionService->anonymizeUser($user);
+            return response('anonymized', 200)->header('Content-Type', 'text/plain');
+        } catch (\RuntimeException $e) {
+            return response($e->getMessage(), 422)->header('Content-Type', 'text/plain');
         } catch (\Exception $e) {
-            $bug = $e->getMessage();
+            \Log::error('User anonymized deletion failed', [
+                'user_id' => $id,
+                'message' => $e->getMessage(),
+            ]);
 
-            if (strpos($bug, '1451') !== false) {
-                echo 'hasForeignKey';
-            } else {
-                echo 'error';
+            if (strpos($e->getMessage(), '1451') !== false) {
+                return response('hasForeignKey', 409)->header('Content-Type', 'text/plain');
             }
+
+            return response('error', 500)->header('Content-Type', 'text/plain');
         }
     }
-    public function delete($id)
+
+    public function restore($id)
     {
         try {
-            $user = User::withTrashed()->FindOrFail($id);
-            $user->delete();
-            $bug = 0;
+            $this->anonymizedDeletionService->restoreUser((int) $id);
+            return response('restored', 200)->header('Content-Type', 'text/plain');
+        } catch (\RuntimeException $e) {
+            return response($e->getMessage(), 422)->header('Content-Type', 'text/plain');
         } catch (\Exception $e) {
-            $bug = $e->getMessage();
-        }
+            \Log::error('User restore failed', [
+                'user_id' => $id,
+                'message' => $e->getMessage(),
+            ]);
 
-        if ($bug == 0) {
-            echo "success";
-        } elseif ($bug == 1451) {
-            echo 'hasForeignKey';
-        } else {
-            echo 'error';
+            return response('error', 500)->header('Content-Type', 'text/plain');
         }
+    }
+
+    public function delete($id)
+    {
+        return $this->destroy($id);
     }
 }

@@ -21,6 +21,9 @@
         <tbody>
         {!! $sl=null !!}
         @foreach($results AS $value)
+            @php
+                $isAnonymized = !empty($isInactiveList) && in_array($value->employee_id, $restorableEmployeeIds ?? [], true);
+            @endphp
             <tr class="{!! $value->employee_id !!}">
                 <td style="width: 100px;">{!! ++$sl !!}</td>
                 <td>
@@ -81,9 +84,10 @@
                
               
                 <td>
-                    @if($value->status == GeneralStatus::ACTIVE)
+                    @if($isAnonymized)
+                        <span class="label label-default">Anonymized</span>
+                    @elseif($value->status == GeneralStatus::ACTIVE)
                         <span class="label label-success">@lang('common.active')</span>
-					</span>
                     @elseif($value->status == GeneralStatus::INACTIVE)
                         <span class="label label-warning">@lang('common.inactive')</span>
                     @else
@@ -97,14 +101,33 @@
                         <i class="glyphicon glyphicon-th-large" aria-hidden="true"></i>
                     </a>
                     @endcan
-                    @can('employee.edit')
-                    <a href="{!! route('employee.edit',$value->employee_id) !!}"  class="btn btn-success btn-xs btnColor">
-                        <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
-                    </a>
-                    @endcan
-                    @can('employee.delete')
-                    <a href="{!!route('employee.delete',$value->employee_id )!!}" data-token="{!! csrf_token() !!}" data-id="{!! $value->employee_id!!}" class="delete btn btn-danger btn-xs deleteBtn btnColor"><i class="fa fa-trash-o" aria-hidden="true"></i></a>
-                @endcan
+                    @if($isAnonymized)
+                        @can('employee.edit')
+                        <a href="{!! route('employee.restore', $value->employee_id) !!}"
+                           data-token="{!! csrf_token() !!}"
+                           data-id="{!! $value->employee_id !!}"
+                           data-redirect="{{ route('employee.index') }}"
+                           class="restore-anonymized btn btn-warning btn-xs btnColor"
+                           title="Restore">
+                            <i class="fa fa-undo" aria-hidden="true"></i>
+                        </a>
+                        @endcan
+                    @else
+                        @can('employee.edit')
+                        <a href="{!! route('employee.edit',$value->employee_id) !!}"  class="btn btn-success btn-xs btnColor">
+                            <i class="fa fa-pencil-square-o" aria-hidden="true"></i>
+                        </a>
+                        @endcan
+                        @can('employee.delete')
+                        <a href="{!! route('employee.delete', $value->employee_id) !!}"
+                           data-token="{!! csrf_token() !!}"
+                           data-id="{!! $value->employee_id !!}"
+                           data-redirect="{{ route('employee.inactive.index') }}"
+                           class="anonymize-delete btn btn-danger btn-xs deleteBtn btnColor">
+                            <i class="fa fa-trash-o" aria-hidden="true"></i>
+                        </a>
+                        @endcan
+                    @endif
                 </td>
             </tr>
 

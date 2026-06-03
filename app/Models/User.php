@@ -74,7 +74,7 @@ class User extends Authenticatable
 
     public function employeeDetails()
     {
-        return $this->hasOne(Employee::class, 'user_id', 'id');
+        return $this->hasOne(Employee::class, 'user_id', 'id')->withTrashed();
     }
     public function getActivitylogOptions(): LogOptions
     {

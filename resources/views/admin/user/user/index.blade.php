@@ -74,6 +74,9 @@
                                     </thead>
                                     <tbody>
                                     @foreach($data as $key => $value)
+                                        @php
+                                            $isRestorable = in_array($value->id, $restorableUserIds ?? [], true);
+                                        @endphp
                                         <tr class="user-row-{{ $value->id }}">
                                             <td>{{ $loop->iteration }}</td>
                                             <td>
@@ -93,38 +96,59 @@
                                             @endif
 
                                             <td>
-                                                <span class="label label-{{ $value->status==1 ? 'success' : 'warning' }}">
-                                                    {{ $value->status==1 ? 'Active' : 'Inactive' }}
-                                                </span>
+                                                @if($isRestorable)
+                                                    <span class="label label-default">Anonymized</span>
+                                                @else
+                                                    <span class="label label-{{ $value->status==1 ? 'success' : 'warning' }}">
+                                                        {{ $value->status==1 ? 'Active' : 'Inactive' }}
+                                                    </span>
+                                                @endif
                                             </td>
                                            
                                             <td>
                                                 @if ($value->id != \Auth::id())
                                                     <div class="btn-group">
-                                                        @can('user.edit')
-                                                        <a href="{{ route('user.edit', $value->id) }}"
-                                                           class="btn btn-sm btn-success" title="Edit">
-                                                            <i class="fa fa-pencil"></i>
-                                                        </a>
-                                                        @if(env('PASSWORD_LOGIN'))
-                                                        <a href="{{ route('sendPasswordReset', $value->id) }}"
-                                                           class="btn btn-sm btn-primary sendPasswordReset"
-                                                           title="Reset Password"
-                                                           data-token="{{ csrf_token() }}" 
-                                                           data-id="{{ $value->id }}">
-                                                            <i class="fa fa-key"></i>
-                                                        </a>
+                                                        @if(!$isRestorable)
+                                                            <a href="{{ route('user.show', $value->id) }}"
+                                                               class="btn btn-sm btn-info" title="View">
+                                                                <i class="fa fa-eye"></i>
+                                                            </a>
+                                                            @can('user.edit')
+                                                            <a href="{{ route('user.edit', $value->id) }}"
+                                                               class="btn btn-sm btn-success" title="Edit">
+                                                                <i class="fa fa-pencil"></i>
+                                                            </a>
+                                                            @if(env('PASSWORD_LOGIN'))
+                                                            <a href="{{ route('sendPasswordReset', $value->id) }}"
+                                                               class="btn btn-sm btn-primary sendPasswordReset"
+                                                               title="Reset Password"
+                                                               data-token="{{ csrf_token() }}" 
+                                                               data-id="{{ $value->id }}">
+                                                                <i class="fa fa-key"></i>
+                                                            </a>
+                                                            @endif
+                                                            @endcan
+                                                            @can('user.destroy')
+                                                            <button type="button"
+                                                               class="btn btn-sm btn-danger delete-btn"
+                                                               title="Anonymize & Deactivate"
+                                                               data-url="{{ route('user.destroy', $value->id) }}"
+                                                               data-token="{{ csrf_token() }}" 
+                                                               data-id="{{ $value->id }}">
+                                                                <i class="fa fa-trash"></i>
+                                                            </button>
+                                                            @endcan
+                                                        @else
+                                                            @can('user.edit')
+                                                            <a href="{{ route('user.restore', $value->id) }}"
+                                                               class="btn btn-sm btn-warning restore-btn"
+                                                               title="Restore User"
+                                                               data-token="{{ csrf_token() }}"
+                                                               data-id="{{ $value->id }}">
+                                                                <i class="fa fa-undo"></i>
+                                                            </a>
+                                                            @endcan
                                                         @endif
-                                                        @endcan
-                                                        @can('user.destroy')
-                                                        <a href="{{ route('user.destroy', $value->id) }}"
-                                                           class="btn btn-sm btn-danger delete-btn"
-                                                           title="Delete"
-                                                           data-token="{{ csrf_token() }}" 
-                                                           data-id="{{ $value->id }}">
-                                                            <i class="fa fa-trash"></i>
-                                                        </a>
-                                                        @endcan
                                                     </div>
                                                 @else
                                                     <span class="text-muted">Current User</span>
@@ -143,22 +167,22 @@
     </div>
 @endsection
 
-@section('scripts')
+@section('page_scripts')
     <script>
         $(document).ready(function() {
             // Highlight active nav link
             $('.btn-group a').removeClass('active');
             $('.btn-group a[href="' + window.location.pathname + '"]').addClass('active');
             
-            // Delete confirmation
+            // Delete confirmation (anonymized soft delete)
             $('.delete-btn').click(function(e) {
                 e.preventDefault();
-                var deleteUrl = $(this).attr('href');
+                var deleteUrl = $(this).data('url');
                 var token = $(this).data('token');
                 var userId = $(this).data('id');
                 var row = $('.user-row-' + userId);
 
-                if(confirm('Are you sure you want to delete this user?')) {
+                if(confirm('This will anonymize personal details, deactivate the account, and soft-delete any linked employee profile. Historical records are kept. Continue?')) {
                     $.ajax({
                         url: deleteUrl,
                         type: 'DELETE',
@@ -166,24 +190,55 @@
                             _token: token
                         },
                         success: function(response) {
-                            if(response === 'success') {
+                            response = $.trim(response);
+                            if(response === 'anonymized' || response === 'success' || response === 'deactivated') {
                                 row.fadeOut(400, function() {
                                     $(this).remove();
                                 });
-                                alert('User deleted successfully.');
-                            } else if(response === 'deactivated') {
-                                row.fadeOut(400, function() {
-                                    $(this).remove();
-                                });
-                                alert('User has an employee profile. User has been deactivated instead of deleted.');
+                                alert('User anonymized and deactivated successfully. Original email and username can now be reused.');
                             } else if(response === 'hasForeignKey') {
                                 alert('Cannot delete this user because they have related records in the system.');
                             } else {
-                                alert('Error deleting user. Please try again.');
+                                alert(response || 'Error deleting user. Please try again.');
                             }
                         },
                         error: function(xhr) {
-                            alert('Error deleting user. Please try again.');
+                            var message = xhr.responseText ? $.trim(xhr.responseText) : 'Error deleting user. Please try again.';
+                            alert(message);
+                        }
+                    });
+                }
+            });
+
+            // Restore anonymized user
+            $('.restore-btn').click(function(e) {
+                e.preventDefault();
+                var restoreUrl = $(this).attr('href');
+                var token = $(this).data('token');
+                var userId = $(this).data('id');
+                var row = $('.user-row-' + userId);
+
+                if(confirm('Restore this user and linked employee profile from the anonymized backup?')) {
+                    $.ajax({
+                        url: restoreUrl,
+                        type: 'POST',
+                        data: {
+                            _token: token
+                        },
+                        success: function(response) {
+                            response = $.trim(response);
+                            if(response === 'restored') {
+                                row.fadeOut(400, function() {
+                                    $(this).remove();
+                                });
+                                alert('User restored successfully.');
+                            } else {
+                                alert(response || 'Error restoring user. Please try again.');
+                            }
+                        },
+                        error: function(xhr) {
+                            var message = xhr.responseText ? $.trim(xhr.responseText) : 'Error restoring user. Please try again.';
+                            alert(message);
                         }
                     });
                 }
