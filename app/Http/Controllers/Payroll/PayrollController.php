@@ -11,6 +11,7 @@ use App\Models\Payroll\PayrollPeriod;
 use App\Models\Payroll\PayrollRecord;
 use App\Models\Payroll\EmployeePayroll;
 use App\Services\Payroll\KenyanPayrollCalculationService;
+use App\Services\Payroll\PayrollCalculationServiceResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -29,11 +30,11 @@ use App\Support\CompanyContext;
 
 class PayrollController extends Controller
 {
-    protected $payrollCalculationService;
+    protected PayrollCalculationServiceResolver $payrollCalculationResolver;
 
-    public function __construct(KenyanPayrollCalculationService $payrollCalculationService)
+    public function __construct(PayrollCalculationServiceResolver $payrollCalculationResolver)
     {
-        $this->payrollCalculationService = $payrollCalculationService;
+        $this->payrollCalculationResolver = $payrollCalculationResolver;
     }
 
     /**
@@ -224,7 +225,9 @@ class PayrollController extends Controller
         try {
             DB::beginTransaction();
 
-            $results = $this->payrollCalculationService->calculatePeriodPayrollForOneEmployee($period, $employeeID);
+            $employee = Employee::findOrFail($employeeID);
+            $payrollService = $this->payrollCalculationResolver->resolveForEmployee($employee);
+            $results = $payrollService->calculatePeriodPayrollForOneEmployee($period, $employeeID);
 
             $successCount = collect($results)->where('status', 'success')->count();
             $errorCount = collect($results)->where('status', 'error')->count();
@@ -774,7 +777,8 @@ class PayrollController extends Controller
             $employeePayroll = EmployeePayroll::findOrFail($request->employee_payroll_id);
             $period = PayrollPeriod::findOrFail($request->period_id);
 
-            $payrollRecord = $this->payrollCalculationService->calculateEmployeePayroll($employeePayroll, $period);
+            $payrollService = $this->payrollCalculationResolver->resolveForEmployeePayroll($employeePayroll);
+            $payrollRecord = $payrollService->calculateEmployeePayroll($employeePayroll, $period);
 
             return response()->json([
                 'success' => true,

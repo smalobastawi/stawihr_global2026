@@ -36,6 +36,14 @@
                                 </div>
                             @endif
 
+                            @if (!empty($missingEmployeeProfile))
+                                <div class="alert alert-warning" role="alert">
+                                    <i class="fa fa-exclamation-triangle"></i>
+                                    <strong>Employee profile not found.</strong>
+                                    Your account is not linked to an employee record, so notices cannot be displayed.
+                                    Please contact P&amp;C for assistance.
+                                </div>
+                            @else
                             <div class="table-responsive">
                                 <table id="myTable" class="table table-bordered">
                                     <thead>
@@ -64,12 +72,17 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="5" class="text-center">No notices available for you at this time.</td>
+                                                <td colspan="5" class="text-center text-muted" style="padding: 32px;">
+                                                    <i class="mdi mdi-bullhorn" style="font-size: 32px; color: #ccc; display: block; margin-bottom: 8px;"></i>
+                                                    No notices available for you at this time.
+                                                    <br><small>Published announcements that apply to you will appear here.</small>
+                                                </td>
                                             </tr>
                                         @endforelse
                                     </tbody>
                                 </table>
                             </div>
+                            @endif
                         </div>
                     </div>
                 </div>

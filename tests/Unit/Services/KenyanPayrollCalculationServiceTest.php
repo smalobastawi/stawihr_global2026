@@ -17,7 +17,7 @@ class KenyanPayrollCalculationServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new KenyanPayrollCalculationService();
+        $this->service = app(KenyanPayrollCalculationService::class);
     }
 
     /** @test */

@@ -701,7 +701,7 @@ class KenyanPayrollCalculationService
     /**
      * Calculate allowances for an employee
      */
-    private function getAHLRelief($housingLevy)
+    protected function getAHLRelief($housingLevy)
     {
         $ahlRelief = 0.15 *  $housingLevy;
         return $ahlRelief;
@@ -1036,7 +1036,7 @@ class KenyanPayrollCalculationService
     /**
      * Calculate taxable income
      */
-    private function calculateTaxableIncome($grossSalary, $allowances, $nssfContribution, $shifContribution, $housingLevy, $pensionContribution)
+    protected function calculateTaxableIncome($grossSalary, $allowances, $nssfContribution, $shifContribution, $housingLevy, $pensionContribution)
     {
         $nonTaxableAmount = 0;
         $taxablePay = 0;
@@ -1074,7 +1074,7 @@ class KenyanPayrollCalculationService
     /**
      * Calculate PAYE tax according to KRA rates
      */
-    private function calculatePayeTax($taxableIncome, EmployeePayroll $employeePayroll, $insuranceRelief_all)
+    protected function calculatePayeTax($taxableIncome, EmployeePayroll $employeePayroll, $insuranceRelief_all)
     {
 
 
@@ -1123,7 +1123,7 @@ class KenyanPayrollCalculationService
     /**
      * Calculate NSSF contribution with tier breakdown
      */
-    private function calculateNssfContribution($employeeDetails, $grossSalary, $payrollPeriod = null)
+    protected function calculateNssfContribution($employeeDetails, $grossSalary, $payrollPeriod = null)
     {
         $payrollPeriodStart = $payrollPeriod ? $payrollPeriod->start_date->format('Y-m-d') : null;
         // Check if employee is over 60 years old at the start of payroll period
@@ -1192,7 +1192,7 @@ class KenyanPayrollCalculationService
     /**
      * Calculate SHIF contribution
      */
-    private function calculateShifContribution($grossSalary)
+    protected function calculateShifContribution($grossSalary)
     {
         return $this->calculateSHIF($grossSalary);
     }
@@ -1200,7 +1200,7 @@ class KenyanPayrollCalculationService
     /**
      * Calculate Housing Levy
      */
-    private function calculateHousingLevy($grossSalary)
+    protected function calculateHousingLevy($grossSalary)
     {
         $housingLevyRate = PayrollConfiguration::getHousingLevyRate();
         $HousingLevy = ($housingLevyRate * $grossSalary);
@@ -1279,7 +1279,7 @@ class KenyanPayrollCalculationService
     /**
      * Calculate Industrial Training Levy (Company Contribution)
      */
-    private function calculateIndustrialTrainingLevy($employeePayroll)
+    protected function calculateIndustrialTrainingLevy($employeePayroll)
     {
         $deduction = $employeePayroll->deductions()
             ->whereHas('payrollDeductionType', function ($query) {
@@ -1298,7 +1298,7 @@ class KenyanPayrollCalculationService
     /**
      * Calculate NSSF Tier 1 Company Contribution
      */
-    private function calculateNssfTier1Company($employeeDetails, $pensionablePay, $payrollPeriod = null)
+    protected function calculateNssfTier1Company($employeeDetails, $pensionablePay, $payrollPeriod = null)
     {
         $payrollPeriodStart = $payrollPeriod ? $payrollPeriod->start_date->format('Y-m-d') : null;
         // Check if employee is over 60 years old at the start of payroll period
@@ -1351,7 +1351,7 @@ class KenyanPayrollCalculationService
     /**
      * Calculate NSSF Tier 2 Company Contribution
      */
-    private function calculateNssfTier2Company($employeeDetails, $grossSalary, $payrollPeriod = null)
+    protected function calculateNssfTier2Company($employeeDetails, $grossSalary, $payrollPeriod = null)
     {
         $pensionablePay = $grossSalary;
         $payrollPeriodStart = $payrollPeriod ? $payrollPeriod->start_date->format('Y-m-d') : null;
@@ -1404,7 +1404,7 @@ class KenyanPayrollCalculationService
     /**
      * Calculate Housing Levy Company Contribution
      */
-    private function calculateHousingLevyCompany($grossSalary)
+    protected function calculateHousingLevyCompany($grossSalary)
     {
         $housingLevyRate = 0.015;
         return round($grossSalary * ($housingLevyRate), 2);

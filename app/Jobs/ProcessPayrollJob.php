@@ -9,7 +9,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use App\Services\Payroll\KenyanPayrollCalculationService;
+use App\Services\Payroll\PayrollCalculationServiceResolver;
 use App\Models\Payroll\PayrollPeriod;
 use App\Models\Employee;
 use App\Lib\Enumerations\GeneralStatus;
@@ -39,7 +39,7 @@ class ProcessPayrollJob implements ShouldQueue
         $this->companyIds = $companyIds;
     }
 
-    public function handle(KenyanPayrollCalculationService $payrollCalculationService)
+    public function handle(PayrollCalculationServiceResolver $payrollCalculationResolver)
     {
         try {
             $period = PayrollPeriod::findOrFail($this->periodId);
@@ -90,8 +90,9 @@ class ProcessPayrollJob implements ShouldQueue
                         continue;
                     }
 
-                    // Calculate payroll
-                    $payrollRecord = $payrollCalculationService->calculateEmployeePayroll($employee->employeePayroll, $period);
+                    // Calculate payroll using the company's payroll country rules
+                    $payrollService = $payrollCalculationResolver->resolveForEmployee($employee);
+                    $payrollRecord = $payrollService->calculateEmployeePayroll($employee->employeePayroll, $period);
                     $successCount++;
                     $processed++;
 

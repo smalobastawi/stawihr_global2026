@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Lib\Enumerations\PayrollCountry;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCompanyRequest extends FormRequest
 {
@@ -24,7 +26,7 @@ class StoreCompanyRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'domain' => 'required|string|max:255|unique:companies,domain',
-            'country' => 'required|string|max:255',
+            'payroll_country' => ['required', 'integer', Rule::in(PayrollCountry::supportedIds())],
             'status' => 'required|in:active,inactive',
             'kra_pin' => 'nullable|string|max:50',
             'registration_number' => 'nullable|string|max:50',

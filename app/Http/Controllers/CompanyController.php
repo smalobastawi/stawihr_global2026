@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Http\Requests\StoreCompanyRequest;
 use App\Http\Requests\UpdateCompanyRequest;
+use App\Lib\Enumerations\PayrollCountry;
 use App\Support\CompanyContext;
 use Illuminate\Http\Request;
 
@@ -25,7 +26,9 @@ class CompanyController extends Controller
      */
     public function create()
     {
-        return view('admin.company.create');
+        $payrollCountries = PayrollCountry::toArray();
+
+        return view('admin.company.create', compact('payrollCountries'));
     }
 
     /**
@@ -33,7 +36,7 @@ class CompanyController extends Controller
      */
     public function store(StoreCompanyRequest $request)
     {
-        $data = $request->validated();
+        $data = $this->prepareCompanyData($request->validated());
         $data['logo'] = $this->handleLogoUpload($request);
 
         Company::create($data);
@@ -58,7 +61,9 @@ class CompanyController extends Controller
      */
     public function edit(Company $company)
     {
-        return view('admin.company.edit', compact('company'));
+        $payrollCountries = PayrollCountry::toArray();
+
+        return view('admin.company.edit', compact('company', 'payrollCountries'));
     }
 
     /**
@@ -66,7 +71,7 @@ class CompanyController extends Controller
      */
     public function update(UpdateCompanyRequest $request, Company $company)
     {
-        $data = $request->validated();
+        $data = $this->prepareCompanyData($request->validated());
         $logo = $this->handleLogoUpload($request, $company);
 
         if ($logo !== null) {
@@ -164,6 +169,16 @@ class CompanyController extends Controller
         return redirect()
             ->route('home.dashboard')
             ->with('success', $message);
+    }
+
+    private function prepareCompanyData(array $data): array
+    {
+        if (isset($data['payroll_country'])) {
+            $data['payroll_country'] = (int) $data['payroll_country'];
+            $data['country'] = PayrollCountry::getName($data['payroll_country']);
+        }
+
+        return $data;
     }
 
     private function handleLogoUpload(Request $request, ?Company $company = null): ?string

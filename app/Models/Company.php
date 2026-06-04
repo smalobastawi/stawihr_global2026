@@ -15,6 +15,7 @@ class Company extends Model
         'logo',
         'domain',
         'country',
+        'payroll_country',
         'status',
         'kra_pin',
         'registration_number',
@@ -23,6 +24,10 @@ class Company extends Model
         'employer_number',
         'nita_registration_number',
         'ecitizen_identifier',
+    ];
+
+    protected $casts = [
+        'payroll_country' => 'integer',
     ];
 
     public function users(): HasMany

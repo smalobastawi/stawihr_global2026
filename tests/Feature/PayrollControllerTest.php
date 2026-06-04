@@ -8,6 +8,7 @@ use App\Models\Payroll\PayrollPeriod;
 use App\Models\Payroll\PayrollRecord;
 use App\Models\Payroll\EmployeePayroll;
 use App\Lib\Enumerations\GeneralStatus;
+use App\Services\Payroll\PayrollCalculationServiceResolver;
 use App\Services\Payroll\KenyanPayrollCalculationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;
@@ -96,6 +97,9 @@ class PayrollControllerTest extends TestCase
             ->once()
             ->andReturn([['status' => 'success']]);
 
+        $mockResolver = $this->mock(PayrollCalculationServiceResolver::class);
+        $mockResolver->shouldReceive('resolveByCountryId')->andReturn($mockService);
+
         $response = $this->post(route('payroll.process'), [
             'period_id' => $this->payrollPeriod->id
         ]);
@@ -120,6 +124,10 @@ class PayrollControllerTest extends TestCase
         $mockService->shouldReceive('calculatePeriodPayrollForOneEmployee')
             ->once()
             ->andReturn(['status' => 'success', 'payroll_record_id' => $this->payrollRecord->id]);
+
+        $this->mock(PayrollCalculationServiceResolver::class)
+            ->shouldReceive('resolveForEmployee')
+            ->andReturn($mockService);
 
         $response = $this->get(route('payroll.process.single', [
             'period' => $this->payrollPeriod->id,

@@ -759,7 +759,11 @@ class EssIndexController extends Controller
         $getEmployeeInfo = $this->commonRepository->getEmployeeDetails($this->user->id);
         //$employeeList = $this->commonRepository->employeeListForLeaves();
 
-        if (!$getEmployeeInfo->supervisor_id) {
+        if (!$getEmployeeInfo) {
+            return redirect()->back()->with('error', 'Your employee profile could not be found. Please contact P&C for assistance.');
+        }
+
+        if (empty($getEmployeeInfo->supervisor_id)) {
             return redirect()->back()->with('error', 'You do not have a supervisor assigned. Please contact P&C to assign a supervisor before applying for leave.');
         }
 
@@ -1073,9 +1077,20 @@ class EssIndexController extends Controller
     {
         $employee = Employee::where('employee_id', session('logged_session_data.employee_id'))
             ->first();
-        $results = EmployeeAward::where('employee_id', $employee->employee_id)->orderBy('employee_award_id', 'DESC')->get();
+
+        if (!$employee) {
+            return view('admin.ess.awards.index', [
+                'results' => collect(),
+                'missingEmployeeProfile' => true,
+            ]);
+        }
+
+        $results = EmployeeAward::where('employee_id', $employee->employee_id)
+            ->orderBy('employee_award_id', 'DESC')
+            ->get();
+
         return view('admin.ess.awards.index', [
-            'results' => $results
+            'results' => $results,
         ]);
     }
 
@@ -1956,65 +1971,73 @@ class EssIndexController extends Controller
     }
        public function trainings(Request $request)
     {
+        $emptyTrainingPayload = [
+            'all_trainings' => collect(),
+            'invitations' => collect(),
+            'invitations_sent' => collect(),
+            'attendances' => collect(),
+            'employee' => null,
+        ];
 
         $login_employee = employeeInfo();
-        if ($login_employee) {
-            if ($request->training_id) {
-                $trainingTypeList = TrainingType::all();
-                $facilitatorList = TrainingFacilitator::all();
-                $training = Training::whereId($request->training_id)->first();
+        if (!$login_employee) {
+            return view('admin.ess.trainings.index', $emptyTrainingPayload);
+        }
 
-                // Get invitation status for this training
-                $invitationStatus = null;
-                if ($login_employee->trainingInvites()->where('training_id', $request->training_id)->exists()) {
-                    $invitationStatus = $this->employee->trainingInvites()
-                        ->where('training_id', $request->training_id)
-                        ->first()
-                        ->status;
-                }
+        if ($request->training_id) {
+            $trainingTypeList = TrainingType::all();
+            $facilitatorList = TrainingFacilitator::all();
+            $training = Training::whereId($request->training_id)->first();
 
-                return view('admin.training.employeeTraining.form')->with([
-                    'trainingTypeList' => $trainingTypeList,
-                    'facilitatorList' => $facilitatorList,
-                    'ess' => 'ess',
-                    'editModeData' => $training,
-                    'showOnly' => 1,
-                    'invitationStatus' => $invitationStatus
-                ]);
+            // Get invitation status for this training
+            $invitationStatus = null;
+            if ($login_employee->trainingInvites()->where('training_id', $request->training_id)->exists()) {
+                $invitationStatus = $this->employee->trainingInvites()
+                    ->where('training_id', $request->training_id)
+                    ->first()
+                    ->status;
             }
 
-            // Get all training invites with their status
-            $invitations = $login_employee->trainingInvites()
-                ->with(['training', 'training.trainingType'])
-                ->orderBy('id', 'DESC')
-                ->get();
-
-            // Get pending invitations
-            $send_invitations = $login_employee->trainingInvites()
-                ->where('status', TrainingInvitationStatus::SENT)
-                ->orderBy('id', 'DESC')
-                ->get();
-
-            // Get all attended trainings
-            $attendances = $login_employee->trainingAttendances()
-                ->with(['training', 'training.trainingType'])
-                ->orderBy('id', 'DESC')
-                ->get();
-
-            // Create a collection with all trainings (invited + attended)
-            $all_trainings = $invitations->merge($attendances)
-                ->unique('training_id')
-                ->sortByDesc('id');
-
-
-            return view('admin.ess.trainings.index')->with([
-                'all_trainings' => $all_trainings,
-                'invitations' => $invitations,
-                'invitations_sent' => $send_invitations,
-                'attendances' => $attendances,
-                'employee' => $login_employee,
+            return view('admin.training.employeeTraining.form')->with([
+                'trainingTypeList' => $trainingTypeList,
+                'facilitatorList' => $facilitatorList,
+                'ess' => 'ess',
+                'editModeData' => $training,
+                'showOnly' => 1,
+                'invitationStatus' => $invitationStatus
             ]);
         }
+
+        // Get all training invites with their status
+        $invitations = $login_employee->trainingInvites()
+            ->with(['training', 'training.trainingType'])
+            ->orderBy('id', 'DESC')
+            ->get();
+
+        // Get pending invitations
+        $send_invitations = $login_employee->trainingInvites()
+            ->where('status', TrainingInvitationStatus::SENT)
+            ->orderBy('id', 'DESC')
+            ->get();
+
+        // Get all attended trainings
+        $attendances = $login_employee->trainingAttendances()
+            ->with(['training', 'training.trainingType'])
+            ->orderBy('id', 'DESC')
+            ->get();
+
+        // Create a collection with all trainings (invited + attended)
+        $all_trainings = $invitations->merge($attendances)
+            ->unique('training_id')
+            ->sortByDesc('id');
+
+        return view('admin.ess.trainings.index')->with([
+            'all_trainings' => $all_trainings,
+            'invitations' => $invitations,
+            'invitations_sent' => $send_invitations,
+            'attendances' => $attendances,
+            'employee' => $login_employee,
+        ]);
     }
      public function showTraining($id)
     {
@@ -2157,8 +2180,13 @@ class EssIndexController extends Controller
      */
     public function noticeBoard()
     {
-        if (!$this->employee || !$this->employee->employee_id) {
-            return redirect()->route('dashboard')->with('error', 'No employee record found for your account.');
+        $employee = $this->user->employeeDetails;
+
+        if (!$employee) {
+            return view('admin.ess.notice_board.index', [
+                'results' => collect(),
+                'missingEmployeeProfile' => true,
+            ]);
         }
 
         $results = Notice::with(['departments', 'regions', 'locations', 'employees'])
@@ -2167,7 +2195,7 @@ class EssIndexController extends Controller
             ->orderBy('publish_date', 'desc')
             ->orderBy('notice_id', 'desc')
             ->get()
-            ->filter(fn (Notice $notice) => $notice->targetsEmployee($this->employee));
+            ->filter(fn (Notice $notice) => $notice->targetsEmployee($employee));
 
         return view('admin.ess.notice_board.index', compact('results'));
     }
@@ -2177,8 +2205,11 @@ class EssIndexController extends Controller
      */
     public function showNotice($id)
     {
-        if (!$this->employee || !$this->employee->employee_id) {
-            return redirect()->route('ess.notices.index')->with('error', 'No employee record found for your account.');
+        $employee = $this->user->employeeDetails;
+
+        if (!$employee) {
+            return redirect()->route('ess.notices.index')
+                ->with('error', 'No employee record found for your account. Please contact P&C for assistance.');
         }
 
         $notice = Notice::with(['createdBy', 'departments', 'regions', 'locations', 'employees'])
@@ -2187,7 +2218,7 @@ class EssIndexController extends Controller
             ->whereDate('publish_date', '<=', now()->toDateString())
             ->firstOrFail();
 
-        if (!$notice->targetsEmployee($this->employee)) {
+        if (!$notice->targetsEmployee($employee)) {
             abort(403, 'You are not authorized to view this notice.');
         }
 

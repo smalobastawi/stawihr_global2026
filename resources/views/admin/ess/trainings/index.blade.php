@@ -61,6 +61,26 @@
                                         class="glyphicon glyphicon-remove"></i>&nbsp;<strong>{{ session()->get('error') }}</strong>
                                 </div>
                             @endif
+                            @if (!$employee)
+                                <div class="alert alert-warning" role="alert">
+                                    <i class="fa fa-exclamation-triangle"></i>
+                                    <strong>Employee profile not found.</strong>
+                                    Your account is not linked to an employee record, so training invitations cannot be displayed.
+                                    Please contact P&amp;C for assistance.
+                                </div>
+                            @elseif ($all_trainings->isEmpty())
+                                <div class="text-center" style="padding: 48px 24px;">
+                                    <i class="mdi mdi-school" style="font-size: 64px; color: #ccc;"></i>
+                                    <h4 style="margin-top: 20px; color: #555;">No trainings yet</h4>
+                                    <p class="text-muted" style="max-width: 480px; margin: 12px auto 0;">
+                                        You have not been assigned or invited to any trainings.
+                                        When HR schedules a training for you, it will appear here with invitation details and response options.
+                                    </p>
+                                    <p class="text-muted" style="margin-top: 8px;">
+                                        <small>Check back later or contact your supervisor or P&amp;C if you expect to see a training listed.</small>
+                                    </p>
+                                </div>
+                            @else
                             <div class="table-responsive">
 
                                 <table id="myTable" class="table table-bordered">
@@ -121,11 +141,14 @@
                                                     @endif
                                                 </td>
                                                 <td>
-                                                    <span
-                                                        class="label label-{{ $invitation->status == TrainingInvitationStatus::ACCEPTED ? 'success' : ($invitation->status == TrainingInvitationStatus::DECLINED ? 'danger' : 'warning') }}">
-                                                        {{ TrainingInvitationStatus::getName($invitation->status) }}
-                                                    </span>
-
+                                                    @if ($invitation)
+                                                        <span
+                                                            class="label label-{{ $invitation->status == TrainingInvitationStatus::ACCEPTED ? 'success' : ($invitation->status == TrainingInvitationStatus::DECLINED ? 'danger' : 'warning') }}">
+                                                            {{ TrainingInvitationStatus::getName($invitation->status) }}
+                                                        </span>
+                                                    @else
+                                                        <span class="label label-default">N/A</span>
+                                                    @endif
                                                 </td>
                                                 <td>
 
@@ -212,6 +235,7 @@
                                     </tbody>
                                 </table>
                             </div>
+                            @endif
                         </div>
                     </div>
                 </div>

@@ -64,10 +64,17 @@
 
                                 <div class="row" style="margin-top: 20px;">
                                     <div class="col-md-6">
-                                        <label class="control-label">Country<span class="validateRq">*</span></label>
-                                        <input type="text" class="form-control" name="country"
-                                            placeholder="Enter country" value="{{ old('country', $company->country) }}"
-                                            required>
+                                        <label class="control-label">Payroll Country<span class="validateRq">*</span></label>
+                                        <select class="form-control" name="payroll_country" required>
+                                            <option value="">Select payroll country</option>
+                                            @foreach ($payrollCountries as $id => $label)
+                                                <option value="{{ $id }}"
+                                                    {{ (int) old('payroll_country', $company->payroll_country ?? \App\Lib\Enumerations\PayrollCountry::KENYA) === (int) $id ? 'selected' : '' }}>
+                                                    {{ $label }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        <small class="text-muted">Determines which statutory PAYE and deduction rules apply during payroll processing.</small>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="control-label">Status<span class="validateRq">*</span></label>

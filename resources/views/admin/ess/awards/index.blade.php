@@ -35,6 +35,25 @@
 									<i class="glyphicon glyphicon-remove"></i>&nbsp;<strong>{{ session()->get('error') }}</strong>
 								</div>
 							@endif
+							@if ($results->isEmpty())
+								@if (!empty($missingEmployeeProfile))
+									<div class="alert alert-warning" role="alert">
+										<i class="fa fa-exclamation-triangle"></i>
+										<strong>Employee profile not found.</strong>
+										Your account is not linked to an employee record, so awards cannot be displayed.
+										Please contact P&amp;C for assistance.
+									</div>
+								@else
+									<div class="text-center" style="padding: 48px 24px;">
+										<i class="mdi mdi-trophy" style="font-size: 64px; color: #ccc;"></i>
+										<h4 style="margin-top: 20px; color: #555;">No awards yet</h4>
+										<p class="text-muted" style="max-width: 480px; margin: 12px auto 0;">
+											You do not have any awards recorded at this time.
+											When an award is assigned to you, it will appear here.
+										</p>
+									</div>
+								@endif
+							@else
 							<div class="table-responsive">
 								<table id="myTable" class="table table-bordered">
 									<thead>
@@ -58,6 +77,7 @@
 									</tbody>
 								</table>
 							</div>
+							@endif
 						</div>
 					</div>
 				</div>
