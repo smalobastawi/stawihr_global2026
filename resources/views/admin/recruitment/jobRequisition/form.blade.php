@@ -172,13 +172,17 @@
                                 </div>
                             </div>
 
-                            <div id="replacement_fields" style="display: {{ old('requisition_type', isset($editModeData) ? $editModeData->requisition_type : 'new_position') == 'replacement' ? 'block' : 'none' }};">
+                            @php
+                                $isReplacementRequisition = old('requisition_type', isset($editModeData) ? $editModeData->requisition_type : 'new_position') === 'replacement';
+                            @endphp
+                            <div id="replacement_fields" style="display: {{ $isReplacementRequisition ? 'block' : 'none' }};">
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label class="control-label col-md-4">Employee Being Replaced</label>
                                             <div class="col-md-8">
                                                 <input type="text" name="replaced_employee_name" class="form-control"
+                                                    @disabled(!$isReplacementRequisition)
                                                     value="{{ old('replaced_employee_name', isset($editModeData) ? $editModeData->replaced_employee_name : '') }}">
                                             </div>
                                         </div>
@@ -187,7 +191,7 @@
                                         <div class="form-group">
                                             <label class="control-label col-md-4">Reason for Replacement</label>
                                             <div class="col-md-8">
-                                                <select name="replacement_reason" id="replacement_reason" class="form-control">
+                                                <select name="replacement_reason" id="replacement_reason" class="form-control" @disabled(!$isReplacementRequisition)>
                                                     <option value="">-- Select --</option>
                                                     <option value="resignation" {{ old('replacement_reason', isset($editModeData) ? $editModeData->replacement_reason : '') == 'resignation' ? 'selected' : '' }}>Resignation</option>
                                                     <option value="termination" {{ old('replacement_reason', isset($editModeData) ? $editModeData->replacement_reason : '') == 'termination' ? 'selected' : '' }}>Termination</option>
@@ -204,6 +208,7 @@
                                             <label class="control-label col-md-4">Other Reason</label>
                                             <div class="col-md-8">
                                                 <input type="text" name="replacement_reason_other" class="form-control"
+                                                    @disabled(!$isReplacementRequisition)
                                                     value="{{ old('replacement_reason_other', isset($editModeData) ? $editModeData->replacement_reason_other : '') }}">
                                             </div>
                                         </div>
@@ -555,14 +560,23 @@
             }
         });
 
-        // Requisition type toggle
-        $('input[name="requisition_type"]').on('change', function() {
-            if ($(this).val() === 'replacement') {
+        function toggleReplacementFields(type) {
+            var $fields = $('#replacement_fields').find('input, select');
+
+            if (type === 'replacement') {
                 $('#replacement_fields').slideDown();
+                $fields.prop('disabled', false);
             } else {
                 $('#replacement_fields').slideUp();
                 $('#replacement_reason_other_row').hide();
+                $fields.prop('disabled', true).val('');
             }
+        }
+
+        toggleReplacementFields($('input[name="requisition_type"]:checked').val());
+
+        $('input[name="requisition_type"]').on('change', function() {
+            toggleReplacementFields($(this).val());
         });
 
         // Replacement reason toggle

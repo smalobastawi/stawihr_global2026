@@ -16,6 +16,25 @@ class JobRequisitionRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('requisition_type') !== 'replacement') {
+            $this->merge([
+                'replaced_employee_name' => null,
+                'replacement_reason' => null,
+                'replacement_reason_other' => null,
+            ]);
+
+            return;
+        }
+
+        if ($this->input('replacement_reason') !== 'other') {
+            $this->merge([
+                'replacement_reason_other' => null,
+            ]);
+        }
+    }
+
     /**
      * Get the validation rules that apply to the request.
      *
@@ -65,14 +84,14 @@ class JobRequisitionRequest extends FormRequest
             }
         }
 
-        // Conditional validation for replacement fields
-        if ($this->requisition_type === 'replacement') {
+        // Replacement fields only apply when hiring to replace an existing employee
+        if ($this->input('requisition_type') === 'replacement') {
             $rules['replaced_employee_name'] = 'required|string|max:200';
             $rules['replacement_reason'] = 'required|string|in:resignation,termination,transfer,other';
-        }
 
-        if ($this->replacement_reason === 'other') {
-            $rules['replacement_reason_other'] = 'required|string|max:255';
+            if ($this->input('replacement_reason') === 'other') {
+                $rules['replacement_reason_other'] = 'required|string|max:255';
+            }
         }
 
         return $rules;

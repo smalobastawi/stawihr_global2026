@@ -107,7 +107,6 @@ class MenuSeeder extends Seeder
                  */
 
                 ['parent_id' => 20, 'action' => NULL, 'name' => 'My Attendance Report', 'menu_url' => 'myAttendanceReport.myAttendanceReport', 'module_id' => '4', 'status' => '1'],
-                ['parent_id' => 10, 'action' => NULL, 'name' => 'Earn Leave Configure', 'menu_url' => 'earnLeaveConfigure.index', 'module_id' => '3', 'status' => '1'],
 
                 /**
                  *

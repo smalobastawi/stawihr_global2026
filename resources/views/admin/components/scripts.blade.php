@@ -50,53 +50,32 @@
  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
  <script>
-     $(document).ready(function() {
-         $('#myTable').DataTable({
-             "pageLength": 2000,
-             "ordering": true,
-             dom: 'Bfrtip',
-             buttons: [
-                 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'pageLength'
-             ],
+     function initAdminDataTable(selector, options) {
+         var $table = $(selector);
+         if (!$table.length || $.fn.DataTable.isDataTable($table)) {
+             return;
+         }
+         var hasDataRows = $table.find('tbody tr').not(':has(td[colspan])').length > 0;
+         if (hasDataRows) {
+             $table.DataTable(options);
+         }
+     }
 
-         });
-     });
      $(document).ready(function() {
-         $('#myTable1').DataTable({
-             "pageLength": 2000,
-             "ordering": true,
+         var exportButtons = ['excelHtml5', 'csvHtml5', 'pdfHtml5', 'pageLength'];
+         var defaultOptions = {
+             pageLength: 2000,
+             ordering: true,
              dom: 'Bfrtip',
-             buttons: [
-                 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'pageLength'
-             ],
+             buttons: exportButtons
+         };
 
-         });
-     });
- </script>
- <script>
-     $(document).ready(function() {
-         $('#attendanceTable1').DataTable({
-             "pageLength": 1000,
-             "ordering": true,
-             dom: 'Bfrtip',
-             buttons: [
-                 'excelHtml5', 'csvHtml5', 'pdfHtml5', 'pageLength'
-             ],
-
-         });
-     });
- </script>
- <script>
-     $(document).ready(function() {
-         $('#myTablePayrollDetails').DataTable({
-             "pageLength": 2000,
-             "ordering": true,
-             dom: 'Bfrtip',
-             buttons: [
-                 'excelHtml5', 'csvHtml5', 'pageLength'
-             ],
-
-         });
+         initAdminDataTable('#myTable', defaultOptions);
+         initAdminDataTable('#myTable1', defaultOptions);
+         initAdminDataTable('#attendanceTable1', $.extend({}, defaultOptions, { pageLength: 1000 }));
+         initAdminDataTable('#myTablePayrollDetails', $.extend({}, defaultOptions, {
+             buttons: ['excelHtml5', 'csvHtml5', 'pageLength']
+         }));
      });
  </script>
  <script>

@@ -1,6 +1,6 @@
 @extends('admin.master')
 
-@section('title', 'Direct Subordinates')
+@section('title', 'My Team')
 
 @section('content')
     <div class="container-fluid">
@@ -39,6 +39,15 @@
                                     <strong>{{ session()->get('error') }}</strong>
                                 </div>
                             @endif
+                            @if (!empty($noEmployeeProfile))
+                                <div class="alert alert-info">
+                                    My Team shows employees who report to you. Your user account is not linked to an employee profile, so there is no team to display. Use an employee-linked account, or manage staff from Employee Management.
+                                </div>
+                            @elseif ($subordinates->isEmpty())
+                                <div class="alert alert-info">
+                                    You do not have any team members assigned to you yet.
+                                </div>
+                            @endif
                             <div class="table-responsive">
                                 <table id="myTable" class="table table-bordered">
                                     <thead>
@@ -54,7 +63,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach ($subordinates as $key => $employee)
+                                        @forelse ($subordinates as $key => $employee)
                                             <tr>
                                                 <td>{{ $key + 1 }}</td>
                                                 <td>{{ $employee->full_name }}</td>
@@ -73,7 +82,11 @@
                                                     @endif
                                                 </td>
                                             </tr>
-                                        @endforeach
+                                        @empty
+                                            <tr>
+                                                <td colspan="8" class="text-center">@lang('common.no_data_available')</td>
+                                            </tr>
+                                        @endforelse
                                     </tbody>
                                 </table>
                             </div>

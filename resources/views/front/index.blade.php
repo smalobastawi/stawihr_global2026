@@ -42,7 +42,7 @@ $front_setting = getFrontData();
                         <div class="col-lg-12">
                             <div class="title-heading text-center text-white">
 
-                                <h1 class="heading font-weight-bold mb-4">StawiHR,The HR and Payroll Solution </h1>
+                                <h1 class="heading font-weight-bold mb-4">StawiHR -  HR and Payroll Solution </h1>
                                 <h6 class="small-title text-uppercase text-light mb-3">
 {{--                                {!! $front_setting->short_description !!}--}}
                                </h6>

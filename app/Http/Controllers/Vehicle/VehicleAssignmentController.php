@@ -44,14 +44,22 @@ class VehicleAssignmentController extends Controller
 
         $assignments = $query->orderBy('created_at', 'desc')->get();
 
-        // Data for filters
-        $vehicles = Vehicle::active()->orderBy('registration_number')->get();
-        $employees = Employee::where('status', 1)->get();
+        // Data for filters (avoid loading entire employee table into the page)
+        $vehicles = Vehicle::active()
+            ->orderBy('registration_number')
+            ->get(['id', 'registration_number', 'make', 'model']);
+
+        $selectedEmployee = null;
+        if ($request->filled('employee_id')) {
+            $selectedEmployee = Employee::where('employee_id', $request->employee_id)
+                ->where('status', 1)
+                ->first(['employee_id', 'first_name', 'middle_name', 'last_name', 'payroll_number']);
+        }
 
         return view('admin.vehicle.assignments.index', compact(
             'assignments',
             'vehicles',
-            'employees'
+            'selectedEmployee'
         ));
     }
 

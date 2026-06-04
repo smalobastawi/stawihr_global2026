@@ -36,18 +36,103 @@ class JobCandidateController extends Controller
 
     public $perPage = 10;
 
-    public function index()
+    public function index(Request $request)
     {
-        $results = Job::select(
+        $jobs = Job::with('location')
+            ->orderBy('job_title', 'asc')
+            ->get(['job_id', 'job_title', 'location_id']);
+
+        $view = $request->get('view', 'pipeline');
+        if (!in_array($view, ['pipeline', 'jobs'], true)) {
+            $view = 'pipeline';
+        }
+
+        $stage = $request->get('stage', 'applications');
+        $allowedStages = ['applications', 'shortlisted', 'rejected', 'interview', 'hired'];
+        if (!in_array($stage, $allowedStages, true)) {
+            $stage = 'applications';
+        }
+
+        $sort = $request->get('sort', 'application_date');
+        $allowedSorts = ['applicant_name', 'application_date', 'years_of_experience', 'highest_qualification', 'status'];
+        if (!in_array($sort, $allowedSorts, true)) {
+            $sort = 'application_date';
+        }
+
+        $direction = strtolower($request->get('direction', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $jobId = $request->filled('job_id') ? (int) $request->job_id : null;
+        if ($view === 'pipeline' && !$jobId && $jobs->isNotEmpty()) {
+            $jobId = $jobs->first()->job_id;
+        }
+
+        $selectedJob = $jobId ? Job::with('location')->find($jobId) : null;
+        $applicants = null;
+        $stageCounts = [];
+
+        if ($view === 'pipeline' && $jobId) {
+            $stageCounts = $this->applicantStageCounts($jobId);
+            $applicants = $this->applicantsForStage($jobId, $stage)
+                ->orderBy($sort, $direction)
+                ->paginate($this->perPage)
+                ->withQueryString();
+        }
+
+        $jobSummaries = null;
+        if ($view === 'jobs') {
+            $jobSummaries = $this->jobSummariesQuery()
+                ->paginate($this->perPage)
+                ->withQueryString();
+        }
+
+        return view('admin.recruitment.jobCandidate.index', [
+            'jobs' => $jobs,
+            'view' => $view,
+            'stage' => $stage,
+            'sort' => $sort,
+            'direction' => $direction,
+            'jobId' => $jobId,
+            'selectedJob' => $selectedJob,
+            'applicants' => $applicants,
+            'stageCounts' => $stageCounts,
+            'jobSummaries' => $jobSummaries,
+        ]);
+    }
+
+    private function jobSummariesQuery()
+    {
+        return Job::with('location')->select(
             'job.*',
             DB::raw('(select count(job_applicant_id) from job_applicant where (status = ' . JobStatus::$SHORTLIST . ' or status = ' . JobStatus::$CALL_FOR_INTERVIEW . ') and job.job_id = job_applicant.job_id) as shortList'),
             DB::raw('(select count(job_applicant_id) from job_applicant where status = ' . JobStatus::$REJECT . ' and job.job_id = job_applicant.job_id) as reject'),
             DB::raw('(select count(job_applicant_id) from job_applicant where job.job_id = job_applicant.job_id) as totalApplication'),
             DB::raw('(SELECT COUNT(job_applicant_id) FROM job_applicant WHERE status = ' . JobStatus::$CALL_FOR_INTERVIEW . ' AND job.job_id = job_applicant.job_id) AS interview'),
             DB::raw('(SELECT COUNT(job_applicant_id) FROM job_applicant WHERE status = ' . JobStatus::$HIRE . ' AND job.job_id = job_applicant.job_id) AS hire')
-        )
-            ->orderBy('job_id', 'DESC')->paginate($this->perPage);
-        return view('admin.recruitment.jobCandidate.index', ['results' => $results]);
+        )->orderBy('job_id', 'DESC');
+    }
+
+    private function applicantsForStage(int $jobId, string $stage)
+    {
+        $query = JobApplicant::where('job_id', $jobId);
+
+        return match ($stage) {
+            'shortlisted' => $query->where('status', JobStatus::$SHORTLIST),
+            'rejected' => $query->where('status', JobStatus::$REJECT),
+            'interview' => $query->where('status', JobStatus::$CALL_FOR_INTERVIEW),
+            'hired' => $query->where('status', JobStatus::$HIRE),
+            default => $query,
+        };
+    }
+
+    private function applicantStageCounts(int $jobId): array
+    {
+        return [
+            'applications' => JobApplicant::where('job_id', $jobId)->count(),
+            'shortlisted' => JobApplicant::where('job_id', $jobId)->where('status', JobStatus::$SHORTLIST)->count(),
+            'rejected' => JobApplicant::where('job_id', $jobId)->where('status', JobStatus::$REJECT)->count(),
+            'interview' => JobApplicant::where('job_id', $jobId)->where('status', JobStatus::$CALL_FOR_INTERVIEW)->count(),
+            'hired' => JobApplicant::where('job_id', $jobId)->where('status', JobStatus::$HIRE)->count(),
+        ];
     }
 
     public function applyCandidateList($id)

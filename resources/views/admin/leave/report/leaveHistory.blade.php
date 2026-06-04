@@ -271,21 +271,26 @@
 @section('page_scripts')
     <script>
         $(document).ready(function() {
-            // Initialize select2
             $('.select2').select2();
 
-            // Initialize DataTable for employees
-            $('#employeeTable').DataTable({
-                responsive: true,
-                pageLength: 25,
-                order: [[1, 'asc']],
-                language: {
-                    search: "Search employees:"
-                },
-                columnDefs: [
-                    { orderable: false, targets: 10 }
-                ]
-            });
+            var $table = $('#employeeTable');
+            var hasDataRows = $table.find('tbody tr').not(':has(td[colspan])').length > 0;
+
+            if (hasDataRows && !$.fn.DataTable.isDataTable($table)) {
+                $table.DataTable({
+                    responsive: true,
+                    pageLength: 25,
+                    order: [[1, 'asc']],
+                    language: {
+                        search: 'Search employees:',
+                        emptyTable: '@lang('common.no_data_available')',
+                        infoEmpty: '@lang('common.no_data_available')'
+                    },
+                    columnDefs: [
+                        { orderable: false, targets: 10 }
+                    ]
+                });
+            }
         });
     </script>
 @endsection

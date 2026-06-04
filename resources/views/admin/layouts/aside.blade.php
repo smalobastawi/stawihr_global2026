@@ -180,14 +180,14 @@
                              </li>
                          @endcan
 
-                        @can('ess.recruitment.job.posts')
+                        @if (auth()->user()->can('ess.subordinates.index') || auth()->user()->can('ess.recruitment.job.posts'))
                             <li>
                                 <a href="{{ route('ess.subordinates.index') }}">
                                     <i data-icon="/" class="linea-icon linea-basic fa-fw"></i>
                                     <span class="hideMenu">My Team</span>
                                 </a>
                             </li>
-                        @endcan
+                        @endif
 
                         @can('ess.performance.myAppraisals')
                             <li>
@@ -546,14 +546,6 @@
                                              <a class="hideMenu" href="{{ route('leaveGroup.index') }}"> <i data-icon="/"
                                                      class="linea-icon linea-basic fa-fw"></i>Leave
                                                  Groups</a>
-
-                                         </li>
-                                     @endcan
-                                     @can('earnLeaveConfigure.index')
-                                         <li class="">
-                                             <a class="hideMenu" href="{{ route('earnLeaveConfigure.index') }}"> <i
-                                                     data-icon="/" class="linea-icon linea-basic fa-fw"></i>Configure
-                                                 paid leave</a>
 
                                          </li>
                                      @endcan

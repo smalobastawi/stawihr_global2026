@@ -1570,7 +1570,7 @@ class ReportController extends Controller
 
         // Get base employee query based on role
         if ($currentUser->hasRole(['HR Administrator', 'SuperAdmin'])) {
-            $employeeQuery = Employee::with(['department', 'designation'])
+            $employeeQuery = Employee::with(['department', 'designation', 'location'])
                 ->where('status', GeneralStatus::ACTIVE);
         } else {
             $employeeQuery = Employee::with(['department', 'designation', 'location'])
@@ -1609,46 +1609,45 @@ class ReportController extends Controller
             }
         }
 
-        // Get current financial year for summary data
-        $currentFY = getCurrentFinancialYear();
-
         $employees = $employeeQuery->orderBy('first_name', 'asc')->get();
 
-        // Get leave data for each employee
         $employeeLeaveData = [];
-        foreach ($employees as $employee) {
-            // Get all leave applications for this employee
-            $leaveQuery = LeaveApplication::where('employee_id', $employee->employee_id);
+        if ($employees->isNotEmpty()) {
+            $employeeIds = $employees->pluck('employee_id')->all();
 
-            // Count total leave applications (all statuses)
-            $totalApplications = $leaveQuery->count();
+            $totals = LeaveApplication::whereIn('employee_id', $employeeIds)
+                ->selectRaw('employee_id, COUNT(*) as total')
+                ->groupBy('employee_id')
+                ->pluck('total', 'employee_id');
 
-            // Get status breakdown
-            $statusCounts = LeaveApplication::where('employee_id', $employee->employee_id)
-                ->selectRaw('final_status, COUNT(*) as count')
-                ->groupBy('final_status')
-                ->pluck('count', 'final_status')
-                ->toArray();
+            $statusByEmployee = [];
+            foreach (
+                LeaveApplication::whereIn('employee_id', $employeeIds)
+                    ->selectRaw('employee_id, final_status, COUNT(*) as count')
+                    ->groupBy('employee_id', 'final_status')
+                    ->get() as $row
+            ) {
+                $statusByEmployee[$row->employee_id][$row->final_status] = (int) $row->count;
+            }
 
-            // Count leave days taken this fiscal year (all statuses)
-            $leaveDaysTaken = LeaveApplication::where('employee_id', $employee->employee_id)
-                ->whereBetween('application_from_date', [$currentFY->start_date, $currentFY->end_date])
-                ->sum('number_of_day');
+            $lastLeaves = LeaveApplication::whereIn('employee_id', $employeeIds)
+                ->selectRaw('employee_id, MAX(application_to_date) as last_leave_date')
+                ->groupBy('employee_id')
+                ->pluck('last_leave_date', 'employee_id');
 
-            // Get last leave date (all statuses)
-            $lastLeave = LeaveApplication::where('employee_id', $employee->employee_id)
-                ->orderBy('application_to_date', 'desc')
-                ->first();
+            foreach ($employees as $employee) {
+                $employeeId = $employee->employee_id;
+                $statusCounts = $statusByEmployee[$employeeId] ?? [];
 
-            $employeeLeaveData[$employee->employee_id] = [
-                'total_applications' => $totalApplications,
-                'leave_days_taken' => $leaveDaysTaken ?? 0,
-                'last_leave_date' => $lastLeave ? $lastLeave->application_to_date : null,
-                'status_counts' => $statusCounts,
-                'pending_count' => $statusCounts[LeaveStatus::PENDING] ?? 0,
-                'approved_count' => $statusCounts[LeaveStatus::APPROVE] ?? 0,
-                'rejected_count' => $statusCounts[LeaveStatus::REJECT] ?? 0,
-            ];
+                $employeeLeaveData[$employeeId] = [
+                    'total_applications' => (int) ($totals[$employeeId] ?? 0),
+                    'last_leave_date' => $lastLeaves[$employeeId] ?? null,
+                    'status_counts' => $statusCounts,
+                    'pending_count' => $statusCounts[LeaveStatus::PENDING] ?? 0,
+                    'approved_count' => $statusCounts[LeaveStatus::APPROVE] ?? 0,
+                    'rejected_count' => $statusCounts[LeaveStatus::REJECT] ?? 0,
+                ];
+            }
         }
 
         $departments = Department::all();

@@ -63,13 +63,13 @@
                                 <div class="col-md-3">
                                     <div class="form-group">
                                         <label class="control-label">@lang('vehicle.driver')</label>
-                                        <select name="employee_id" class="form-control select2-searchable">
+                                        <select name="employee_id" id="employeeFilter" class="form-control">
                                             <option value="">@lang('common.all_drivers')</option>
-                                            @foreach($employees as $emp)
-                                                <option value="{{ $emp->employee_id }}" {{ request('employee_id') == $emp->employee_id ? 'selected' : '' }}>
-                                                    {{ $emp->full_name }} ({{ $emp->payroll_number }})
+                                            @if ($selectedEmployee)
+                                                <option value="{{ $selectedEmployee->employee_id }}" selected>
+                                                    {{ $selectedEmployee->full_name }} ({{ $selectedEmployee->payroll_number }})
                                                 </option>
-                                            @endforeach
+                                            @endif
                                         </select>
                                     </div>
                                 </div>
@@ -151,7 +151,7 @@
                                                 </a>
                                             </td>
                                             <td>{{ $assignment->employee->payroll_number ?? 'N/A' }}</td>
-                                            <td>{{ $assignment->assigned_from->format('d/m/Y') }}</td>
+                                            <td>{{ $assignment->assigned_from ? $assignment->assigned_from->format('d/m/Y') : '-' }}</td>
                                             <td>{{ $assignment->assigned_to ? $assignment->assigned_to->format('d/m/Y') : '-' }}</td>
                                             <td>{{ $assignment->durationInDays() }} @lang('vehicle.days')</td>
                                             <td>{{ $assignment->assignedBy->name ?? 'N/A' }}</td>
@@ -191,33 +191,51 @@
 @section('page_scripts')
 <script>
     $(document).ready(function() {
-        $('.select2-searchable').select2({
-            placeholder: 'Search for a driver...',
-            allowClear: true
+        $('#employeeFilter').select2({
+            placeholder: '@lang('common.all_drivers')',
+            allowClear: true,
+            width: '100%',
+            minimumInputLength: 0,
+            ajax: {
+                url: '{{ route('vehicle.get_drivers') }}',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) {
+                    return { q: params.term || '' };
+                },
+                processResults: function(data) {
+                    return { results: data };
+                }
+            }
         });
 
-        // Initialize DataTable with search
-        $('#assignmentsTable').DataTable({
-            dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rtip',
-            pageLength: 25,
-            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-            order: [[4, 'desc']], // Sort by assigned_from date descending
-            language: {
-                search: "Search assignments:",
-                lengthMenu: "Show _MENU_ entries",
-                info: "Showing _START_ to _END_ of _TOTAL_ assignments",
-                infoEmpty: "No assignments found",
-                paginate: {
-                    first: "First",
-                    last: "Last",
-                    next: "Next",
-                    previous: "Previous"
-                }
-            },
-            columnDefs: [
-                { orderable: false, targets: [9] } // Disable sorting on actions column
-            ]
-        });
+        var $table = $('#assignmentsTable');
+        var hasDataRows = $table.find('tbody tr').not(':has(td[colspan])').length > 0;
+
+        if (hasDataRows && !$.fn.DataTable.isDataTable($table)) {
+            $table.DataTable({
+                dom: '<"row"<"col-sm-6"l><"col-sm-6"f>>rtip',
+                pageLength: 25,
+                lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                order: [[4, 'desc']],
+                language: {
+                    search: 'Search assignments:',
+                    lengthMenu: 'Show _MENU_ entries',
+                    info: 'Showing _START_ to _END_ of _TOTAL_ assignments',
+                    infoEmpty: 'No assignments found',
+                    emptyTable: 'No assignments found',
+                    paginate: {
+                        first: 'First',
+                        last: 'Last',
+                        next: 'Next',
+                        previous: 'Previous'
+                    }
+                },
+                columnDefs: [
+                    { orderable: false, targets: [9] }
+                ]
+            });
+        }
     });
 </script>
 @endsection

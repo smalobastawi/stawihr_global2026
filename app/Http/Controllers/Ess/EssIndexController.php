@@ -1132,25 +1132,28 @@ class EssIndexController extends Controller
 
     public function subordinates()
     {
-        // Get logged-in employee
         $employee = employeeInfo();
 
-
         if (!$employee) {
-            return redirect()->back()->with('error', 'Employee not found');
+            return view('admin.ess.subordinates.index', [
+                'subordinates' => collect(),
+                'noEmployeeProfile' => true,
+            ]);
         }
 
-
-        // Get all subordinates (direct and indirect)
         $subordinateIds = $employee->getAllSubordinateIds();
 
+        $subordinates = empty($subordinateIds)
+            ? collect()
+            : Employee::with(['department', 'designation', 'workLocation'])
+                ->whereIn('employee_id', $subordinateIds)
+                ->orderBy('first_name')
+                ->get();
 
-        // Fetch all subordinate employees with their department and designation
-        $subordinates = Employee::with(['department', 'designation', 'workLocation'])
-            ->whereIn('employee_id', $subordinateIds)
-            ->get();
-
-        return view('admin.ess.subordinates.index', compact('subordinates'));
+        return view('admin.ess.subordinates.index', [
+            'subordinates' => $subordinates,
+            'noEmployeeProfile' => false,
+        ]);
     }
 
     public function myPayroll()

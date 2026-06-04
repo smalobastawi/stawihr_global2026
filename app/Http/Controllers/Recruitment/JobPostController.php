@@ -8,6 +8,7 @@ namespace App\Http\Controllers\Recruitment;
 use Exception;
 
 use App\Models\Job;
+use App\Models\JobApplicant;
 use App\Models\JobRequisition;
 use App\Models\Location;
 use App\Models\Department;
@@ -179,13 +180,39 @@ class JobPostController extends Controller
         ]);
     }
 
-    public function show($id)
+    public function show(Request $request, $id)
     {
-        $results = Job::with(['createdBy'])->where('job_id', $id)->first();
+        $result = Job::with(['createdBy', 'location'])->where('job_id', $id)->firstOrFail();
         $employee = employeeInfo() ?? null;
+
+        $tab = $request->get('tab', 'details');
+        if (!in_array($tab, ['details', 'applicants'], true)) {
+            $tab = 'details';
+        }
+
+        $sort = $request->get('sort', 'application_date');
+        $allowedSorts = ['applicant_name', 'application_date', 'years_of_experience', 'highest_qualification', 'status'];
+        if (!in_array($sort, $allowedSorts, true)) {
+            $sort = 'application_date';
+        }
+
+        $direction = strtolower($request->get('direction', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $applicantCount = JobApplicant::where('job_id', $id)->count();
+        $applicants = JobApplicant::where('job_id', $id)
+            ->orderBy($sort, $direction)
+            ->paginate(15)
+            ->withQueryString();
+
         return view('admin.recruitment.job.details', [
-            'result' => $results,
-            'employee' => $employee
+            'result' => $result,
+            'employee' => $employee,
+            'tab' => $tab,
+            'applicants' => $applicants,
+            'applicantCount' => $applicantCount,
+            'sort' => $sort,
+            'direction' => $direction,
+            'jobId' => (int) $id,
         ]);
     }
 
