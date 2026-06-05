@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <meta name="googlebot" content="noindex, nofollow">
+  <title>Dashboard — StawiHR User Guide</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/docs/user-guide/assets/css/guide.css">
+  <link rel="shortcut icon" href="/admin_assets/img/favicon.png">
+</head>
+<body data-page="dashboard" data-depth="0">
+
+<header class="guide-topbar">
+  <button type="button" class="guide-sidebar-toggle" id="guide-sidebar-toggle" aria-label="Toggle navigation">☰</button>
+  <a class="guide-topbar-brand" href="index.html">
+    <img src="/admin_assets/img/logo.png" alt="StawiHR">
+    <span>User Guide</span>
+  </a>
+  <nav class="guide-topbar-nav">
+    <a href="/dashboard">← Back to StawiHR</a>
+  </nav>
+</header>
+
+<div class="guide-layout">
+  <aside class="guide-sidebar" id="guide-sidebar">
+    <nav id="guide-sidebar-nav"></nav>
+  </aside>
+
+  <main class="guide-main">
+    <article class="guide-content">
+      <div class="guide-breadcrumb"><a href="index.html">User Guide</a> / Dashboard</div>
+      <h1>Dashboard</h1>
+      <p class="guide-lead">Your home screen after login — summary cards, shortcuts, and personal attendance.</p>
+
+      <figure class="guide-figure">
+        <img src="/docs/user-guide/assets/images/screenshots/dashboard-sidebar-top.png" alt="StawiHR dashboard with summary cards and shortcuts">
+        <figcaption>Figure 1 — The Dashboard showing summary cards, shortcut tiles, and the My Attendance table.</figcaption>
+      </figure>
+
+      <h2 id="summary-cards">Summary cards</h2>
+      <p>Four coloured cards at the top provide at-a-glance metrics:</p>
+      <ul>
+        <li><strong>Active Employees</strong> (teal) — total active headcount. Click <em>view all</em> to open the employee list.</li>
+        <li><strong>Departments</strong> (pink) — number of departments. Respects company/location permissions when enabled.</li>
+        <li><strong>Today's Headcount</strong> (orange) — employees marked present today.</li>
+        <li><strong>On Leave today</strong> (purple) — employees on fully approved leave for today's date.</li>
+      </ul>
+
+      <h2 id="shortcuts">Shortcuts</h2>
+      <p>Four white shortcut tiles link directly to major admin modules:</p>
+      <ul>
+        <li><strong>Manage Employees</strong> → Employee Management</li>
+        <li><strong>Payroll</strong> → Payroll module</li>
+        <li><strong>Attendance</strong> → Attendance module</li>
+        <li><strong>Leave Management</strong> → Leave Management module</li>
+      </ul>
+      <p>Each tile opens in the same window. Shortcut visibility depends on your permissions.</p>
+
+      <h2 id="attendance-table">My Attendance table</h2>
+      <p>Below the shortcuts, the <strong>My [Month] [Year] Attendance</strong> section shows your personal clock-in/out records for the current month with columns:</p>
+      <ul>
+        <li><strong>#</strong> — row number</li>
+        <li><strong>Date</strong> — attendance date</li>
+        <li><strong>In time</strong> — clock-in time</li>
+        <li><strong>Out Time</strong> — clock-out time</li>
+        <li><strong>Status</strong> — present, absent, late, etc.</li>
+      </ul>
+      <p>If no records exist yet, the table displays "No data available".</p>
+
+      <h2 id="top-bar">Top bar context</h2>
+      <p>The dashboard header shows your selected <strong>Company</strong> and active <strong>Financial Year</strong>. Changing company context may update the summary card counts.</p>
+
+      <div class="guide-callout guide-callout-info">
+        <strong>Permission-based content</strong>
+        Cards, shortcuts, and widgets appear only when your role has the matching permissions.
+      </div>
+
+      <h2 id="access">How to return to the dashboard</h2>
+      <p>Click <strong>Dashboard</strong> at the top of the left sidebar, or navigate to <code>/dashboard</code>.</p>
+
+      <p class="guide-footer-note">StawiHR User Guide · Dashboard</p>
+    </article>
+
+    <aside class="guide-toc">
+      <div class="guide-toc-title">On this page</div>
+      <nav id="guide-toc-list"></nav>
+    </aside>
+  </main>
+</div>
+
+<script src="/docs/user-guide/assets/js/guide.js"></script>
+</body>
+</html>

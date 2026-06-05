@@ -1595,20 +1595,11 @@
                   </li>
               @endcan
 
-             <li class="treeview-menu waves-effect">
-                 <a href="javascript:void(0)" class="module">
-                     <i class="iconFontSize  hideMenu"></i> <span class="hide-menu hideMenu">...</span>
+             <li>
+                 <a href="{{ route('user.guide') }}" class="waves-effect" target="_blank" rel="noopener">
+                     <i class="mdi mdi-book-open-page-variant hideMenu"></i>
+                     <span class="hide-menu hideMenu">User Guide</span>
                  </a>
-                 <ul class="treeview-menu nav nav-second-level">
-                     <li class="">
-                         <a class="hideMenu" href="#"> <i data-icon="/" class=""></i></a>
-
-                     </li>
-                     <li class="">
-                         <a class="hideMenu" href="#"> <i data-icon="/" class=""></i></a>
-
-                     </li>
-                 </ul>
              </li>
          </ul>
      </div>

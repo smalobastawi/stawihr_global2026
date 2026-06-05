@@ -1,0 +1,268 @@
+[
+  {
+    "title": "Welcome",
+    "href": "index.html",
+    "section": "Getting Started",
+    "description": "Overview of the StawiHR user guide and all sidebar modules.",
+    "keywords": "welcome home introduction overview start"
+  },
+  {
+    "title": "Quickstart",
+    "href": "getting-started.html",
+    "section": "Getting Started",
+    "description": "Sign in, reset password, SSO, and first steps after login.",
+    "keywords": "login sign in password forgot 2fa otp google microsoft azure first steps"
+  },
+  {
+    "title": "Navigate the System",
+    "href": "navigation.html",
+    "section": "Getting Started",
+    "description": "Sidebar menu, top bar, company selector, financial year, permissions.",
+    "keywords": "navigation sidebar menu modules top bar company financial year permissions"
+  },
+  {
+    "title": "Dashboard",
+    "href": "dashboard.html",
+    "section": "Getting Started",
+    "description": "Summary cards, shortcuts, and personal attendance table.",
+    "keywords": "dashboard home active employees departments headcount leave shortcuts attendance"
+  },
+  {
+    "title": "ESS Overview",
+    "href": "ess/index.html",
+    "section": "Self Service",
+    "description": "Employee Self Service modules — leave, payroll, training, feedback.",
+    "keywords": "ess self service employee overview"
+  },
+  {
+    "title": "Leave & Approvals",
+    "href": "ess/leave.html",
+    "section": "Self Service",
+    "description": "Apply for leave, track status, and approve team requests.",
+    "keywords": "leave apply annual sick approval supervisor pending scheduled"
+  },
+  {
+    "title": "Payroll & Loans",
+    "href": "ess/payroll.html",
+    "section": "Self Service",
+    "description": "View payslips, download PDF, and track personal loans.",
+    "keywords": "payroll payslip salary net pay loan repayment my payroll"
+  },
+  {
+    "title": "Team, Performance & More",
+    "href": "ess/more.html",
+    "section": "Self Service",
+    "description": "My Team, performance, PIP, training, notices, feedback, vehicle.",
+    "keywords": "team performance pip training awards notices policy feedback anonymous job posts vehicle disciplinary shifts"
+  },
+  {
+    "title": "Administration",
+    "href": "admin/administration.html",
+    "section": "Sidebar Modules",
+    "description": "Users, roles, role permissions, company permissions, activity logs.",
+    "keywords": "administration users roles permissions password activity logs security"
+  },
+  {
+    "title": "Policy Documents",
+    "href": "admin/policy-documents.html",
+    "section": "Sidebar Modules",
+    "description": "Document categories and upload HR policies for employees.",
+    "keywords": "policy documents categories upload hr policies procedures"
+  },
+  {
+    "title": "Employee Management",
+    "href": "admin/employees.html",
+    "section": "Sidebar Modules",
+    "description": "Manage employees, departments, sections, designations, termination.",
+    "keywords": "employee management staff departments sections designations location regions contracts termination joiners leavers master roll"
+  },
+  {
+    "title": "Vehicle Management",
+    "href": "admin/vehicle-management.html",
+    "section": "Sidebar Modules",
+    "description": "Register fleet vehicles and track employee assignments.",
+    "keywords": "vehicle fleet car assignment my vehicle"
+  },
+  {
+    "title": "Leave Management",
+    "href": "admin/leave-management.html",
+    "section": "Sidebar Modules",
+    "description": "Leave setup, holidays, approvals, adjustments, and leave reports.",
+    "keywords": "leave management holidays public weekly leave types groups rollover adjustments schedule encashment balances"
+  },
+  {
+    "title": "Attendance",
+    "href": "admin/attendance.html",
+    "section": "Sidebar Modules",
+    "description": "Work shifts, biometric devices, overtime approval, attendance reports.",
+    "keywords": "attendance shifts biometric overtime daily monthly weekly raw logs ip whitelist clock in"
+  },
+  {
+    "title": "Payroll",
+    "href": "admin/payroll.html",
+    "section": "Sidebar Modules",
+    "description": "Process payroll, loans, earnings, deductions, statutory reports.",
+    "keywords": "payroll process paye nssf shif ahl p9 loans earnings deductions variance payment reports salary"
+  },
+  {
+    "title": "Disciplinary",
+    "href": "admin/disciplinary.html",
+    "section": "Sidebar Modules",
+    "description": "Disciplinary categories, cases, and actions.",
+    "keywords": "disciplinary cases warnings misconduct actions categories"
+  },
+  {
+    "title": "Performance Management",
+    "href": "admin/performance.html",
+    "section": "Sidebar Modules",
+    "description": "Appraisals, rating scales, supervisor and HOD evaluations, PIP plans.",
+    "keywords": "performance appraisal review period rating scale focus areas behavioral supervisor hod pip improvement"
+  },
+  {
+    "title": "Recruitment",
+    "href": "admin/recruitment.html",
+    "section": "Sidebar Modules",
+    "description": "Job requisitions, job posts, and candidate management.",
+    "keywords": "recruitment hiring job requisition job post candidates apply careers internal"
+  },
+  {
+    "title": "Training",
+    "href": "admin/training.html",
+    "section": "Sidebar Modules",
+    "description": "Training types, facilitators, sessions, and training reports.",
+    "keywords": "training facilitator sessions invitations attendance report learning"
+  },
+  {
+    "title": "Awards",
+    "href": "admin/awards.html",
+    "section": "Sidebar Modules",
+    "description": "Record and publish employee awards and recognition.",
+    "keywords": "awards recognition achievement trophy"
+  },
+  {
+    "title": "Notice Board",
+    "href": "admin/notice-board.html",
+    "section": "Sidebar Modules",
+    "description": "Publish company announcements visible on dashboard and ESS.",
+    "keywords": "notice board announcements publish company news"
+  },
+  {
+    "title": "Analytics",
+    "href": "admin/analytics.html",
+    "section": "Sidebar Modules",
+    "description": "HR Insights dashboard with workforce metrics and charts.",
+    "keywords": "analytics hr insights charts metrics headcount turnover reports"
+  },
+  {
+    "title": "Employee Feedback",
+    "href": "admin/employee-feedback.html",
+    "section": "Sidebar Modules",
+    "description": "Feedback categories, employee submissions, and anonymous box.",
+    "keywords": "employee feedback anonymous box categories suggestions"
+  },
+  {
+    "title": "Settings",
+    "href": "admin/settings.html",
+    "section": "Sidebar Modules",
+    "description": "System configuration — companies, workflows, financial year, integrations.",
+    "keywords": "settings configuration system setup"
+  },
+  {
+    "title": "General Settings",
+    "href": "admin/settings.html#general-settings",
+    "section": "Settings",
+    "description": "Public portal branding, logo, company title, meta tags, favicon.",
+    "keywords": "general settings branding logo front page careers portal meta"
+  },
+  {
+    "title": "Companies",
+    "href": "admin/settings.html#companies",
+    "section": "Settings",
+    "description": "Multi-company setup, add companies, company switcher.",
+    "keywords": "companies multi company switcher superadmin all companies entity"
+  },
+  {
+    "title": "Company Settings",
+    "href": "admin/settings.html#company-settings",
+    "section": "Settings",
+    "description": "Per-company HR defaults, payroll rules, statutory registration numbers.",
+    "keywords": "company settings defaults payroll pin nssf address timezone leave group"
+  },
+  {
+    "title": "Print Head Settings",
+    "href": "admin/settings.html#print-head",
+    "section": "Settings",
+    "description": "Letterhead and header/footer layout for payslips and PDF reports.",
+    "keywords": "print head letterhead payslip pdf header footer logo reports"
+  },
+  {
+    "title": "Approval Workflows",
+    "href": "admin/settings.html#approval-workflows",
+    "section": "Settings",
+    "description": "Multi-step approval chains for leave, loans, payroll, and requisitions.",
+    "keywords": "approval workflows chain leave loan payroll requisition overtime approver"
+  },
+  {
+    "title": "Financial Year Settings",
+    "href": "admin/settings.html#financial-year",
+    "section": "Settings",
+    "description": "Define fiscal calendar start and end dates shown in the top bar.",
+    "keywords": "financial year fiscal calendar jan dec rollover reporting period"
+  },
+  {
+    "title": "System Settings",
+    "href": "admin/settings.html#system-settings",
+    "section": "Settings",
+    "description": "Authentication, 2FA, password policy, email SMS, biometric, licence.",
+    "keywords": "system settings 2fa authentication google azure smtp sms biometric license password expiry"
+  },
+  {
+    "title": "Sidebar Modules Overview",
+    "href": "admin/index.html",
+    "section": "Sidebar Modules",
+    "description": "Index of all admin and HR modules in the application sidebar.",
+    "keywords": "admin overview modules index all modules"
+  },
+  {
+    "title": "Users",
+    "href": "admin/administration.html#users",
+    "section": "Administration",
+    "description": "Create and manage user accounts linked to employees.",
+    "keywords": "users add user active inactive account credentials"
+  },
+  {
+    "title": "Roles & Permissions",
+    "href": "admin/administration.html#roles",
+    "section": "Administration",
+    "description": "Define roles and assign menu permissions to control access.",
+    "keywords": "roles permissions role permissions company permissions access control"
+  },
+  {
+    "title": "Process Payroll",
+    "href": "admin/payroll.html#process",
+    "section": "Payroll",
+    "description": "Run payroll for a pay period — validate, calculate, approve.",
+    "keywords": "process payroll run pay period calculate approve"
+  },
+  {
+    "title": "Apply for Leave",
+    "href": "ess/leave.html#apply-leave",
+    "section": "Self Service",
+    "description": "Step-by-step guide to submitting a leave application.",
+    "keywords": "apply leave submit annual sick reason attachment"
+  },
+  {
+    "title": "My Payroll / Payslips",
+    "href": "ess/payroll.html#my-payroll",
+    "section": "Self Service",
+    "description": "Open and download payslips for each pay period.",
+    "keywords": "payslip download view print my payroll period"
+  },
+  {
+    "title": "Forgot Password",
+    "href": "getting-started.html#forgot-password",
+    "section": "Getting Started",
+    "description": "Reset your password via email from the login page.",
+    "keywords": "forgot password reset recover email"
+  }
+]

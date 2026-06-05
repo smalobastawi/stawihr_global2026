@@ -150,6 +150,12 @@
 
                         <a href="#" data-bs-toggle="modal" data-bs-target="#resetModal">Forgot Password?</a>
 
+                        <p class="text-center mt-3 mb-0">
+                            <a href="{{ route('user.guide') }}" target="_blank" rel="noopener">
+                                <i class="fas fa-book"></i> User Guide
+                            </a>
+                        </p>
+
                         <div class="modal fade" id="resetModal" tabindex="-1" aria-labelledby="resetModalLabel"
                             aria-hidden="true">
                             <div class="modal-dialog">

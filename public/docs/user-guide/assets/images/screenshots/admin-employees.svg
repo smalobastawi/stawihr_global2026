@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="Employee management list">
+  <rect width="960" height="540" fill="#f4f6f8"/>
+  <rect x="220" y="16" width="720" height="48" fill="#fff" stroke="#e3e8ee"/>
+  <text x="240" y="46" font-family="Segoe UI, sans-serif" font-size="16" fill="#1a1f36" font-weight="600">Manage Employees</text>
+  <rect x="240" y="80" width="100" height="32" rx="4" fill="#018ef5"/>
+  <text x="262" y="101" font-family="Segoe UI, sans-serif" font-size="12" fill="#fff">+ Add Employee</text>
+  <rect x="240" y="130" width="680" height="360" rx="6" fill="#fff" stroke="#e3e8ee"/>
+  <rect x="260" y="150" width="640" height="28" fill="#f4f6f8"/>
+  <text x="280" y="169" font-family="Segoe UI, sans-serif" font-size="11" fill="#1a1f36" font-weight="600">Name</text>
+  <text x="420" y="169" font-family="Segoe UI, sans-serif" font-size="11" fill="#1a1f36" font-weight="600">Department</text>
+  <text x="560" y="169" font-family="Segoe UI, sans-serif" font-size="11" fill="#1a1f36" font-weight="600">Designation</text>
+  <text x="720" y="169" font-family="Segoe UI, sans-serif" font-size="11" fill="#1a1f36" font-weight="600">Status</text>
+  <rect x="260" y="178" width="640" height="26" fill="#fff" stroke="#e3e8ee"/>
+  <text x="280" y="196" font-family="Segoe UI, sans-serif" font-size="11" fill="#384248">Jane Doe</text>
+  <text x="420" y="196" font-family="Segoe UI, sans-serif" font-size="11" fill="#384248">Finance</text>
+  <text x="560" y="196" font-family="Segoe UI, sans-serif" font-size="11" fill="#384248">Accountant</text>
+  <text x="720" y="196" font-family="Segoe UI, sans-serif" font-size="11" fill="#22c55e">Active</text>
+</svg>

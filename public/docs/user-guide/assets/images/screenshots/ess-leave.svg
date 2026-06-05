@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="ESS Leave application">
+  <rect width="960" height="540" fill="#f4f6f8"/>
+  <rect x="0" y="0" width="200" height="540" fill="#2f323e"/>
+  <rect x="220" y="16" width="720" height="48" fill="#fff" stroke="#e3e8ee"/>
+  <text x="240" y="46" font-family="Segoe UI, sans-serif" font-size="16" fill="#1a1f36" font-weight="600">Leave  Self Service</text>
+  <rect x="240" y="80" width="680" height="420" rx="6" fill="#fff" stroke="#e3e8ee"/>
+  <rect x="260" y="100" width="120" height="32" rx="4" fill="#018ef5"/>
+  <text x="290" y="121" font-family="Segoe UI, sans-serif" font-size="12" fill="#fff">Apply Leave</text>
+  <text x="260" y="160" font-family="Segoe UI, sans-serif" font-size="12" fill="#697386">Leave Type</text>
+  <rect x="260" y="170" width="280" height="28" rx="4" fill="#f4f6f8" stroke="#e3e8ee"/>
+  <text x="560" y="160" font-family="Segoe UI, sans-serif" font-size="12" fill="#697386">Start Date</text>
+  <rect x="560" y="170" width="140" height="28" rx="4" fill="#f4f6f8" stroke="#e3e8ee"/>
+  <text x="260" y="230" font-family="Segoe UI, sans-serif" font-size="12" fill="#697386">Reason</text>
+  <rect x="260" y="240" width="440" height="60" rx="4" fill="#f4f6f8" stroke="#e3e8ee"/>
+  <rect x="260" y="320" width="440" height="80" rx="4" fill="#fafbfc" stroke="#e3e8ee"/>
+  <text x="280" y="345" font-family="Segoe UI, sans-serif" font-size="11" fill="#697386">Status: Pending Supervisor Approval</text>
+  <text x="280" y="370" font-family="Segoe UI, sans-serif" font-size="11" fill="#697386">Annual Leave  3 days</text>
+</svg>

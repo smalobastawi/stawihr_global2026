@@ -73,6 +73,11 @@ Route::group(['middleware' => ['web']], function () {
     Route::get('/job/{job_id}/download/description', [JobPostController::class, 'downloadJdFile'])->name('jobPost.downloadDescription');
 });
 
+// User guide entry — redirects once to static HTML docs; all other guide pages are static under /docs/user-guide/
+Route::get('user-guide', function () {
+    return redirect('/docs/user-guide/index.html');
+})->name('user.guide');
+
 Route::group(['module' => 'Administration', 'middleware' => ['prevent-back-history', 'auth', 'permission']], function () {
 
     Route::get('internalJob/{id}/{slug?}', [WebController::class, 'internalJobDetails'])->name('job.internal_details');

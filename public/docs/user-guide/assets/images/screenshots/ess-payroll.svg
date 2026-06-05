@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-label="ESS Payroll payslip">
+  <rect width="960" height="540" fill="#f4f6f8"/>
+  <rect x="220" y="16" width="720" height="48" fill="#fff" stroke="#e3e8ee"/>
+  <text x="240" y="46" font-family="Segoe UI, sans-serif" font-size="16" fill="#1a1f36" font-weight="600">My Payroll</text>
+  <rect x="240" y="80" width="680" height="420" rx="6" fill="#fff" stroke="#e3e8ee"/>
+  <text x="260" y="115" font-family="Segoe UI, sans-serif" font-size="12" fill="#697386">Select pay period</text>
+  <rect x="260" y="125" width="200" height="28" rx="4" fill="#f4f6f8" stroke="#e3e8ee"/>
+  <rect x="260" y="170" width="640" height="28" rx="0" fill="#018ef5" opacity="0.1"/>
+  <text x="280" y="189" font-family="Segoe UI, sans-serif" font-size="11" fill="#1a1f36" font-weight="600">Period</text>
+  <text x="420" y="189" font-family="Segoe UI, sans-serif" font-size="11" fill="#1a1f36" font-weight="600">Gross</text>
+  <text x="560" y="189" font-family="Segoe UI, sans-serif" font-size="11" fill="#1a1f36" font-weight="600">Net Pay</text>
+  <text x="720" y="189" font-family="Segoe UI, sans-serif" font-size="11" fill="#1a1f36" font-weight="600">Action</text>
+  <rect x="260" y="198" width="640" height="28" fill="#fff" stroke="#e3e8ee"/>
+  <text x="280" y="217" font-family="Segoe UI, sans-serif" font-size="11" fill="#384248">May 2026</text>
+  <text x="420" y="217" font-family="Segoe UI, sans-serif" font-size="11" fill="#384248">85,000</text>
+  <text x="560" y="217" font-family="Segoe UI, sans-serif" font-size="11" fill="#384248">62,400</text>
+  <text x="720" y="217" font-family="Segoe UI, sans-serif" font-size="11" fill="#018ef5">View / Download</text>
+</svg>

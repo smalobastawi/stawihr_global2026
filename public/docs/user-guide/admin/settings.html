@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
+  <meta name="googlebot" content="noindex, nofollow">
+  <title>Settings — StawiHR User Guide</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/docs/user-guide/assets/css/guide.css">
+  <link rel="shortcut icon" href="/admin_assets/img/favicon.png">
+</head>
+<body data-page="admin/settings" data-depth="1">
+
+<header class="guide-topbar">
+  <button type="button" class="guide-sidebar-toggle" id="guide-sidebar-toggle" aria-label="Toggle navigation">☰</button>
+  <a class="guide-topbar-brand" href="../index.html">
+    <img src="/admin_assets/img/logo.png" alt="StawiHR">
+    <span>User Guide</span>
+  </a>
+  <nav class="guide-topbar-nav">
+    <a href="/dashboard">← Back to StawiHR</a>
+  </nav>
+</header>
+
+<div class="guide-layout">
+  <aside class="guide-sidebar" id="guide-sidebar">
+    <nav id="guide-sidebar-nav"></nav>
+  </aside>
+
+  <main class="guide-main">
+    <article class="guide-content">
+      <div class="guide-breadcrumb"><a href="../index.html">User Guide</a> / Settings</div>
+      <h1>Settings</h1>
+      <p class="guide-lead">System-wide configuration for branding, companies, workflows, financial periods, and global behaviour.</p>
+
+      <figure class="guide-figure">
+        <img src="/docs/user-guide/assets/images/screenshots/settings-menu-expanded.png" alt="StawiHR Settings menu with all sub-items expanded">
+        <figcaption>Figure 1 — Settings module expanded in the sidebar, showing all seven configuration screens.</figcaption>
+      </figure>
+
+      <p>Open <strong>Settings</strong> near the bottom of the left sidebar (above User Guide). Each sub-item is documented below.</p>
+
+      <h2 id="general-settings">General Settings</h2>
+      <p><strong>Settings → General Settings</strong></p>
+      <p>Controls the public-facing front page and general application branding:</p>
+      <ul>
+        <li><strong>Company title and logo</strong> — displayed on the login page and public careers site.</li>
+        <li><strong>About us / short description</strong> — text shown on the external job portal homepage.</li>
+        <li><strong>Meta tags</strong> — SEO title, description, and social sharing (Open Graph) settings for the public site.</li>
+        <li><strong>Favicon</strong> — browser tab icon for the application.</li>
+      </ul>
+      <p>Use this screen when rebranding or updating what external candidates and visitors see before logging in.</p>
+
+      <h2 id="companies">Companies</h2>
+      <p><strong>Settings → Companies</strong></p>
+      <p>Manage the list of legal entities or business units in a multi-company deployment:</p>
+      <ul>
+        <li><strong>Add company</strong> — register a new company with name, code, and contact details.</li>
+        <li><strong>Edit company</strong> — update company profile information.</li>
+        <li><strong>Company switcher</strong> — users with access to multiple companies select the active company from the top bar (e.g. "All Companies (SuperAdmin)").</li>
+      </ul>
+      <p>Employee records, payroll runs, and reports can be scoped to a single company or aggregated across companies depending on user permissions.</p>
+
+      <h2 id="company-settings">Company Settings</h2>
+      <p><strong>Settings → Company Settings</strong></p>
+      <p>Per-company HR and operational defaults that differ between entities:</p>
+      <ul>
+        <li><strong>Working hours and timezone</strong> — local business rules for the selected company.</li>
+        <li><strong>Default leave group</strong> — leave policy applied to new employees in this company.</li>
+        <li><strong>Payroll defaults</strong> — currency, pay frequency references, and company-specific payroll rules.</li>
+        <li><strong>Address and contact</strong> — used on payslips, letters, and statutory reports.</li>
+        <li><strong>Registration numbers</strong> — employer PIN, NSSF number, and other statutory identifiers for filings.</li>
+      </ul>
+      <div class="guide-callout guide-callout-tip">
+        <strong>Tip</strong>
+        Configure Company Settings immediately after adding a new company and before onboarding employees into that entity.
+      </div>
+
+      <h2 id="print-head">Print Head Settings</h2>
+      <p><strong>Settings → Print Head Settings</strong></p>
+      <p>Define the letterhead and header/footer layout for printed and PDF documents:</p>
+      <ul>
+        <li><strong>Company logo on printouts</strong> — appears on payslips, P9 forms, and HR letters.</li>
+        <li><strong>Header text</strong> — company name, address block, and tagline.</li>
+        <li><strong>Footer text</strong> — copyright, confidentiality notice, or page numbers.</li>
+        <li><strong>Report-specific layouts</strong> — separate print heads for payroll vs. HR reports if configured.</li>
+      </ul>
+      <p>Preview a sample payslip or report after saving to confirm alignment and image quality.</p>
+
+      <h2 id="approval-workflows">Approval Workflows</h2>
+      <p><strong>Settings → Approval Workflows</strong></p>
+      <p>Define multi-step approval chains used across the system. Each workflow specifies ordered approver roles or individuals for a transaction type.</p>
+      <p>Common workflow types include:</p>
+      <ul>
+        <li><strong>Leave applications</strong> — e.g. Supervisor → HOD → HR.</li>
+        <li><strong>Loan applications</strong> — e.g. Supervisor → Finance → HR.</li>
+        <li><strong>Payroll processing</strong> — e.g. Payroll Officer → Finance Manager → CEO.</li>
+        <li><strong>Job requisitions</strong> — hiring approval chain before posting vacancies.</li>
+        <li><strong>Overtime requests</strong> — supervisor approval before payroll inclusion.</li>
+      </ul>
+      <ol class="guide-steps">
+        <li>Create a new workflow and name it clearly (e.g. "Standard Leave Approval").</li>
+        <li>Add approval steps in order — each step maps to a role or specific user.</li>
+        <li>Assign the workflow to the relevant module or leave/loan type in module settings.</li>
+        <li>Test with a non-production user account to confirm approvers receive items in ESS → Approvals.</li>
+      </ol>
+      <div class="guide-callout guide-callout-warning">
+        <strong>Important</strong>
+        Changing an active workflow does not retroactively alter items already in the approval queue. Plan workflow changes during quiet periods.
+      </div>
+
+      <h2 id="financial-year">Financial Year Settings</h2>
+      <p><strong>Settings → Financial Year Settings</strong></p>
+      <p>Define the organisation's fiscal calendar displayed in the top bar (e.g. <em>Financial Year: 01 Jan – 31 Dec, 2026</em>):</p>
+      <ul>
+        <li><strong>Start date</strong> — first day of the financial year.</li>
+        <li><strong>End date</strong> — last day of the financial year.</li>
+        <li><strong>Active year</strong> — only one financial year is active at a time for reporting.</li>
+        <li><strong>Year rollover</strong> — create the next financial year before the current one closes.</li>
+      </ul>
+      <p>Financial year boundaries affect leave rollover, performance review periods, budget reports, and year-end payroll summaries.</p>
+
+      <h2 id="system-settings">System Settings</h2>
+      <p><strong>Settings → System Settings</strong></p>
+      <p>Global toggles and integration options that affect the entire application:</p>
+      <ul>
+        <li><strong>Authentication options</strong> — password login, Google SSO, Azure AD (Microsoft) login enable/disable.</li>
+        <li><strong>Two-factor authentication (2FA)</strong> — require OTP on login when enabled.</li>
+        <li><strong>Password policy</strong> — expiry days, complexity rules, forced change on first login.</li>
+        <li><strong>Email / SMS notifications</strong> — SMTP settings and SMS gateway for OTP and alerts.</li>
+        <li><strong>Biometric integration</strong> — connection settings for attendance devices.</li>
+        <li><strong>License and environment</strong> — application licence validation and environment-specific flags.</li>
+        <li><strong>Feature toggles</strong> — enable or disable optional modules per deployment.</li>
+      </ul>
+      <div class="guide-callout guide-callout-warning">
+        <strong>System admin only</strong>
+        Incorrect System Settings can lock out users or stop notifications. Restrict access to trusted administrators.
+      </div>
+
+      <h2 id="settings-checklist">Recommended setup order</h2>
+      <ol class="guide-steps">
+        <li><strong>Companies</strong> — register all entities.</li>
+        <li><strong>Company Settings</strong> — configure each company.</li>
+        <li><strong>Financial Year Settings</strong> — set the active year.</li>
+        <li><strong>Approval Workflows</strong> — define approval chains.</li>
+        <li><strong>Print Head Settings</strong> — set up document branding.</li>
+        <li><strong>General Settings</strong> — configure the public portal.</li>
+        <li><strong>System Settings</strong> — authentication, notifications, integrations.</li>
+      </ol>
+
+      <p class="guide-footer-note">StawiHR User Guide · Settings</p>
+    </article>
+
+    <aside class="guide-toc">
+      <div class="guide-toc-title">On this page</div>
+      <nav id="guide-toc-list"></nav>
+    </aside>
+  </main>
+</div>
+
+<script src="/docs/user-guide/assets/js/guide.js"></script>
+</body>
+</html>
