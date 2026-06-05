@@ -93,6 +93,7 @@
                         <li>Locations </li>
                         <li>Designation/Jot title</li>
                     </ol>
+                    <p class="text-muted">Required employee name columns: <strong>first_name</strong>, <strong>last_name</strong>. <strong>middle_name</strong> is optional.</p>
                 </div>
 
             </div>

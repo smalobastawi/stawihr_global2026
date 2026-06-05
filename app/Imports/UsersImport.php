@@ -30,18 +30,14 @@ use Maatwebsite\Excel\Concerns\ToModel;
 use Illuminate\Support\Facades\Validator;
 use App\Lib\Enumerations\StaffContractTypes;
 use Illuminate\Validation\ValidationException;
+use Maatwebsite\Excel\Concerns\RemembersRowNumber;
+use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithStartRow;
-use Maatwebsite\Excel\Concerns\WithChunkReading;
 
-class UsersImport implements ToModel, WithHeadingRow, WithStartRow, WithChunkReading
+class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRows
 {
-    /**
-     * @param array $row
-     *
-     * @return \Illuminate\Database\Eloquent\Model|null
-     */
-    private static $globalRowCounter = 2;
+    use RemembersRowNumber;
 
     /**
      * Collection of row-level import errors.
@@ -49,16 +45,19 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, WithChunkRea
     protected array $errors = [];
 
     /**
-     * Skip the first row ("Master Roll" title)
+     * Row 1 is the "Master Roll" title; column headers are on row 2.
+     */
+    public function headingRow(): int
+    {
+        return 2;
+    }
+
+    /**
+     * Data rows begin below the header row.
      */
     public function startRow(): int
     {
-        return 2; // Headers are on row 2
-    }
-
-    public function chunkSize(): int
-    {
-        return 300;
+        return 3;
     }
 
     public function getErrors(): array
@@ -66,91 +65,113 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, WithChunkRea
         return $this->errors;
     }
 
+    public function isEmptyWhen(array $row): bool
+    {
+        return !$this->hasFirstName($row);
+    }
+
     public function model(array $row, $rowNumber = null)
     {
-
-        $currentRow = self::$globalRowCounter++;
+        $currentRow = $this->getRowNumber() ?? $rowNumber ?? 0;
 
         // Normalize column names (handle spaces, special chars)
         $row = $this->normalizeColumnNames($row);
+        $row = $this->mapTemplateColumns($row);
 
-        // Skip if first_name is empty (empty row)
-        if (empty($row['first_name'])) {
-            
-            $this->errors[] = "Row {$currentRow} was skipped: first_name is missing or empty.";
+        if (!$this->hasFirstName($row)) {
             return null;
         }
+
         try {
             $validator = Validator::make($row, [
                 'first_name' => 'required|string|min:2',
+                'middle_name' => 'nullable|string',
                 'last_name' => 'required|string|min:2',
                 'payroll_number' => 'required|string',
                 'department' => 'required|string',
             ]);
 
             if ($validator->fails()) {
-                $failures = $validator->errors();
-                if ($failures->isNotEmpty()) {
-                    $formattedErrors = [];
-                    foreach ($failures->toArray() as $field => $messages) {
-                        $columnValue = $row[$field] ?? 'N/A';
-                        foreach ($messages as $message) {
-                            $formattedErrors[] = "Row {$currentRow}, Column '{$field}': {$columnValue} - {$message}";
-                        }
+                foreach ($validator->errors()->toArray() as $field => $messages) {
+                    $columnValue = $row[$field] ?? 'N/A';
+                    foreach ($messages as $message) {
+                        $this->errors[] = "Row {$currentRow}, Column '{$field}': {$columnValue} - {$message}";
                     }
-                    $this->errors = array_merge($this->errors, $formattedErrors);
                 }
+
                 return null;
             }
         } catch (\Exception $e) {
             Log::error('Validation error: ' . $e->getMessage());
-            $this->errors[] = "Row {$currentRow} validation error: " . $e->getMessage();
+            $this->errors[] = "Row {$currentRow} was skipped: {$e->getMessage()}";
             return null;
         }
 
         // Process dates
-        $start_date = $this->parseDate($row['start_date'] ?? null);
-        $effective_date = $this->parseDate($row['effective_date'] ?? null);
+        $start_date = $this->resolveEmploymentStartDate($row);
+        $effective_date = $this->parseDate($row['effective_date'] ?? null) ?? $start_date;
         $end_of_probation = $this->parseDate($row['end_of_probation'] ?? null);
         $end_of_contract = $this->parseDate($row['end_of_contract'] ?? null);
 
-        // Create or update User account
-        $employeeAccountDataFormat = $this->makeEmployeeAccountDataFormat_from_excel($row);
-        $parentData = User::updateOrCreate(
-            ['email' => $employeeAccountDataFormat['email']],
-            $employeeAccountDataFormat
-        );
-
-        // Create or update Employee record
-        $employeeDataFormat = $this->makeEmployeePersonalInformationDataFormat_from_excel(
-            $row,
-            $start_date,
-            $employeeAccountDataFormat['email'],
-            $parentData->id
-        );
-
-        $newEmployee = Employee::updateOrCreate(
-            [
-                'payroll_number' => $employeeDataFormat['payroll_number'],
-            ],
-            $employeeDataFormat
-        );
-
-        // Create or update Employee Payroll record
-        $this->createOrUpdateEmployeePayroll($row, $newEmployee, $effective_date);
-
-        // Assign default role
-        $parentData->assignRole('Employee');
-
-        // Create contract record
-        $this->createOrUpdateContract($row, $newEmployee, $start_date, $end_of_contract, $end_of_probation);
-
-        // Update joiners table
-        $this->createOrUpdateJoinerRecord($newEmployee, $start_date);
-
-        if ($newEmployee) {
-            session()->flash('success', "Employee {$newEmployee->first_name} {$newEmployee->last_name} imported successfully.", 30);
+        if (empty($start_date)) {
+            $this->errors[] = "Row {$currentRow} was skipped: contract start date is missing. Please provide start_date or effective_date.";
+            return null;
         }
+
+        try {
+            // Create or update User account
+            $employeeAccountDataFormat = $this->makeEmployeeAccountDataFormat_from_excel($row);
+            $parentData = User::updateOrCreate(
+                ['email' => $employeeAccountDataFormat['email']],
+                $employeeAccountDataFormat
+            );
+
+            // Create or update Employee record
+            $employeeDataFormat = $this->makeEmployeePersonalInformationDataFormat_from_excel(
+                $row,
+                $start_date,
+                $employeeAccountDataFormat['email'],
+                $parentData->id
+            );
+
+            $newEmployee = Employee::updateOrCreate(
+                [
+                    'payroll_number' => $employeeDataFormat['payroll_number'],
+                ],
+                $employeeDataFormat
+            );
+
+            // Create or update Employee Payroll record
+            $this->createOrUpdateEmployeePayroll($row, $newEmployee, $effective_date);
+
+            // Assign default role
+            $parentData->assignRole('Employee');
+
+            // Create contract record
+            $this->createOrUpdateContract($row, $newEmployee, $start_date, $end_of_contract, $end_of_probation);
+
+            // Update joiners table
+            $this->createOrUpdateJoinerRecord($newEmployee, $start_date);
+
+            if ($newEmployee) {
+                session()->flash('success', "Employee {$newEmployee->first_name} {$newEmployee->last_name} imported successfully.", 30);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Employee import row failed', [
+                'row' => $currentRow,
+                'payroll_number' => $row['payroll_number'] ?? null,
+                'message' => $e->getMessage(),
+            ]);
+            $this->errors[] = $this->formatRowException($e, $currentRow);
+            return null;
+        }
+    }
+
+    private function hasFirstName(array $row): bool
+    {
+        $row = $this->normalizeColumnNames($row);
+
+        return trim((string) ($row['first_name'] ?? '')) !== '';
     }
 
     /**
@@ -168,6 +189,49 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, WithChunkRea
             $normalized[$normalizedKey] = $value;
         }
         return $normalized;
+    }
+
+    /**
+     * Map template column aliases to the fields expected by the importer.
+     */
+    private function mapTemplateColumns(array $row): array
+    {
+        if (!empty($row['id_passport']) && empty($row['idpassport'])) {
+            $row['idpassport'] = $row['id_passport'];
+        }
+
+        if (empty($row['payroll_number']) && !empty($row['id_passport'])) {
+            $row['payroll_number'] = (string) $row['id_passport'];
+        }
+
+        return $row;
+    }
+
+    private function resolveEmploymentStartDate(array $row): ?string
+    {
+        foreach (['start_date', 'effective_date', 'date_of_joining', 'hire_date'] as $column) {
+            $parsed = $this->parseDate($row[$column] ?? null);
+            if (!empty($parsed)) {
+                return $parsed;
+            }
+        }
+
+        return null;
+    }
+
+    private function formatRowException(\Throwable $e, int $currentRow): string
+    {
+        $message = $e->getMessage();
+
+        if (str_contains($message, "Column 'start_date' cannot be null")) {
+            return "Row {$currentRow} was skipped: contract start date is missing. Please provide start_date or effective_date.";
+        }
+
+        if (str_contains($message, 'Integrity constraint violation')) {
+            return "Row {$currentRow} was skipped: required employee information is missing or invalid.";
+        }
+
+        return "Row {$currentRow} was skipped: could not import this employee. Please check the data and try again.";
     }
 
     /**

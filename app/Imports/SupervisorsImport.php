@@ -11,6 +11,13 @@ use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
 class SupervisorsImport implements ToModel, WithHeadingRow
 {
+    protected array $errors = [];
+
+    public function getErrors(): array
+    {
+        return $this->errors;
+    }
+
     /**
      * @param Collection $collection
      */
@@ -31,12 +38,11 @@ class SupervisorsImport implements ToModel, WithHeadingRow
     {
         $employeeData['updated_at'] = date('Y-m-d H:i s');
         $employeeData['updated_by'] = Auth::user()->id;
-        if ($data['supervisor']){
-            $employeeData['supervisor'] = Employee::where('payroll_number', $data['supervisor'])->pluck('employee_id')->first();
-
-        }
-        else
+        if (!empty($data['supervisor'])) {
+            $employeeData['supervisor_id'] = Employee::where('payroll_number', $data['supervisor'])->value('employee_id') ?? 1;
+        } else {
             $employeeData['supervisor_id'] = 1;
+        }
         return $employeeData;
     }
 }

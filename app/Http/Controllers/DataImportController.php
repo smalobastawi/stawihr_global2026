@@ -9,11 +9,13 @@ use App\Models\FinancialYear;
 use App\Models\PayrollEarningTypes;
 use App\Repositories\EmployeeRepository;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use App\Imports\UsersImport;
 use App\Imports\LeavesImport;
+use App\Imports\SupervisorsImport;
 
 class DataImportController extends Controller
 {
@@ -383,8 +385,14 @@ class DataImportController extends Controller
             }
             return redirect()->back()->with('import_errors', $errors);
         } catch (\Exception $e) {
+            Log::error('Employee import failed', ['message' => $e->getMessage()]);
+
             return redirect()->back()
-                ->with('error', 'An error occurred during import: ' . $e->getMessage());
+                ->with('warning', 'Import could not be completed. Please review the details below.')
+                ->with('import_errors', array_merge(
+                    $import->getErrors(),
+                    [$this->formatImportErrorMessage($e)]
+                ));
         }
 
         if ($import->getErrors()) {
@@ -395,6 +403,21 @@ class DataImportController extends Controller
 
         return redirect()->route('employee.importView')
             ->with('success', 'Users imported successfully!');
+    }
+
+    private function formatImportErrorMessage(\Exception $e): string
+    {
+        $message = $e->getMessage();
+
+        if (str_contains($message, "Column 'start_date' cannot be null")) {
+            return 'One or more employees are missing a contract start date. Please add start_date or effective_date in your file.';
+        }
+
+        if (str_contains($message, 'Integrity constraint violation')) {
+            return 'Some required employee information is missing or invalid. Please review your file and try again.';
+        }
+
+        return 'The import could not be completed. Please check your file format and required fields, then try again.';
     }
 
     public function importLeaves(Request $request)
