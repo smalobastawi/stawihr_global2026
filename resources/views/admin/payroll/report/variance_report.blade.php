@@ -53,6 +53,7 @@
                                     @endforeach
                                 </select>
                             </div>
+                            @include('admin.payroll.report.partials.company_filter')
                             <div class="col-md-4">
                                 <label for="department_id" class="form-label">Department (Optional)</label>
                                 <select class="form-control" id="department_id" name="department_id">
@@ -83,6 +84,7 @@
                         <div class="alert alert-info">
                             <strong>Comparison:</strong>
                             {{ $currentPeriod->name }} vs {{ $previousPeriod->name }}
+                            <br><strong>Company:</strong> {{ $selectedCompanyName ?? 'All Companies' }}
                         </div>
 
                         <div class="row">

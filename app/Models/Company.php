@@ -15,6 +15,13 @@ class Company extends Model
         'logo',
         'domain',
         'country',
+        'address',
+        'official_contact_number',
+        'official_email',
+        'company_contact_name',
+        'representative_phone',
+        'representative_email',
+        'print_head_description',
         'payroll_country',
         'status',
         'kra_pin',
@@ -50,5 +57,8 @@ class Company extends Model
         return $this->hasMany(EmployeePayrollProfile::class);
     }
 
-    // add other relationships as needed
+    public function financialYears(): HasMany
+    {
+        return $this->hasMany(FinancialYear::class);
+    }
 }

@@ -155,6 +155,60 @@
                                         <small class="text-muted">Kenya eCitizen Portal Business Identifier</small>
                                     </div>
                                 </div>
+
+                                <h4 style="margin-top: 30px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                                    <i class="mdi mdi-map-marker fa-fw"></i> Contact &amp; Correspondence
+                                </h4>
+
+                                <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-12">
+                                        <label class="control-label">Registered Address</label>
+                                        <textarea class="form-control" name="address" rows="3"
+                                            placeholder="Enter company address">{{ old('address') }}</textarea>
+                                    </div>
+                                </div>
+
+                                <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-6">
+                                        <label class="control-label">Official Phone</label>
+                                        <input type="text" class="form-control" name="official_contact_number"
+                                            value="{{ old('official_contact_number') }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="control-label">Official Email</label>
+                                        <input type="email" class="form-control" name="official_email"
+                                            value="{{ old('official_email') }}">
+                                    </div>
+                                </div>
+
+                                <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-6">
+                                        <label class="control-label">Contact Person</label>
+                                        <input type="text" class="form-control" name="company_contact_name"
+                                            value="{{ old('company_contact_name') }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="control-label">Representative Phone</label>
+                                        <input type="text" class="form-control" name="representative_phone"
+                                            value="{{ old('representative_phone') }}">
+                                    </div>
+                                </div>
+
+                                <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-6">
+                                        <label class="control-label">Representative Email</label>
+                                        <input type="email" class="form-control" name="representative_email"
+                                            value="{{ old('representative_email') }}">
+                                    </div>
+                                </div>
+
+                                <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-12">
+                                        <label class="control-label">Print Head (Payslips &amp; Reports)</label>
+                                        <textarea class="form-control" name="print_head_description" rows="4"
+                                            placeholder="HTML or text shown at the top of payslips and reports">{{ old('print_head_description') }}</textarea>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="form-actions">

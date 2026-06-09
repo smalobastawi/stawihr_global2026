@@ -45,6 +45,7 @@ class Kernel extends HttpKernel
             \Inspector\Laravel\Middleware\WebRequestMonitoring::class,
             \App\Http\Middleware\EnsureUserHasCompany::class,
             \App\Http\Middleware\SetActiveCompany::class,
+            \App\Http\Middleware\EnsureModuleEnabled::class,
             \App\Http\Middleware\PreventSearchIndexing::class,
 
         ],
@@ -85,5 +86,6 @@ class Kernel extends HttpKernel
         'training.invitation.response' => \App\Http\Middleware\ValidateTrainingInvitation::class,
         'google.tokens' => \App\Http\Middleware\CheckGoogleTokens::class,
         'active.company' => \App\Http\Middleware\SetActiveCompany::class,
+        'module.enabled' => \App\Http\Middleware\EnsureModuleEnabled::class,
     ];
 }

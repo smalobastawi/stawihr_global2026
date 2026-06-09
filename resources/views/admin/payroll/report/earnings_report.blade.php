@@ -54,6 +54,7 @@
                                                 </select>
                                             </div>
                                         </div>
+                                        @include('admin.payroll.report.partials.company_filter')
                                         <div class="col-md-3">
                                             <div class="form-group">
                                                 <label>Earning Type</label>

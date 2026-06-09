@@ -33,8 +33,12 @@ class AppServiceProvider extends ServiceProvider
         Schema::defaultStringLength(191);
 
         View::composer('*', function ($view) {
-            $view->with('activeFinancialYear', FinancialYear::active()->first());
+            $view->with('activeFinancialYear', getActiveFinancialYear());
         });
+
+        if (Auth::check() && session('enabled_module_names') === null) {
+            refreshEnabledModules();
+        }
         // PayrollRecord::observe(PayrollRecordObserver::class);
         $models = [
             \App\Models\Payroll\PayrollRecord::class,
@@ -49,5 +53,6 @@ class AppServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->singleton(\App\Services\Payroll\PayrollCalculationServiceResolver::class);
+        $this->app->singleton(\App\Services\ModuleActivationService::class);
     }
 }

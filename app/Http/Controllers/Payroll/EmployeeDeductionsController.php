@@ -83,7 +83,7 @@ class EmployeeDeductionsController extends Controller
         ];
 
         $financialYears = \App\Models\FinancialYear::orderBy('start_date', 'desc')->get();
-        $activeFinancialYear = \App\Models\FinancialYear::active()->first();
+        $activeFinancialYear = getActiveFinancialYear();
 
         return view('admin.payroll.employee_deductions.index', compact(
             'results',
@@ -136,10 +136,10 @@ class EmployeeDeductionsController extends Controller
         }
 
         $financialYears = \App\Models\FinancialYear::orderBy('start_date', 'desc')->get();
-        $activeFinancialYear = \App\Models\FinancialYear::active()->first();
+        $activeFinancialYear = getActiveFinancialYear();
 
         $financialYears = \App\Models\FinancialYear::orderBy('start_date', 'desc')->get();
-        $activeFinancialYear = \App\Models\FinancialYear::active()->first();
+        $activeFinancialYear = getActiveFinancialYear();
 
         return view('admin.payroll.employee_deductions.form', compact(
             'employees',
@@ -309,7 +309,7 @@ class EmployeeDeductionsController extends Controller
         ];
 
         $financialYears = \App\Models\FinancialYear::orderBy('start_date', 'desc')->get();
-        $activeFinancialYear = \App\Models\FinancialYear::active()->first();
+        $activeFinancialYear = getActiveFinancialYear();
 
         return view('admin.payroll.employee_deductions.form', compact(
             'editModeData',

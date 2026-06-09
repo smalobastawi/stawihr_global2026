@@ -29,6 +29,19 @@ class AuthServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->registerPolicies();
+
+        Gate::before(function ($user, $ability) {
+            if (is_string($ability) && str_starts_with($ability, 'pmMenu__')) {
+                $moduleName = substr($ability, strlen('pmMenu__'));
+
+                if (!moduleEnabled($moduleName)) {
+                    return false;
+                }
+            }
+
+            return null;
+        });
+
         Gate::after(function ($user, $ability) {
             ($user->hasRole('SuperAdmin'));
             return $user->hasRole('SuperAdmin') ? true : null;

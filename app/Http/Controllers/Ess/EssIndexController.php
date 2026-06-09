@@ -768,7 +768,7 @@ class EssIndexController extends Controller
         }
 
         // Get current financial year
-        $financialYear = FinancialYear::active()->first();
+        $financialYear = getActiveFinancialYear();
         if (!$financialYear) {
             return redirect()->back()->with('error', 'No active financial year found. Please contact administrator.');
         }

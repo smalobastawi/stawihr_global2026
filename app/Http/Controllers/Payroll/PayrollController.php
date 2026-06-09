@@ -401,7 +401,7 @@ class PayrollController extends Controller
             }
 
             // Get the current financial year
-            $financialYear = FinancialYear::active()->first();
+            $financialYear = getActiveFinancialYear();
             if (!$financialYear) {
                 Log::warning('No active financial year found for leave encashment processing', [
                     'payroll_record_id' => $record->id,

@@ -5,7 +5,8 @@
 
 use App\Http\Controllers\Api\RemoteLogController;
 use App\Lib\Enumerations\GeneralStatus;
-use App\Models\CompanySettings;
+use App\Models\Company;
+use App\Support\CompanyContext;
 use App\Models\FrontSetting;
 use App\Models\Payroll\DeductionType;
 use App\Models\User;
@@ -15,6 +16,9 @@ use App\Models\Employee;
 use App\Models\FinancialYear;
 use App\Models\MorphoDeviceLog;
 use App\Models\Payroll\PayrollPeriod;
+use App\Models\Payroll\PayrollRecord;
+use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Database\Eloquent\Builder;
 use App\Models\HolidayDetails;
 use App\Models\LeaveGroupSetting;
 use Illuminate\Support\Facades\Route;
@@ -354,10 +358,26 @@ if (!function_exists('getPageTitle')) {
     }
 }
 if (!function_exists('helper_companyInfo')) {
-    function helper_companyInfo()
+    function helper_companyInfo($company = null)
     {
-        $settings = CompanySettings::orderBy('id', 'desc')->first();
-        return $settings;
+        $company = $company ?? getActiveCompany();
+        if (!$company) {
+            return null;
+        }
+
+        return (object) [
+            'legal_Name' => $company->name,
+            'legal_Address' => $company->address,
+            'official_contact_number' => $company->official_contact_number,
+            'official_email' => $company->official_email,
+            'company_contact_name' => $company->company_contact_name,
+            'representative_phone' => $company->representative_phone,
+            'representative_email' => $company->representative_email,
+            'KRA_PIN' => $company->kra_pin,
+            'employer_number' => $company->employer_number,
+            'NSSF_employer_number' => $company->nssf_employer_number,
+            'NHIF_employer_code' => $company->shif_employer_code,
+        ];
     }
 }
 
@@ -421,45 +441,150 @@ if (!function_exists('companyDisplayName')) {
     function companyDisplayName($company = null)
     {
         $company = $company ?? getActiveCompany();
-        $settings = helper_companyInfo();
 
-        if ($company?->name) {
-            return $company->name;
-        }
-
-        return $settings?->legal_Name ?? config('app.name', 'STAWIHR');
+        return $company?->name ?? config('app.name', 'STAWIHR');
     }
 }
 
 if (!function_exists('companyDisplayAddress')) {
-    function companyDisplayAddress()
+    function companyDisplayAddress($company = null)
     {
-        return helper_companyInfo()?->legal_Address;
+        $company = $company ?? getActiveCompany();
+
+        return $company?->address;
     }
 }
 
 if (!function_exists('companyDisplayEmail')) {
-    function companyDisplayEmail()
+    function companyDisplayEmail($company = null)
     {
-        return helper_companyInfo()?->official_email;
+        $company = $company ?? getActiveCompany();
+
+        return $company?->official_email;
     }
 }
 
 if (!function_exists('companyDisplayPhone')) {
-    function companyDisplayPhone()
+    function companyDisplayPhone($company = null)
     {
-        return helper_companyInfo()?->official_contact_number;
+        $company = $company ?? getActiveCompany();
+
+        return $company?->official_contact_number;
+    }
+}
+
+if (!function_exists('reportFilterCompanies')) {
+    function reportFilterCompanies()
+    {
+        $permittedIds = CompanyContext::permittedCompanyIds();
+        if (empty($permittedIds)) {
+            return collect();
+        }
+
+        return Company::whereIn('id', $permittedIds)
+            ->where('status', 'active')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+    }
+}
+
+if (!function_exists('resolveReportCompanyId')) {
+    function resolveReportCompanyId(HttpRequest $request): ?int
+    {
+        if ($request->has('company_id')) {
+            if ($request->company_id === null || $request->company_id === '') {
+                return null;
+            }
+
+            $companyId = (int) $request->company_id;
+            $permittedIds = CompanyContext::permittedCompanyIds();
+            if (!empty($permittedIds) && !in_array($companyId, $permittedIds, true)) {
+                abort(403, 'You do not have access to this company.');
+            }
+
+            return $companyId;
+        }
+
+        return CompanyContext::activeCompanyId();
+    }
+}
+
+if (!function_exists('applyCompanyFilterToPayrollRecords')) {
+    function applyCompanyFilterToPayrollRecords(Builder $query, ?int $companyId): Builder
+    {
+        if (!$companyId) {
+            return $query;
+        }
+
+        return $query->withoutGlobalScope('company')
+            ->whereHas('employee', function ($employeeQuery) use ($companyId) {
+                $employeeQuery->where('employee.company_id', $companyId);
+            });
+    }
+}
+
+if (!function_exists('applyCompanyFilterToPayrollRecordDetails')) {
+    function applyCompanyFilterToPayrollRecordDetails(Builder $query, ?int $companyId): Builder
+    {
+        if (!$companyId) {
+            return $query;
+        }
+
+        return $query->whereHas('payrollRecord', function ($payrollRecordQuery) use ($companyId) {
+            applyCompanyFilterToPayrollRecords($payrollRecordQuery, $companyId);
+        });
+    }
+}
+
+if (!function_exists('reportCompanyViewData')) {
+    function reportCompanyViewData(?int $companyId): array
+    {
+        $selectedCompany = $companyId ? Company::find($companyId) : null;
+
+        return [
+            'companies' => reportFilterCompanies(),
+            'selectedCompanyId' => $companyId,
+            'selectedCompanyName' => $selectedCompany?->name,
+        ];
+    }
+}
+
+if (!function_exists('getStatutoryPayrollRecords')) {
+    function getStatutoryPayrollRecords($period, ?int $companyId, string $column)
+    {
+        $query = PayrollRecord::with(['employee', 'payrollPeriod'])
+            ->where('payroll_period_id', $period->id)
+            ->where($column, '>', 0);
+
+        return applyCompanyFilterToPayrollRecords($query, $companyId)
+            ->orderBy('created_at', 'DESC')
+            ->get();
+    }
+}
+
+if (!function_exists('getActiveFinancialYear')) {
+    function getActiveFinancialYear(?int $companyId = null): ?FinancialYear
+    {
+        return FinancialYear::activeForCompany($companyId);
     }
 }
 
 if (!function_exists('getCurrentFinancialYear')) {
-    function getCurrentFinancialYear()
+    function getCurrentFinancialYear(?int $companyId = null)
     {
+        $companyId = $companyId ?? CompanyContext::defaultCompanyIdForNewRecord();
         $today = date('Y-m-d');
-        $fiscal_year = FinancialYear::where('start_date', '<=', $today)
-            ->where('end_date', '>=', $today)->where('status', GeneralStatus::ACTIVE)
-            ->first();
-        return $fiscal_year;
+
+        $query = FinancialYear::withoutGlobalScope('company')
+            ->where('start_date', '<=', $today)
+            ->where('end_date', '>=', $today)
+            ->where('status', GeneralStatus::ACTIVE);
+
+        if ($companyId) {
+            $query->where('company_id', $companyId);
+        }
+
+        return $query->first();
     }
 }
 if (!function_exists('getCurrentPayrollPeriod')) {
@@ -614,5 +739,19 @@ if (!function_exists('helper_getBiometricAttendance')) {
             \Log::error('Error fetching biometric attendance: ' . $e->getMessage());
             return false;
         }
+    }
+}
+
+if (!function_exists('moduleEnabled')) {
+    function moduleEnabled(?string $moduleName): bool
+    {
+        return app(\App\Services\ModuleActivationService::class)->isEnabled($moduleName);
+    }
+}
+
+if (!function_exists('refreshEnabledModules')) {
+    function refreshEnabledModules(): void
+    {
+        app(\App\Services\ModuleActivationService::class)->refreshSession();
     }
 }

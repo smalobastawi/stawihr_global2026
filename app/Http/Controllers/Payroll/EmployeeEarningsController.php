@@ -124,7 +124,7 @@ class EmployeeEarningsController extends Controller
 
         // Get financial years for dropdown
         $financialYears = FinancialYear::orderBy('start_date', 'desc')->get();
-        $activeFinancialYear = FinancialYear::active()->first();
+        $activeFinancialYear = getActiveFinancialYear();
 
         // Pre-select employee if provided
         $selectedEmployee = null;
@@ -309,7 +309,7 @@ class EmployeeEarningsController extends Controller
 
         // Get financial years for dropdown
         $financialYears = FinancialYear::orderBy('start_date', 'desc')->get();
-        $activeFinancialYear = FinancialYear::active()->first();
+        $activeFinancialYear = getActiveFinancialYear();
         $payrollPeriods = PayrollPeriod::where('status', '!=', 'closed')->get();
         return view('admin.payroll.employee_earnings.form', compact(
             'editModeData',

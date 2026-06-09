@@ -10,7 +10,7 @@ use App\Traits\BelongsToCompany;
 
 class PrintHeadSetting extends Model
 {
-    //use BelongsToCompany;
+    use BelongsToCompany;
 
     protected $table = 'print_head_settings';
     protected $primaryKey = 'print_head_setting_id';
@@ -19,4 +19,17 @@ class PrintHeadSetting extends Model
         'print_head_setting_id',
         'description'
     ];
+
+    public static function first($columns = ['*'])
+    {
+        $company = getActiveCompany();
+        if ($company?->print_head_description) {
+            $instance = new static();
+            $instance->description = $company->print_head_description;
+
+            return $instance;
+        }
+
+        return parent::first($columns);
+    }
 }

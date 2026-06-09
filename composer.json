@@ -7,7 +7,7 @@
     "require": {
         "php": "^8.2",
         "anhskohbo/no-captcha": "^3.6",
-        "barryvdh/laravel-dompdf": "^3.0",
+        "barryvdh/laravel-dompdf": "^3.1.2",
         "consoletvs/charts": "^6.6",
         "doctrine/dbal": "^4.0",
         "google/apiclient": "^2.15",

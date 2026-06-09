@@ -280,6 +280,7 @@
                  </li>
              @endcan
 
+             @if(moduleEnabled('Hr Uploads'))
              @can(['document-categories.index', 'documents-upload.index'])
                  <li class="treeview waves-effect">
                      <a href="javascript:void(0)" class="module">
@@ -306,6 +307,7 @@
                      </ul>
                  </li>
              @endcan
+             @endif
 
              @can('pmMenu__Employee Management')
                  <li class="treeview-menu waves-effect">
@@ -1534,35 +1536,11 @@
                              class="hide-menu hideMenu">Settings<span class="fa arrow"></span></span>
                      </a>
                      <ul class="treeview-menu nav nav-second-level" style="background-color: #00b3ee99">
-                         @can('front.setting')
-                             <li class="">
-                                 <a class="hideMenu" href="{{ route('front.setting') }}"> <i data-icon="/"
-                                         class="linea-icon linea-basic fa-fw"></i>General
-                                     Settings</a>
-
-                             </li>
-                         @endcan
                          @can('company.index')
                              <li class="">
                                  <a class="hideMenu" href="{{ route('company.index') }}"> <i data-icon="/"
                                          class="linea-icon linea-basic fa-fw"></i>Companies
                                  </a>
-
-                             </li>
-                         @endcan
-                         @can('company.setting')
-                             <li class="">
-                                 <a class="hideMenu" href="{{ route('company.setting') }}"> <i data-icon="/"
-                                         class="linea-icon linea-basic fa-fw"></i>Company
-                                     Settings</a>
-
-                             </li>
-                         @endcan
-                         @can('generalSettings.index')
-                             <li class="">
-                                 <a class="hideMenu" href="{{ route('generalSettings.index') }}"> <i data-icon="/"
-                                         class="linea-icon linea-basic fa-fw"></i>Print
-                                     Head Settings</a>
 
                              </li>
                          @endcan
@@ -1589,6 +1567,13 @@
                                           class="linea-icon linea-basic fa-fw"></i>
                                       System Settings</a>
 
+                              </li>
+                          @endcan
+                          @can('systemSettings.index')
+                              <li class="">
+                                  <a class="hideMenu" href="{{ route('moduleSettings.index') }}"> <i data-icon="/"
+                                          class="linea-icon linea-basic fa-fw"></i>
+                                      Module Settings</a>
                               </li>
                           @endcan
                       </ul>

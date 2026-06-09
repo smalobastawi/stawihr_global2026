@@ -2,38 +2,43 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
+use App\Models\Company;
 use App\Models\FinancialYear;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class FinancialYearSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     *
-     * @return void
-     */
     public function run()
     {
+        $companyId = Company::orderBy('id')->value('id');
+        if (!$companyId) {
+            $this->command->warn('No company found. Skipping financial year seeding.');
+
+            return;
+        }
+
         $currentYear = Carbon::now()->year;
 
-        // Delete any existing financial years for current year to avoid unique constraint issues
-        FinancialYear::whereYear('start_date', $currentYear)
+        FinancialYear::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->whereYear('start_date', $currentYear)
             ->whereYear('end_date', $currentYear)
             ->delete();
 
-        FinancialYear::create([
-            'name' => $currentYear,
+        FinancialYear::withoutGlobalScopes()->create([
+            'company_id' => $companyId,
+            'name' => (string) $currentYear,
             'description' => "Financial Year {$currentYear}",
-            'status' => 1, // Active
+            'status' => 1,
             'start_date' => Carbon::create($currentYear, 1, 1),
             'end_date' => Carbon::create($currentYear, 12, 31),
-            'created_by' => 1, // Assuming admin user ID
+            'created_by' => 1,
             'updated_by' => 1,
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'uuid' => (string) Str::uuid(),
         ]);
 
-        $this->command->info("Financial year {$currentYear} created successfully.");
+        $this->command->info("Financial year {$currentYear} created for company #{$companyId}.");
     }
 }

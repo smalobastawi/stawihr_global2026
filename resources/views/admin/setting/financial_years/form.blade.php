@@ -71,6 +71,25 @@
 
                 </div>
 
+                @if(empty($activeCompanyId) && isset($companies) && $companies->isNotEmpty())
+                    <div class="form-group">
+                        <label class="col-md-4 control-label">Company *</label>
+                        <div class="col-md-6">
+                            <select name="company_id" class="form-control select2" required>
+                                <option value="">Select company</option>
+                                @foreach($companies as $company)
+                                    <option value="{{ $company->id }}"
+                                        {{ (int) old('company_id', $editModeData->company_id ?? '') === (int) $company->id ? 'selected' : '' }}>
+                                        {{ $company->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                @elseif(!empty($activeCompanyId))
+                    <input type="hidden" name="company_id" value="{{ $activeCompanyId }}">
+                @endif
+
                 <!-- Year Name -->
                 <div class="form-group">
                     <label class="col-md-4 control-label">Year Name *</label>

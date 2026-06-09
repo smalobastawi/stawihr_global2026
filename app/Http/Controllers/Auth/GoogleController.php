@@ -63,6 +63,7 @@ class GoogleController extends Controller
             }
 
             session()->put('logged_session_data', $user_data);
+            refreshEnabledModules();
 
             if (($user->password_changed_at == null)) {
                 $user->update([

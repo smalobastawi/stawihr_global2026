@@ -19,8 +19,18 @@ class Module extends Model
     protected $primaryKey = 'id';
     protected $fillable = [
         'name',
-        'icon_class'
+        'icon_class',
+        'is_enabled',
     ];
+
+    protected $casts = [
+        'is_enabled' => 'boolean',
+    ];
+
+    public function scopeEnabled($query)
+    {
+        return $query->where('is_enabled', true);
+    }
 
     public function approvers()
     {

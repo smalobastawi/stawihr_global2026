@@ -51,7 +51,9 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-md-6">
+                                    @include('admin.payroll.report.partials.company_filter')
+
+                                    <div class="col-md-4">
                                         <div class="form-group">
                                             <input name="action" type="submit" id="filter" style="margin-top: 25px; width: 100px;" class="btn btn-info " value="@lang('common.filter')">
                                             <button name="action" type="button" id="filter" style="margin-top: 25px; width: 100px;" class="btn btn-info"> <a style="color: white" href="{{route('shifReportsIndex')}}">Clear filter</a> </button>
@@ -64,10 +66,8 @@
                         </div>
                         <div class="table-responsive">
                           <div class="row">
-                            <div class="col-md-4"></div>
                             <div class="col-md-4">Period: {{ $currentPeriod->name ?? 'All' }}</div>
-                            <div class="col-md-4">  </div>
-                            <div class="col-md-4"></div>
+                            <div class="col-md-4">Company: {{ $selectedCompanyName ?? 'All Companies' }}</div>
                           </div>
                             <table id="payrollReportsTable" class="table table-bordered">
                                 <thead>

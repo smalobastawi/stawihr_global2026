@@ -34,11 +34,23 @@
 								<i class="glyphicon glyphicon-remove"></i>&nbsp;<strong>{{ session()->get('error') }}</strong>
 							</div>
 						@endif
+						@if(!empty($showAllCompanies))
+							<div class="alert alert-info">
+								Viewing financial years across all permitted companies. Select a company from the header to manage years for one company.
+							</div>
+						@elseif(!empty($activeCompanyId))
+							<div class="alert alert-info">
+								Managing financial years for <strong>{{ \App\Support\CompanyContext::selectedCompanyName() }}</strong>.
+							</div>
+						@endif
 						<div class="table-responsive">
 							<table id="myTable" class="table table-bordered">
 								<thead>
 									 <tr class="tr_header">
                                         <th>@lang('common.serial')</th>
+                                        @if(!empty($showAllCompanies))
+                                            <th>Company</th>
+                                        @endif
                                         <th>Name</th>
                                         <th>Start</th>
                                         <th>End</th>
@@ -51,10 +63,19 @@
 									@foreach($results AS $value)
 										<tr class="{!! $value->id !!}">
 											<td style="width: 100px;">{!! ++$sl !!}</td>
+											@if(!empty($showAllCompanies))
+												<td>{{ $value->company?->name ?? 'N/A' }}</td>
+											@endif
 											<td>{!! $value->name !!}</td>
-											<td>{!! \Carbon::parse($value->start_date)->format('d-m-Y') !!}</td>
-											<td>{!!\Carbon::parse( $value->end_date)->format('d-m-Y') !!}</td>
-											<td>{!! $value->status !!}</td>
+											<td>{!! \Carbon\Carbon::parse($value->start_date)->format('d-m-Y') !!}</td>
+											<td>{!!\Carbon\Carbon::parse( $value->end_date)->format('d-m-Y') !!}</td>
+											<td>
+												@if($value->status == 1)
+													<span class="label label-success">Active</span>
+												@else
+													<span class="label label-default">Inactive</span>
+												@endif
+											</td>
 											
 											<td style="width: 100px;">
 												<a href="{!! route('financial_year.edit', $value->id) !!}"  class="btn btn-success btn-xs btnColor">

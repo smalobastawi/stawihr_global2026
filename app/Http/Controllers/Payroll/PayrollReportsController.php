@@ -37,7 +37,6 @@ use App\Models\FinancialYear;
 use App\Models\LeaveType;
 use App\Models\Payroll\PensionScheme;
 use App\Models\Company;
-
 class PayrollReportsController
 {
     public function index()
@@ -261,6 +260,7 @@ class PayrollReportsController
     public function shifReportIndex(Request $request)
     {
         $payrollPeriods = PayrollPeriod::orderBy('start_date', 'desc')->take(24)->get();
+        $companyId = resolveReportCompanyId($request);
 
         if ($request->filled('payroll_period_id')) {
             $period = PayrollPeriod::find($request->payroll_period_id);
@@ -268,40 +268,21 @@ class PayrollReportsController
             $period = PayrollPeriod::where('is_current', true)->first();
         }
 
-        $results = collect();
+        $results = $period
+            ? getStatutoryPayrollRecords($period, $companyId, 'shif_contribution')
+            : collect();
 
-        if ($period) {
-            $results = PayrollRecord::with(['employee', 'payrollPeriod'])
-                ->where('payroll_period_id', $period->id)
-                ->where('shif_contribution', '>', 0)
-                ->orderBy('created_at', 'DESC')
-                ->get();
-        }
+        $viewData = array_merge(
+            $this->payrollReportViewData($payrollPeriods, $period, $companyId, $results),
+            ['totalSHIF' => $results->sum('shif_contribution')]
+        );
 
-        if ($request->action == 'Filter') {
-            return view('admin.payroll.report.SHIF_Reports.shif_monthly_reports', [
-                'results' => $results,
-                'payrollPeriods' => $payrollPeriods,
-                'currentPeriod' => $period,
-            ]);
-        } elseif ($request->action == 'Download') {
-            $results = collect();
-            if ($period) {
-                $results = PayrollRecord::with(['employee', 'payrollPeriod'])
-                    ->where('payroll_period_id', $period->id)
-                    ->where('shif_contribution', '>', 0)
-                    ->orderBy('created_at', 'DESC')
-                    ->get();
-            }
-            $totalSHIF = $results->sum('shif_contribution');
-            $data = ['results' => $results, 'currentPeriod' => $period, 'totalSHIF' => $totalSHIF];
+        if ($request->action == 'Download') {
+            $data = ['results' => $results, 'currentPeriod' => $period, 'totalSHIF' => $viewData['totalSHIF']];
             return Excel::download(new ShifReportExport($data), ($period->name ?? 'shif') . '_shif_report.xlsx');
         }
-        return view('admin.payroll.report.SHIF_Reports.shif_monthly_reports', [
-            'results' => $results,
-            'payrollPeriods' => $payrollPeriods,
-            'currentPeriod' => $period,
-        ]);
+
+        return view('admin.payroll.report.SHIF_Reports.shif_monthly_reports', $viewData);
     }
 
 
@@ -309,6 +290,7 @@ class PayrollReportsController
     public function nssfReportIndex(Request $request)
     {
         $payrollPeriods = PayrollPeriod::orderBy('start_date', 'desc')->take(24)->get();
+        $companyId = $this->resolveReportCompanyId($request);
 
         if ($request->filled('payroll_period_id')) {
             $period = PayrollPeriod::find($request->payroll_period_id);
@@ -316,44 +298,24 @@ class PayrollReportsController
             $period = PayrollPeriod::where('is_current', true)->first();
         }
 
-        $results = collect();
+        $results = $period
+            ? getStatutoryPayrollRecords($period, $companyId, 'nssf_contribution')
+            : collect();
 
-        if ($period) {
-            $results = PayrollRecord::with(['employee', 'payrollPeriod'])
-                ->where('payroll_period_id', $period->id)
-                ->where('nssf_contribution', '>', 0)
-                ->orderBy('created_at', 'DESC')
-                ->get();
-        }
+        $viewData = $this->payrollReportViewData($payrollPeriods, $period, $companyId, $results);
 
-        if ($request->action == 'Filter') {
-            return view('admin.payroll.report.NSSF_Reports.nssf_monthly_report', [
-                'results' => $results,
-                'payrollPeriods' => $payrollPeriods,
-                'currentPeriod' => $period,
-            ]);
-        } elseif ($request->action == 'Download') {
-            $results = collect();
-            if ($period) {
-                $results = PayrollRecord::with(['employee', 'payrollPeriod'])
-                    ->where('payroll_period_id', $period->id)
-                    ->where('nssf_contribution', '>', 0)
-                    ->orderBy('created_at', 'DESC')
-                    ->get();
-            }
+        if ($request->action == 'Download') {
             $data = ['results' => $results, 'currentPeriod' => $period];
             return Excel::download(new NssfReportExport($data), ($period->name ?? 'nssf') . '_nssf_report.xlsx');
         }
-        return view('admin.payroll.report.NSSF_Reports.nssf_monthly_report', [
-            'results' => $results,
-            'payrollPeriods' => $payrollPeriods,
-            'currentPeriod' => $period,
-        ]);
+
+        return view('admin.payroll.report.NSSF_Reports.nssf_monthly_report', $viewData);
     }
 
     public function ahlReportIndex(Request $request)
     {
         $payrollPeriods = PayrollPeriod::orderBy('start_date', 'desc')->take(24)->get();
+        $companyId = resolveReportCompanyId($request);
 
         if ($request->filled('payroll_period_id')) {
             $period = PayrollPeriod::find($request->payroll_period_id);
@@ -361,40 +323,21 @@ class PayrollReportsController
             $period = PayrollPeriod::where('is_current', true)->first();
         }
 
-        $results = collect();
+        $results = $period
+            ? getStatutoryPayrollRecords($period, $companyId, 'housing_levy')
+            : collect();
 
-        if ($period) {
-            $results = PayrollRecord::with(['employee', 'payrollPeriod'])
-                ->where('payroll_period_id', $period->id)
-                ->where('housing_levy', '>', 0)
-                ->orderBy('created_at', 'DESC')
-                ->get();
-        }
+        $viewData = array_merge(
+            $this->payrollReportViewData($payrollPeriods, $period, $companyId, $results),
+            ['totalAHL' => $results->sum('housing_levy')]
+        );
 
-        if ($request->action == 'Filter') {
-            return view('admin.payroll.report.AHL_Reports.ahl_monthly_reports', [
-                'results' => $results,
-                'payrollPeriods' => $payrollPeriods,
-                'currentPeriod' => $period,
-            ]);
-        } elseif ($request->action == 'Download') {
-            $results = collect();
-            if ($period) {
-                $results = PayrollRecord::with(['employee', 'payrollPeriod'])
-                    ->where('payroll_period_id', $period->id)
-                    ->where('housing_levy', '>', 0)
-                    ->orderBy('created_at', 'DESC')
-                    ->get();
-            }
-            $totalAHL = $results->sum('housing_levy');
-            $data = ['results' => $results, 'currentPeriod' => $period, 'totalAHL' => $totalAHL];
+        if ($request->action == 'Download') {
+            $data = ['results' => $results, 'currentPeriod' => $period, 'totalAHL' => $viewData['totalAHL']];
             return Excel::download(new AhlReportExport($data), ($period->name ?? 'ahl') . '_ahl_report.xlsx');
         }
-        return view('admin.payroll.report.AHL_Reports.ahl_monthly_reports', [
-            'results' => $results,
-            'payrollPeriods' => $payrollPeriods,
-            'currentPeriod' => $period,
-        ]);
+
+        return view('admin.payroll.report.AHL_Reports.ahl_monthly_reports', $viewData);
     }
 
     public function deductionsReport(Request $request)
@@ -404,24 +347,27 @@ class PayrollReportsController
             ->orderBy('name')->get();
         $departments = Department::orderBy('department_name')->get();
         $payrollPeriods = PayrollPeriod::orderBy('start_date', 'desc')->take(24)->get();
+        $companyId = resolveReportCompanyId($request);
 
         // Get current period for default selection
         $currentPeriod = PayrollPeriod::where('is_current', true)->first();
         $selectedPeriodId = $request->payroll_period_id ?? $currentPeriod?->id;
 
-        $results = $this->getDeductionsData($request, $selectedPeriodId);
+        $results = $this->getDeductionsData($request, $selectedPeriodId, $companyId);
 
-        return view('admin.payroll.report.deductions_report', [
+        return view('admin.payroll.report.deductions_report', array_merge([
             'results' => $results,
             'deductionTypes' => $deductionTypes,
             'departments' => $departments,
             'payrollPeriods' => $payrollPeriods,
             'selectedPeriodId' => $selectedPeriodId,
-        ]);
+        ], reportCompanyViewData($companyId)));
     }
 
-    private function getDeductionsData(Request $request, $periodId = null)
+    private function getDeductionsData(Request $request, $periodId = null, ?int $companyId = null)
     {
+        $companyId = $companyId ?? resolveReportCompanyId($request);
+
         $query = PayrollRecordDetail::with([
             'payrollRecord.employeePayroll.employee.department',
             'payrollRecord.payrollPeriod'
@@ -449,7 +395,7 @@ class PayrollReportsController
             }
         }
 
-        return $query->get();
+        return applyCompanyFilterToPayrollRecordDetails($query, $companyId)->get();
     }
 
     public function exportDeductionsReport(Request $request)
@@ -465,24 +411,27 @@ class PayrollReportsController
         $earningTypes = PayrollEarningTypes::orderBy('name')->get();
         $departments = Department::orderBy('department_name')->get();
         $payrollPeriods = PayrollPeriod::orderBy('start_date', 'desc')->take(24)->get();
+        $companyId = resolveReportCompanyId($request);
 
         // Get current period for default selection
         $currentPeriod = PayrollPeriod::where('is_current', true)->first();
         $selectedPeriodId = $request->payroll_period_id ?? $currentPeriod?->id;
 
-        $results = $this->getEarningsData($request, $selectedPeriodId);
+        $results = $this->getEarningsData($request, $selectedPeriodId, $companyId);
 
-        return view('admin.payroll.report.earnings_report', [
+        return view('admin.payroll.report.earnings_report', array_merge([
             'results' => $results,
             'earningTypes' => $earningTypes,
             'departments' => $departments,
             'payrollPeriods' => $payrollPeriods,
             'selectedPeriodId' => $selectedPeriodId,
-        ]);
+        ], reportCompanyViewData($companyId)));
     }
 
-    private function getEarningsData(Request $request, $periodId = null)
+    private function getEarningsData(Request $request, $periodId = null, ?int $companyId = null)
     {
+        $companyId = $companyId ?? resolveReportCompanyId($request);
+
         $query = PayrollRecordDetail::with([
             'payrollRecord.employeePayroll.employee.department',
             'payrollRecord.payrollPeriod'
@@ -509,7 +458,7 @@ class PayrollReportsController
             }
         }
 
-        return $query->get();
+        return applyCompanyFilterToPayrollRecordDetails($query, $companyId)->get();
     }
 
     public function exportEarningsReport(Request $request)
@@ -881,6 +830,7 @@ class PayrollReportsController
     {
         $departments = Department::orderBy('department_name')->get();
         $payrollPeriods = PayrollPeriod::orderBy('start_date', 'desc')->take(24)->get();
+        $companyId = resolveReportCompanyId($request);
 
         $currentPeriod = null;
         $previousPeriod = null;
@@ -900,38 +850,9 @@ class PayrollReportsController
                         ->first();
                 }
 
-                // Get current period payroll records
-                $currentQuery = PayrollRecord::with([
-                    'employee.department',
-                    'employee.designation',
-                    'employee.branch',
-                    'payrollPeriod',
-                    'details'
-                ])->where('payroll_period_id', $currentPeriod->id);
-
-                if ($request->filled('department_id')) {
-                    $currentQuery->whereHas('employee.department', function ($q) use ($request) {
-                        $q->where('department_id', $request->department_id);
-                    });
-                }
-                $currentPeriodData = $currentQuery->get();
-
-                // Get previous period payroll records
+                $currentPeriodData = $this->getVariancePeriodData($request, $currentPeriod, $companyId);
                 if ($previousPeriod) {
-                    $previousQuery = PayrollRecord::with([
-                        'employee.department',
-                        'employee.designation',
-                        'employee.branch',
-                        'payrollPeriod',
-                        'details'
-                    ])->where('payroll_period_id', $previousPeriod->id);
-
-                    if ($request->filled('department_id')) {
-                        $previousQuery->whereHas('employee.department', function ($q) use ($request) {
-                            $q->where('department_id', $request->department_id);
-                        });
-                    }
-                    $previousPeriodData = $previousQuery->get();
+                    $previousPeriodData = $this->getVariancePeriodData($request, $previousPeriod, $companyId);
                 }
             }
         }
@@ -941,9 +862,7 @@ class PayrollReportsController
                 return redirect()->back()->with('error', 'Cannot generate variance report without a previous period for comparison.');
             }
 
-            // Get the active/selected company
-            $activeCompanyData = getActiveCompaniesForSuperAdmin();
-            $company = $activeCompanyData['currentCompany'];
+            $company = $companyId ? Company::find($companyId) : getActiveCompany();
 
             return Excel::download(
                 new PayrollVarianceExport($currentPeriodData, $previousPeriodData, $currentPeriod, $previousPeriod, $company),
@@ -951,14 +870,14 @@ class PayrollReportsController
             );
         }
 
-        return view('admin.payroll.report.variance_report', [
+        return view('admin.payroll.report.variance_report', array_merge([
             'currentPeriodData' => $currentPeriodData,
             'previousPeriodData' => $previousPeriodData,
             'currentPeriod' => $currentPeriod,
             'previousPeriod' => $previousPeriod,
             'departments' => $departments,
             'payrollPeriods' => $payrollPeriods,
-        ]);
+        ], reportCompanyViewData($companyId)));
     }
 
     /**
@@ -966,6 +885,8 @@ class PayrollReportsController
      */
     public function exportVarianceReport(Request $request)
     {
+        $companyId = resolveReportCompanyId($request);
+
         // Get current payroll period
         $currentPeriod = null;
         if ($request->filled('payroll_period_id')) {
@@ -985,48 +906,33 @@ class PayrollReportsController
             return redirect()->back()->with('error', 'No previous payroll period found for comparison.');
         }
 
-        // Get current period payroll records
-        $currentQuery = PayrollRecord::with([
-            'employee.department',
-            'employee.designation',
-            'employee.branch',
-            'payrollPeriod',
-            'details'
-        ])->where('payroll_period_id', $currentPeriod->id);
-
-        if ($request->filled('department_id')) {
-            $currentQuery->whereHas('employee.department', function ($q) use ($request) {
-                $q->where('department_id', $request->department_id);
-            });
-        }
-
-        $currentPeriodData = $currentQuery->get();
-
-        // Get previous period payroll records
-        $previousQuery = PayrollRecord::with([
-            'employee.department',
-            'employee.designation',
-            'employee.branch',
-            'payrollPeriod',
-            'details'
-        ])->where('payroll_period_id', $previousPeriod->id);
-
-        if ($request->filled('department_id')) {
-            $previousQuery->whereHas('employee.department', function ($q) use ($request) {
-                $q->where('department_id', $request->department_id);
-            });
-        }
-
-        $previousPeriodData = $previousQuery->get();
-
-        // Get the active/selected company
-        $activeCompanyData = getActiveCompaniesForSuperAdmin();
-        $company = $activeCompanyData['currentCompany'];
+        $currentPeriodData = $this->getVariancePeriodData($request, $currentPeriod, $companyId);
+        $previousPeriodData = $this->getVariancePeriodData($request, $previousPeriod, $companyId);
+        $company = $companyId ? Company::find($companyId) : getActiveCompany();
 
         return Excel::download(
             new PayrollVarianceExport($currentPeriodData, $previousPeriodData, $currentPeriod, $previousPeriod, $company),
             'payroll_variance_report_' . str_replace(' ', '_', $currentPeriod->name) . '.xlsx'
         );
+    }
+
+    private function getVariancePeriodData(Request $request, PayrollPeriod $period, ?int $companyId)
+    {
+        $query = PayrollRecord::with([
+            'employee.department',
+            'employee.designation',
+            'employee.branch',
+            'payrollPeriod',
+            'details'
+        ])->where('payroll_period_id', $period->id);
+
+        if ($request->filled('department_id')) {
+            $query->whereHas('employee.department', function ($q) use ($request) {
+                $q->where('department_id', $request->department_id);
+            });
+        }
+
+        return applyCompanyFilterToPayrollRecords($query, $companyId)->get();
     }
 
     public function payrollInputsReport()
@@ -1757,5 +1663,14 @@ class PayrollReportsController
             \Log::error('Error processing salary change metadata: ' . $e->getMessage());
             return $defaultInfo;
         }
+    }
+
+    protected function payrollReportViewData($payrollPeriods, $period, ?int $companyId, $results): array
+    {
+        return array_merge([
+            'results' => $results,
+            'payrollPeriods' => $payrollPeriods,
+            'currentPeriod' => $period,
+        ], reportCompanyViewData($companyId));
     }
 }

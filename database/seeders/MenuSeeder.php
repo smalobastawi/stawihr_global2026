@@ -130,7 +130,7 @@ class MenuSeeder extends Seeder
                  * @Settings
                  *
                  */
-                ['parent_id' => 0, 'action' => NULL, 'name' => 'Settings', 'menu_url' => 'generalSettings.index', 'module_id' => '11', 'status' => '1'],
+                ['parent_id' => 0, 'action' => NULL, 'name' => 'Settings', 'menu_url' => 'company.index', 'module_id' => '11', 'status' => '1'],
                 ['parent_id' => 0, 'action' => NULL, 'name' => 'Manual Attendance', 'menu_url' => 'newAttendanceIndex', 'module_id' => '4', 'status' => '1'],
                 ['parent_id' => 22, 'action' => NULL, 'name' => 'Summary Report', 'menu_url' => 'summaryReport.summaryReport', 'module_id' => '3', 'status' => '1'],
                 ['parent_id' => 22, 'action' => NULL, 'name' => 'My Leave Report', 'menu_url' => 'myLeaveReport.myLeaveReport', 'module_id' => '3', 'status' => '1'],
@@ -157,10 +157,6 @@ class MenuSeeder extends Seeder
                 ['parent_id' => 22, 'action' => NULL, 'name' => 'Full Organization Report', 'menu_url' => 'leaveReport.fullOrganizationReport', 'module_id' => '3', 'status' => '1'],
                 ['parent_id' => 0, 'action' => NULL, 'name' => 'Rollover Leaves', 'menu_url' => 'rolloverLeaves', 'module_id' => '3', 'status' => '1'],
                 ['parent_id' => 0, 'action' => NULL, 'name' => 'Pending Approvals', 'menu_url' => 'pendingLeaveRequests.pendingLeaveRequests', 'module_id' => '3', 'status' => '1'],
-                ['parent_id' => 0, 'action' => NULL, 'name' => 'Front Setting', 'menu_url' => null, 'module_id' => '11', 'status' => '1'],
-                ['parent_id' => 0, 'action' => NULL, 'name' => 'General Setting', 'menu_url' => 'front.setting', 'module_id' => '11', 'status' => '1'],
-                ['parent_id' => 0, 'action' => NULL, 'name' => 'Front Service	service.index',  'menu_url' => null, 'module_id' => '11', 'status' => '1'],
-
                 ['parent_id' => 18, 'action' => NULL, 'name' => 'Dashboard Attendance', 'menu_url' => 'attendance.dashboard', 'module_id' => '4', 'status' => '1'],
                 ['parent_id' => 0, 'action' => NULL, 'name' => 'Pay Group', 'menu_url' => 'paygroup.index', 'module_id' => '5', 'status' => '0'],
                 ['parent_id' => 0, 'action' => NULL, 'name' => 'Job Category', 'menu_url' => 'job_category.index', 'module_id' => '5', 'status' => '0'],

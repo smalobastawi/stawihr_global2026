@@ -131,6 +131,7 @@ class LoginController extends Controller
                     "password_changed_at" => $user->password_changed_at,
                 ];
                 session()->put('logged_session_data', $user_data);
+                refreshEnabledModules();
                 //check and update Biometric Login for the user
                 $biometicStatusToday = helper_getBiometricAttendance();
 
@@ -264,6 +265,7 @@ class LoginController extends Controller
                 "password_changed_at" => $user->password_changed_at,
             ];
             session()->put('logged_session_data', $user_data);
+            refreshEnabledModules();
 
             // Clear OTP session
             session()->forget(['2fa_otp', '2fa_user_id']);
@@ -340,6 +342,7 @@ class LoginController extends Controller
                 $user->save();
             }
             session()->put('logged_session_data', $user_data);
+            refreshEnabledModules();
 
             // Check biometric status
             $biometicStatusToday = helper_getBiometricAttendance();

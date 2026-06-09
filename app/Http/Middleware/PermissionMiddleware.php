@@ -43,9 +43,15 @@ class PermissionMiddleware
 
         if (is_null($permission)) {
             $permission = $request->route()->getName();
-            if($permission=='home.dashboard'||$permission=='home.logout' ||$permission=='home.profile'){
+            if ($permission == 'home.dashboard' || $permission == 'home.logout' || $permission == 'home.profile') {
                 return $next($request);
             }
+
+            if (in_array($permission, ['moduleSettings.index', 'moduleSettings.update'], true)
+                && $authGuard->user()->can('systemSettings.index')) {
+                return $next($request);
+            }
+
             $permissions = array($permission);
         }
 

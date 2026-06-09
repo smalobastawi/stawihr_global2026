@@ -39,12 +39,14 @@
                                 <form method="GET">
                                 <div class="col-md-3">
                                     <div class="form-group">
-                                        <label for="year">Year</label>
-                                        <input type="text" name="year" value="{{ '' }}" class="form-control yearPicker" id="year" readonly="readonly" placeholder="Select Year">
+                                        <label for="month">Month</label>
+                                        <input type="text" name="month" value="{{ $currentMonth ?? '' }}" class="form-control monthPicker" id="month" readonly="readonly" placeholder="Select Month">
                                     </div>
                                 </div>
 
-                                <div class="col-md-6">
+                                @include('admin.payroll.report.partials.company_filter')
+
+                                <div class="col-md-4">
                                     <div class="form-group">
                                         <input name="action" type="submit" id="filter" style="margin-top: 25px; width: 100px;" class="btn btn-info " value="Filter">
                                         <button name="action" type="button" id="clearFilter" style="margin-top: 25px; width: 100px;" class="btn btn-info"> <a style="color: white" href="{{route('paye.report.index')}}">Clear filter</a> </button>
@@ -53,6 +55,10 @@
                                 </div>
                                 </form>
                             </div>
+                        </div>
+                        <div class="row" style="margin-bottom: 15px;">
+                            <div class="col-md-4">Month: {{ $currentMonth ?? 'N/A' }}</div>
+                            <div class="col-md-4">Company: {{ $selectedCompanyName ?? 'All Companies' }}</div>
                         </div>
                         <div class="table-responsive">
                             <table id="payeReportTable" class="table table-bordered" style="width:100%">
@@ -96,7 +102,7 @@
                                         @endforeach
                                     @else
                                         <tr>
-                                            <td colspan="14" class="text-center">No data available for the selected year.</td>
+                                            <td colspan="14" class="text-center">No data available for the selected period.</td>
                                         </tr>
                                     @endif
                                 </tbody>
@@ -113,10 +119,9 @@
 @section('page_scripts')
 <script>
     $(function() {
-        $('.yearPicker').datepicker({
-            format: "yyyy",
-            viewMode: "years",
-            minViewMode: "years",
+        $('.monthPicker').datepicker({
+            format: "yyyy-mm",
+            minViewMode: "months",
             autoclose: true
         });
     });

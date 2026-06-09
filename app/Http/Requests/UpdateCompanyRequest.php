@@ -35,6 +35,13 @@ class UpdateCompanyRequest extends FormRequest
             'employer_number' => 'nullable|string|max:50',
             'nita_registration_number' => 'nullable|string|max:50',
             'ecitizen_identifier' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:2000',
+            'official_contact_number' => 'nullable|string|max:50',
+            'official_email' => 'nullable|email|max:255',
+            'company_contact_name' => 'nullable|string|max:255',
+            'representative_phone' => 'nullable|string|max:50',
+            'representative_email' => 'nullable|email|max:255',
+            'print_head_description' => 'nullable|string|max:5000',
             'logo' => 'nullable|image|mimes:jpeg,jpg,png,gif,webp,svg|max:2048',
         ];
     }

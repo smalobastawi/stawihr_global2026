@@ -8,11 +8,11 @@ use App\Traits\BelongsToCompany;
 
 class FinancialYear extends Model
 {
-    // //use BelongsToCompany;
-
+    use BelongsToCompany;
     use HasFactory;
 
     protected $fillable = [
+        'company_id',
         'name',
         'description',
         'status',
@@ -40,10 +40,21 @@ class FinancialYear extends Model
         parent::boot();
 
         static::creating(function ($financialYear) {
+            if ($financialYear->status == 1 && $financialYear->company_id) {
+                static::withoutGlobalScopes()
+                    ->where('company_id', $financialYear->company_id)
+                    ->where('status', 1)
+                    ->update(['status' => 0]);
+            }
+        });
 
-            // If the new financial year is active, deactivate all others
-            if ($financialYear->status == 1) {
-                FinancialYear::where('status', 1)->update(['status' => 0]);
+        static::updating(function ($financialYear) {
+            if ($financialYear->isDirty('status') && $financialYear->status == 1 && $financialYear->company_id) {
+                static::withoutGlobalScopes()
+                    ->where('company_id', $financialYear->company_id)
+                    ->where('status', 1)
+                    ->where('id', '!=', $financialYear->id)
+                    ->update(['status' => 0]);
             }
         });
     }
@@ -51,6 +62,19 @@ class FinancialYear extends Model
     public function scopeActive($query)
     {
         return $query->where('status', 1);
+    }
+
+    public static function activeForCompany(?int $companyId = null): ?self
+    {
+        $companyId = $companyId ?? \App\Support\CompanyContext::defaultCompanyIdForNewRecord();
+
+        $query = static::withoutGlobalScope('company')->where('status', 1);
+
+        if ($companyId) {
+            $query->where('company_id', $companyId);
+        }
+
+        return $query->first();
     }
 
     public function getFormattedDateRangeAttribute()

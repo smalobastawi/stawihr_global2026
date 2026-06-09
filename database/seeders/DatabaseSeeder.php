@@ -20,7 +20,6 @@ class DatabaseSeeder extends Seeder
        // Artisan::call('permission:create-permission-routes'); // Create permissions for all routes
 
         $this->call(CompanySeeder::class);
-        $this->call(CompanySettingsSeeder::class);
         $this->call(RegionSeeder::class);
         $this->call(LocationSeeder::class);
         $this->call(DepartmentSeeder::class);

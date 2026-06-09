@@ -10,6 +10,7 @@ use App\Models\GroupedMenuRoutePermission;
 use App\Repositories\CommonRepository;
 use App\Http\Controllers\Controller;
 use App\Models\Module;
+use App\Services\ModuleActivationService;
 use App\Models\Role as ModelsRole;
 use App\Models\User;
 use Exception;
@@ -25,10 +26,12 @@ class RolePermissionController extends Controller
 {
 
     protected $commonRepository;
+    protected ModuleActivationService $moduleActivation;
 
-    public function __construct(CommonRepository $commonRepository)
+    public function __construct(CommonRepository $commonRepository, ModuleActivationService $moduleActivation)
     {
         $this->commonRepository = $commonRepository;
+        $this->moduleActivation = $moduleActivation;
     }
 
     public function index()
@@ -85,14 +88,19 @@ class RolePermissionController extends Controller
 
     public function getAllMenu(Request $request)
     {
-        $groupPms=GroupedMenuRoutePermission::with('module')->select('menu_name','module_id')
-        ->groupBy('menu_name')->groupBy('module_id')
-        ->get();
+        $enabledModuleIds = $this->moduleActivation->enabledModules()->pluck('id');
+
+        $groupPms = GroupedMenuRoutePermission::with('module')
+            ->whereIn('module_id', $enabledModuleIds)
+            ->select('menu_name', 'module_id')
+            ->groupBy('menu_name')
+            ->groupBy('module_id')
+            ->get();
         $roleId=$request->role_id;
         $role = Role::where('id', $roleId)->first();
         $rolePermissions=$role->permissions()->orderBy('name','asc')->pluck('name')->toArray();
         //dd($rolePermissions);
-        $modules=Module::all();
+        $modules = $this->moduleActivation->enabledModules();
         $actionTypeColors=[
             'CREATE' => 'text-success', // Green
             'READ' => 'text-primary',  // Blue
@@ -136,6 +144,7 @@ class RolePermissionController extends Controller
             // $moreSubSections=GroupedMenuRoutePermission::whereIn('permission', $perms)
             // ->distinct()->pluck('sub_section')->toArray()?? [];
        $permissions=array_merge($permission_groups,$menus,$sub_sections,$perms,$moreMenus/*,$morePermGroups,$moreSubSections*/);
+            $permissions = $this->moduleActivation->filterPermissionsForEnabledModules($permissions);
             foreach($permissions as $permission){
                 Permission::updateOrCreate(['name'=>$permission],['name'=>$permission,'guard'=>'web']);
                 
