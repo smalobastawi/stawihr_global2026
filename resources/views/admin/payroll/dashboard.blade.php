@@ -16,7 +16,10 @@
             </div>
             <div class="col-lg-4 col-sm-4 col-md-4 col-xs-12">
                 @include('admin.partials.alert')
-                <div class="form-group pull-right" style="margin-top: 10px;">
+                <a href="{{ route('payroll.calculator.index') }}" class="btn btn-info pull-right m-t-10 waves-effect waves-light">
+                    <i class="fa fa-calculator"></i> Payroll Calculator
+                </a>
+                <div class="form-group pull-right m-r-10" style="margin-top: 10px;">
                     <select id="monthFilter" class="form-control" style="width: 200px;">
                         @foreach ($periods as $period)
                             <option value="{{ $period->id }}" @if ($period->id == $currentPeriod->id) selected @endif>

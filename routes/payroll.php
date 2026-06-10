@@ -43,6 +43,7 @@ use App\Http\Controllers\Payroll\LoanTypeController;
 use App\Http\Controllers\Payroll\LoanApplicationController;
 use App\Http\Controllers\Payroll\ManualLoanDeductionController;
 use App\Http\Controllers\Payroll\LoanReportController;
+use App\Http\Controllers\Payroll\StandalonePayrollCalculatorController;
 
 
 Route::group(['module' => 'Payroll', 'prefix' => 'payroll', 'middleware' => ['auth', 'permission']], function () {
@@ -286,6 +287,12 @@ Route::group(['module' => 'Payroll', 'prefix' => 'payroll', 'middleware' => ['au
     Route::group(['section' => 'processing', 'sub_section' => 'dashboard', 'prefix' => 'dashboard'], function () {
         Route::get('/', [PayrollController::class, 'dashboard'])->name('payroll.dashboard');
         Route::get('/charts-data', [PayrollController::class, 'getChartsData'])->name('payroll.dashboard.charts-data');
+    });
+
+    Route::group(['section' => 'processing', 'sub_section' => 'calculator', 'prefix' => 'calculator'], function () {
+        Route::get('/', [StandalonePayrollCalculatorController::class, 'index'])->name('payroll.calculator.index');
+        Route::post('/calculate', [StandalonePayrollCalculatorController::class, 'calculate'])->name('payroll.calculator.calculate');
+        Route::get('/payslip', [StandalonePayrollCalculatorController::class, 'payslip'])->name('payroll.calculator.payslip');
     });
 
     Route::group(['section' => 'processing', 'sub_section' => 'payroll_records', 'prefix' => 'payroll'], function () {

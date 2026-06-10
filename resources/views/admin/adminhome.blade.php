@@ -238,13 +238,16 @@
         </div>
 
         <div class="row">
+            @can('payroll.calculator.index')
             <div class="col-lg-3 col-sm-6 col-xs-12">
                 <div class="white-box analytics-info">
-                    <h3 class="box-title"> <a href="{{ route('employee.index') }}" target="_blank"> Manage Employees<i
-                                class="ti-arrow-top-right"></i></a></h3>
-
+                    <h3 class="box-title">
+                        <a href="{{ route('payroll.calculator.index') }}" target="_blank"> Payroll Calculator<i
+                                class="ti-arrow-top-right"></i></a>
+                    </h3>
                 </div>
             </div>
+            @endcan
             @can('payrollIndex')
                 <div class="col-lg-3 col-sm-6 col-xs-12">
                     <div class="white-box analytics-info">

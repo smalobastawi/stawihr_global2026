@@ -2280,4 +2280,130 @@ class KenyanPayrollCalculationService
             'taxable_income' => $taxableIncome
         ];
     }
+
+    /**
+     * Standalone gross-to-net calculation for the payroll calculator tool.
+     * Does not persist data or require an employee profile.
+     */
+    public function calculateFromGross(float $grossSalary, array $options = []): array
+    {
+        $grossSalary = max(0, round($grossSalary, 2));
+        $allowances = [];
+
+        $employeeDetails = new \stdClass();
+        $employeeDetails->date_of_birth = null;
+        $employeeDetails->nssf_rate_type = $options['nssf_rate_type'] ?? '2';
+
+        $employeePayroll = new EmployeePayroll();
+        $employeePayroll->tax_status = 'taxable';
+        $employeePayroll->disability_exemption = false;
+
+        if ($grossSalary <= 0) {
+            return $this->buildStandaloneCalculationResult(
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            );
+        }
+
+        $pensionablePay = $grossSalary;
+        $insuranceReliefAll = $this->calculateInsuranceRelief_All([]);
+
+        $nssfBreakdown = $this->calculateNssfContribution($employeeDetails, $grossSalary, $this->currentPayrollPeriod);
+        $nssfContribution = (float) $nssfBreakdown['total'];
+        $shifContribution = (float) $this->calculateShifContribution($grossSalary);
+        $housingLevy = (float) $this->calculateHousingLevy($grossSalary);
+        $pensionContribution = (float) $this->calculatePensionContribution($employeePayroll, $pensionablePay);
+
+        $taxableIncome = (float) $this->calculateTaxableIncome(
+            $grossSalary,
+            $allowances,
+            $nssfContribution,
+            $shifContribution,
+            $housingLevy,
+            $pensionContribution
+        );
+
+        $payeTax = (float) $this->calculatePayeTax($taxableIncome, $employeePayroll, $insuranceReliefAll);
+        $statutoryDeductions = $payeTax + $nssfContribution + $shifContribution + $housingLevy + $pensionContribution;
+        $netSalary = round($grossSalary - $statutoryDeductions, 2);
+
+        $nssfTier1Company = (float) $this->calculateNssfTier1Company($employeeDetails, $grossSalary, $this->currentPayrollPeriod);
+        $nssfTier2Company = (float) $this->calculateNssfTier2Company($employeeDetails, $grossSalary, $this->currentPayrollPeriod);
+        $housingLevyCompany = (float) $this->calculateHousingLevyCompany($grossSalary);
+        $employerPension = (float) $this->calculateEmployerPensionContribution($employeePayroll, $grossSalary);
+        $trainingLevy = (float) $this->calculateIndustrialTrainingLevy($employeePayroll);
+
+        return $this->buildStandaloneCalculationResult(
+            $grossSalary,
+            $taxableIncome,
+            $netSalary,
+            round($statutoryDeductions, 2),
+            $payeTax,
+            $nssfContribution,
+            (float) $nssfBreakdown['tier1'],
+            (float) $nssfBreakdown['tier2'],
+            $shifContribution,
+            $housingLevy,
+            $pensionContribution,
+            $nssfTier1Company,
+            $nssfTier2Company,
+            $housingLevyCompany,
+            $employerPension,
+            $trainingLevy
+        );
+    }
+
+    private function buildStandaloneCalculationResult(
+        float $grossSalary,
+        float $taxableIncome,
+        float $netSalary,
+        float $totalDeductions,
+        float $payeTax,
+        float $socialSecurity,
+        float $socialSecurityTier1,
+        float $socialSecurityTier2,
+        float $healthLevy,
+        float $housingLevy,
+        float $pension,
+        float $employerSocialSecurityTier1,
+        float $employerSocialSecurityTier2,
+        float $employerHousingLevy,
+        float $employerPension,
+        float $trainingLevy
+    ): array {
+        return [
+            'gross_salary' => $grossSalary,
+            'taxable_income' => $taxableIncome,
+            'net_salary' => $netSalary,
+            'total_deductions' => $totalDeductions,
+            'paye_tax' => $payeTax,
+            'social_security' => $socialSecurity,
+            'social_security_tier1' => $socialSecurityTier1,
+            'social_security_tier2' => $socialSecurityTier2,
+            'health_levy' => $healthLevy,
+            'housing_levy' => $housingLevy,
+            'pension' => $pension,
+            'employer_contributions' => [
+                'social_security_tier1' => $employerSocialSecurityTier1,
+                'social_security_tier2' => $employerSocialSecurityTier2,
+                'housing' => $employerHousingLevy,
+                'pension' => $employerPension,
+                'training_levy' => $trainingLevy,
+            ],
+        ];
+    }
 }

@@ -47,6 +47,7 @@ class Kernel extends HttpKernel
             \App\Http\Middleware\SetActiveCompany::class,
             \App\Http\Middleware\EnsureModuleEnabled::class,
             \App\Http\Middleware\PreventSearchIndexing::class,
+            \App\Http\Middleware\LogDataDownloadMiddleware::class,
 
         ],
 

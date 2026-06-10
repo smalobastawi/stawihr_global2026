@@ -276,6 +276,14 @@
                                  </a>
                              </li>
                          @endcan
+                         @can('reports.download_logs')
+                             <li>
+                                 <a href="{{ route('reports.download_logs') }}">
+                                     <i data-icon="/" class="linea-icon linea-basic fa-fw"></i>
+                                     <span class="hideMenu">Download Logs</span>
+                                 </a>
+                             </li>
+                         @endcan
                      </ul>
                  </li>
              @endcan
@@ -858,6 +866,14 @@
                          </li>
                     
 
+                         @can('payroll.calculator.index')
+                             <li>
+                                 <a href="{{ route('payroll.calculator.index') }}">
+                                     <i data-icon="/" class="linea-icon linea-basic fa-fw"></i>
+                                     <span class="hideMenu">Payroll Calculator</span>
+                                 </a>
+                             </li>
+                         @endcan
                          @can('payroll.dashboard')
                              <li>
                                  <a href="{{ route('payroll.dashboard') }}">
