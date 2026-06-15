@@ -166,6 +166,7 @@
                                         <th>@lang('employee.name')</th>
                                         <th>@lang('employee.department')</th>
                                         <th>@lang('payroll.payroll_number')</th>
+                                        <th>@lang('payroll.currency')</th>
                                         <th>@lang('payroll.basic_salary')</th>
                                         <th>Frequency of basic</th>
                                         <th>Earnings</th>
@@ -196,6 +197,9 @@
                                             </td>
                                             <td>
                                                 {{ $employeePayroll->payroll_number }}
+                                            </td>
+                                            <td>
+                                                {{ $employeePayroll->getDisplayCurrency() }}
                                             </td>
                                             <td>
                                                 <span

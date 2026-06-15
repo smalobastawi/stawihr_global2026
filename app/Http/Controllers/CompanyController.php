@@ -178,6 +178,14 @@ class CompanyController extends Controller
             $data['country'] = PayrollCountry::getName($data['payroll_country']);
         }
 
+        if (array_key_exists('domain', $data) && $data['domain'] === '') {
+            $data['domain'] = null;
+        }
+
+        if (isset($data['currency'])) {
+            $data['currency'] = strtoupper($data['currency']);
+        }
+
         return $data;
     }
 

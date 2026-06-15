@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Payroll;
 
 use App\Http\Controllers\Controller;
 use App\Lib\Enumerations\ApprovalStatus;
+use App\Lib\Enumerations\Currency;
 use App\Lib\Enumerations\GeneralStatus;
 use App\Models\ApprovalWorkflow;
 use App\Models\Department;
@@ -33,7 +34,7 @@ class EmployeePayrollController extends Controller
      */
     public function index(Request $request)
     {
-        $query = EmployeePayroll::with(['employee.department', 'pensionScheme', 'allowances', 'employeeDeductions', 'earnings']);
+        $query = EmployeePayroll::with(['employee.department', 'employee.company', 'pensionScheme', 'allowances', 'employeeDeductions', 'earnings']);
 
         // Apply filters
         if ($request->filled('search')) {
@@ -98,6 +99,7 @@ class EmployeePayrollController extends Controller
             'employee_id' => 'required|exists:employee,employee_id|unique:employee_payrolls,employee_id,NULL,id,is_active,1',
             'phone_number' => 'nullable|string|max:20|regex:/^[\+0-9\-\(\)\s]*$/',
             'basic_salary' => 'required|numeric|min:0',
+            'currency' => ['required', 'string', 'size:3', Rule::in(Currency::codes())],
             'income_frequency' => 'required|in:daily,weekly,monthly',
             'payment_method' => 'required|in:bank_transfer,mobile_money,cash,cheque',
             'bank_name' => 'nullable|string|max:255',
@@ -204,6 +206,7 @@ class EmployeePayrollController extends Controller
                 'payroll_number' => $payrollNumber,
                 'phone_number' => $request->phone_number,
                 'basic_salary' => $request->basic_salary,
+                'currency' => strtoupper($request->currency),
                 'income_frequency' => $request->income_frequency ?? 'monthly',
                 'payment_method' => $request->payment_method,
                 'bank_name' => $request->bank_name,
@@ -361,6 +364,7 @@ class EmployeePayrollController extends Controller
         $validator = Validator::make($request->all(), [
             'phone_number' => 'nullable|string|max:20|regex:/^[\+0-9\-\(\)\s]*$/',
             'basic_salary' => 'required|numeric|min:0',
+            'currency' => ['required', 'string', 'size:3', Rule::in(Currency::codes())],
             'income_frequency' => 'required|in:daily,weekly,monthly',
             'payment_method' => 'required|in:bank_transfer,mobile_money,cash,cheque',
             'bank_name' => 'nullable|string|max:255',
@@ -469,11 +473,16 @@ class EmployeePayrollController extends Controller
                         'updated_fields' => $this->getUpdatedFields($request, $employeePayroll)
                     ]
                 );
+
+                $employeePayroll->update([
+                    'currency' => strtoupper($request->currency),
+                ]);
             } else {
                 // Regular update without salary change
                 $employeePayroll->update([
                     'phone_number' => $request->phone_number,
                     'basic_salary' => $newSalary,
+                    'currency' => strtoupper($request->currency),
                     'income_frequency' => $request->income_frequency ?? $employeePayroll->income_frequency,
                     'payment_method' => $request->payment_method,
                     'bank_name' => $request->bank_name,

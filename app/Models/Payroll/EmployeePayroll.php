@@ -2,16 +2,17 @@
 
 namespace App\Models\Payroll;
 
+use App\Lib\Enumerations\ApprovalStatus;
+use App\Lib\Enumerations\Currency;
 use App\Lib\Enumerations\GeneralStatus;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Employee;
 use App\Models\EmployeeDeductions;
 use App\Models\EmployeeEarnings;
 use App\Traits\HasApprovalWorkflow;
 use App\Traits\ProvidesApprovalDetails;
-use App\Lib\Enumerations\ApprovalStatus;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\Facades\LogBatch;
 use Spatie\Activitylog\LogOptions;
@@ -553,6 +554,22 @@ class EmployeePayroll extends Model
             'half' => 0.5       // Half rate for specific cases
         ];
     }
+
+    public function getDisplayCurrency(): string
+    {
+        if (!empty($this->currency) && Currency::isValid($this->currency)) {
+            return strtoupper($this->currency);
+        }
+
+        $companyCurrency = $this->employee?->company?->currency;
+
+        if (!empty($companyCurrency) && Currency::isValid($companyCurrency)) {
+            return strtoupper($companyCurrency);
+        }
+
+        return Currency::DEFAULT;
+    }
+
     public function getApprovalDetails(): array
     {
         $details = [
@@ -561,7 +578,7 @@ class EmployeePayroll extends Model
             'Payroll Number' => $this->payroll_number ?? 'N/A',
             'Basic Salary' => number_format($this->basic_salary, 2),
             'Income Frequency' => $this->income_frequency ?? 'N/A',
-            'Currency' => $this->currency ?? 'N/A',
+            'Currency' => $this->getDisplayCurrency(),
             'Payment Method' => $this->payment_method ?? 'N/A',
             'Bank Details' => $this->bank_name ? "{$this->bank_name} ({$this->bank_branch}) - ••••" . substr($this->account_number, -4) : 'N/A',
             'Account Name' => $this->account_name ?? 'N/A',

@@ -158,15 +158,15 @@ class EmployeeDeductionsController extends Controller
      */
     public function store(Request $request)
     {
-        $deductionType = DeductionType::findOrFail($request->payroll_deduction_type_id);
+        $deductionType = DeductionType::findOrFail($request->deduction_type_id);
         $calculationType = $deductionType->default_calculation_type;
 
         $validator = Validator::make($request->all(), [
             'employee_id' => 'required|exists:employee,employee_id',
-            'payroll_deduction_type_id' => [
+            'deduction_type_id' => [
                 'required',
                 'exists:deduction_types,id',
-                Rule::unique('employee_deductions')->where(function ($query) use ($request) {
+                Rule::unique('employee_deductions', 'deduction_type_id')->where(function ($query) use ($request) {
                     return $query->where('employee_id', $request->employee_id)
                         ->where(function ($q) {
                             $q->whereNull('effective_to')
@@ -331,13 +331,13 @@ class EmployeeDeductionsController extends Controller
         $deduction = EmployeeDeductions::findOrFail($id);
 
 
-        $deductionType = DeductionType::findOrFail($request->payroll_deduction_type_id);
+        $deductionType = DeductionType::findOrFail($request->deduction_type_id);
 
         $calculationType = $deductionType->default_calculation_type;
 
         $validator = Validator::make($request->all(), [
             'employee_id' => 'required|exists:employee,employee_id',
-            'payroll_deduction_type_id' => 'required|exists:deduction_types,id',
+            'deduction_type_id' => 'required|exists:deduction_types,id',
             'deduction_category' => 'required|in:loan_repayment,advance_repayment,tax,nssf,nhif,other',
             'amount' => 'required_if:calculation_type,fixed_amount|nullable|numeric|min:0',
             'percentage' => 'required_if:calculation_type,percentage_of_basic|nullable|numeric|min:0|max:100',

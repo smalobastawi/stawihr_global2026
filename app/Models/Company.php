@@ -23,6 +23,7 @@ class Company extends Model
         'representative_email',
         'print_head_description',
         'payroll_country',
+        'currency',
         'status',
         'kra_pin',
         'registration_number',

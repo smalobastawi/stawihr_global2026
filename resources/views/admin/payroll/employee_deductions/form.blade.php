@@ -98,12 +98,12 @@
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label class="control-label col-md-4" for="payroll_deduction_type_id">Employee
+                                        <label class="control-label col-md-4" for="deduction_type_id">Employee
                                             Deduction Type<span class="validateRq">*</span></label>
                                         <div class="col-md-8">
-                                            <select name="payroll_deduction_type_id" class="form-control required payroll_deduction_type_id" id="payroll_deduction_type_id">
+                                            <select name="deduction_type_id" class="form-control required deduction_type_id" id="deduction_type_id">
 @foreach($payrollDeductionTypes->pluck('name', 'id')->toArray() as $__key => $__value)
-<option value="{{ $__key }}" {{ (string)Request::old('payroll_deduction_type_id') == (string)$__key ? 'selected' : '' }}>{{ $__value }}</option>
+<option value="{{ $__key }}" {{ (string) old('deduction_type_id', $editModeData->deduction_type_id ?? '') == (string) $__key ? 'selected' : '' }}>{{ $__value }}</option>
 @endforeach
 </select>
                                         </div>
@@ -379,7 +379,7 @@
         $("#employeeDeductionForm").validate();
 
         // Handle deduction type selection
-        $(document).on("change", ".payroll_deduction_type_id", function() {
+        $(document).on("change", ".deduction_type_id", function() {
             var deductionTypeId = $(this).val();
 
             // Hide all sections first
@@ -419,7 +419,7 @@
 
         // Initialize form based on edit mode
         @if (isset($editModeData))
-            $('.payroll_deduction_type_id').trigger('change');
+            $('.deduction_type_id').trigger('change');
         @endif
 
         const today = new Date();

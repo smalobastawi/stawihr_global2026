@@ -77,20 +77,9 @@
                                         <div class="form-group">
                                             <label class="control-label col-md-3">@lang('payroll.currency')</label>
                                             <div class="col-md-9">
-                                                <select name="currency" class="form-control" required>
-                                                    <option value="KES"
-                                                        {{ old('currency', $employeePayroll->currency ?? 'KES') == 'KES' ? 'selected' : '' }}>
-                                                        KES</option>
-                                                    <option value="USD"
-                                                        {{ old('currency', $employeePayroll->currency) == 'USD' ? 'selected' : '' }}>
-                                                        USD</option>
-                                                    <option value="EUR"
-                                                        {{ old('currency', $employeePayroll->currency) == 'EUR' ? 'selected' : '' }}>
-                                                        EUR</option>
-                                                    <option value="GBP"
-                                                        {{ old('currency', $employeePayroll->currency) == 'GBP' ? 'selected' : '' }}>
-                                                        GBP</option>
-                                                </select>
+                                                @include('admin.partials.currency-select', [
+                                                    'selected' => old('currency', $employeePayroll->currency ?? \App\Lib\Enumerations\Currency::DEFAULT),
+                                                ])
                                             </div>
                                         </div>
                                     </div>

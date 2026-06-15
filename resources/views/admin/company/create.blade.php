@@ -54,9 +54,9 @@
                                             placeholder="Enter company name" required>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="control-label">Domain<span class="validateRq">*</span></label>
+                                        <label class="control-label">Domain</label>
                                         <input type="text" class="form-control" name="domain" placeholder="Enter domain"
-                                            required>
+                                            value="{{ old('domain') }}">
                                     </div>
                                 </div>
 
@@ -73,6 +73,16 @@
                                         </select>
                                         <small class="text-muted">Determines which statutory PAYE and deduction rules apply during payroll processing.</small>
                                     </div>
+                                    <div class="col-md-6">
+                                        <label class="control-label">Currency<span class="validateRq">*</span></label>
+                                        @include('admin.partials.currency-select', [
+                                            'selected' => old('currency', \App\Lib\Enumerations\Currency::DEFAULT),
+                                        ])
+                                        <small class="text-muted">Default currency for company payroll and financial display.</small>
+                                    </div>
+                                </div>
+
+                                <div class="row" style="margin-top: 20px;">
                                     <div class="col-md-6">
                                         <label class="control-label">Status<span class="validateRq">*</span></label>
                                         <select class="form-control" name="status" required>
@@ -131,28 +141,11 @@
 
                                 <div class="row" style="margin-top: 20px;">
                                     <div class="col-md-6">
-                                        <label class="control-label">Employer Number</label>
-                                        <input type="text" class="form-control" name="employer_number"
-                                            placeholder="Enter Employer Number"
-                                            value="{{ old('employer_number') }}">
-                                        <small class="text-muted">General Employer Reference Number</small>
-                                    </div>
-                                    <div class="col-md-6">
                                         <label class="control-label">NITA Registration Number</label>
                                         <input type="text" class="form-control" name="nita_registration_number"
                                             placeholder="Enter NITA Registration Number"
                                             value="{{ old('nita_registration_number') }}">
                                         <small class="text-muted">National Industrial Training Authority Registration</small>
-                                    </div>
-                                </div>
-
-                                <div class="row" style="margin-top: 20px;">
-                                    <div class="col-md-6">
-                                        <label class="control-label">eCitizen Identifier</label>
-                                        <input type="text" class="form-control" name="ecitizen_identifier"
-                                            placeholder="Enter eCitizen Identifier"
-                                            value="{{ old('ecitizen_identifier') }}">
-                                        <small class="text-muted">Kenya eCitizen Portal Business Identifier</small>
                                     </div>
                                 </div>
 

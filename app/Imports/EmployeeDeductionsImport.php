@@ -78,7 +78,7 @@ class EmployeeDeductionsImport implements ToModel, WithHeadingRow, WithValidatio
         }
 
         $existingDeduction = EmployeeDeductions::where('employee_id', $employee->employee_id)
-            ->where('payroll_deduction_type_id', $deductionType->id)
+            ->where('deduction_type_id', $deductionType->id)
             ->where(function ($query) {
                 $query->whereNull('effective_to')->orWhere('effective_to', '>=', now());
             })
@@ -97,7 +97,7 @@ class EmployeeDeductionsImport implements ToModel, WithHeadingRow, WithValidatio
 
         return new EmployeeDeductions([
             'employee_id' => $employee->employee_id,
-            'payroll_deduction_type_id' => $deductionType->id,
+            'deduction_type_id' => $deductionType->id,
             'deduction_category' => $row['deduction_category'],
             'calculation_type' => $deductionType->default_calculation_type,
             'amount' => $row['amount'] ?? 0,
