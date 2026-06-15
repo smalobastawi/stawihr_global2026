@@ -62,8 +62,7 @@
 
                         <div class="row">
                             <div id="searchBox">
-                                <form method="POST">
-							@csrf
+                                <form method="GET" action="{{ route('payroll.overtime.index') }}">
                                 <div class="col-md-3">
                                     <div class="form-group departmentName">
                                         <label class="control-label" for="employee_id">@lang('employee.employee')</label>
@@ -139,8 +138,9 @@
                                                     <a href="{{ route('payroll.overtime.edit', $value->id) }}" class="btn btn-warning btn-sm" title="Edit">
                                                         <i class="fa fa-edit"> Edit</i>
                                                     </a>
-                                                    <form method="POST">
-							@csrf
+                                                    <form action="{{ route('payroll.overtime.delete', $value->id) }}" method="POST" style="display: inline;">
+                                                        @csrf
+                                                        @method('DELETE')
                                                     <button type="submit" class="btn btn-danger btn-sm" title="Delete" onclick="return confirm('Are you sure you want to delete this overtime record?')">
                                                         <i class="fa fa-trash">Delete</i>
                                                     </button>
