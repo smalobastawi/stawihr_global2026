@@ -1,0 +1,54 @@
+name: Tag HR Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 2.5.0)'
+        required: true
+        type: string
+
+jobs:
+  tag-and-stamp:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          VERSION="${VERSION#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
+            echo "Version must be semver (e.g. 2.5.0)"
+            exit 1
+          fi
+
+      - name: Stamp VERSION.json
+        run: |
+          php -r "
+          file_put_contents('VERSION.json', json_encode([
+            'version' => getenv('VERSION'),
+            'git_ref' => 'v'.getenv('VERSION'),
+            'commit' => '${{ github.sha }}',
+            'built_at' => date('c'),
+            'repository' => '${{ github.repository }}',
+          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES).PHP_EOL);
+          "
+
+      - name: Commit VERSION.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION.json
+          git commit -m "chore: stamp version v${VERSION}" || echo "Nothing to commit"
+          git push
+
+      - name: Create and push tag
+        run: |
+          git tag -a "v${VERSION}" -m "Release v${VERSION}"
+          git push origin "v${VERSION}"
