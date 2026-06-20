@@ -135,7 +135,7 @@ class LoginController extends Controller
                 //check and update Biometric Login for the user
                 $biometicStatusToday = helper_getBiometricAttendance();
 
-                redirect()->intended(url('/dashboard'));
+                return redirect()->intended(url('/dashboard'));
             }
         }
         // Authentication failed

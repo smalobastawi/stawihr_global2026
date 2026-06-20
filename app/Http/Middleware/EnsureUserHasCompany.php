@@ -16,6 +16,10 @@ class EnsureUserHasCompany
             return $next($request);
         }
 
+        if ($request->routeIs('subscription.suspended') || $request->is('subscription/suspended')) {
+            return $next($request);
+        }
+
         // Allow SuperAdmin bypass
         if ($user->hasRole('SuperAdmin')) {
             return $next($request);

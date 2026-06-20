@@ -17,6 +17,7 @@ use App\Http\Controllers\Payroll\EmployeeDeductionsController;
 use App\Http\Controllers\Payroll\ProgramAllocationController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\EthnicityController;
+use App\Http\Controllers\SubscriptionSuspensionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -67,6 +68,10 @@ Route::group(['middleware' => ['guest']], function () {
 });
 
 
+
+Route::get('subscription/suspended', [SubscriptionSuspensionController::class, 'show'])
+    ->middleware(['auth'])
+    ->name('subscription.suspended');
 
 Route::group(['middleware' => ['web']], function () {
     Route::get('/job/{job_id}/view/description', [JobPostController::class, 'viewJdFile'])->name('jobPost.viewDescription');
