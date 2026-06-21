@@ -14,8 +14,8 @@
              <div class="dropdown user-pro-body">
 
                  <div>
-                    <img src="{{ asset('storage/uploads/front/' . $front_setting?->logo ?? '') }}" alt=""
-                        class="logo-light" style="height: 50px; width: 60px;" />
+                    <img src="{{ systemLogoUrl() }}" alt="{{ companyDisplayName(getFirstCompany()) }}"
+                        class="logo-light" style="height: 50px; width: auto; max-width: 200px; object-fit: contain;" />
                  </div>
 
                  <a href="#" class="dropdown-toggle u-dropdown " data-toggle="dropdown" role="button"

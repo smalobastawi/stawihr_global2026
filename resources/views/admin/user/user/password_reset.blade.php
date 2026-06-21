@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 @php
-    $front_setting = getFrontData();
+    $logoUrl = systemLogoUrl();
 @endphp
 <head>
     <meta charset="utf-8">
@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
-    <link rel="shortcut icon" href="{!! asset('admin_assets/img/logo-placeholder.png') !!}" type="image/x-icon"/>
+    <link rel="shortcut icon" href="{{ $logoUrl }}" type="image/x-icon"/>
     <title>HRMS Login</title>
     <!-- Bootstrap Core CSS -->
     <link href="{!! asset('admin_assets/bootstrap/dist/css/bootstrap.min.css') !!}" rel="stylesheet">
@@ -31,7 +31,7 @@
             <div class="card">
                 <div class="login-logo" style="text-align: center">
 
-                    <img src="{{ asset('storage/uploads/front/'.$front_setting->logo) }}" style="margin-top: 2px;height:50px;"/>
+                    <img src="{{ $logoUrl }}" style="margin-top: 2px;height:50px;"/>
                 </div>
                 <div class="card-header">{{ __('Reset Password') }}</div>
 

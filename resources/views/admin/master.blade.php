@@ -19,7 +19,7 @@
             <meta name="employee-id" content="{{ $employeeInfo->employee_id }}">
         @endisset
     @endauth
-    <link rel="shortcut icon" href="{{ asset('storage/uploads/front/' . ($front_setting?->logo ?? '')) }}" type="image/x-icon" />
+    <link rel="shortcut icon" href="{{ systemLogoUrl() }}" type="image/x-icon" />
 
     <title>@yield('title')</title>
     @include('admin.components.styles')

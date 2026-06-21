@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 @php
-    $front_setting = getFrontData();
+    $logoUrl = systemLogoUrl();
 @endphp
 <head>
     <meta charset="utf-8">
@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="">
     <meta name="author" content="">
-    <link rel="shortcut icon" href="{{ asset('storage/uploads/front/'.$front_setting->logo) }}" type="image/x-icon"/>
+    <link rel="shortcut icon" href="{{ $logoUrl }}" type="image/x-icon"/>
     <title>{{env('APP_NAME')}}</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> 
@@ -56,7 +56,7 @@
         <div class="col-md-6">
             <div class="login-container">
                 <div class="login-logo text-center">
-                    <img src="{{ asset('storage/uploads/front/'.$front_setting->logo) }}" alt="{{env('APP_NAME')}}">
+                    <img src="{{ $logoUrl }}" alt="{{env('APP_NAME')}}">
                 </div>
 
                 @if($errors->any())

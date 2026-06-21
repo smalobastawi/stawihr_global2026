@@ -1,10 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 @php
-    $front_setting = getFrontData();
-    $logoUrl = $front_setting->logo
-        ? asset('storage/uploads/front/' . $front_setting->logo)
-        : null;
+    $logoUrl = systemLogoUrl();
     $heroImage = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1280&h=900&fit=crop&q=80';
     $googleEnabled = (bool) env('GOOGLE_CLIENT_ID');
     $azureEnabled = (bool) env('AZURE_CLIENT_ID');
@@ -21,9 +18,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    @if($logoUrl)
-        <link rel="shortcut icon" href="{{ $logoUrl }}" type="image/x-icon">
-    @endif
+    <link rel="shortcut icon" href="{{ $logoUrl }}" type="image/x-icon">
 
     <style>
         :root {
@@ -379,9 +374,7 @@
 
         <section class="auth-panel">
             <div class="auth-card">
-                @if($logoUrl)
-                    <img src="{{ $logoUrl }}" alt="{{ env('APP_NAME') }}" class="auth-logo">
-                @endif
+                <img src="{{ $logoUrl }}" alt="{{ env('APP_NAME') }}" class="auth-logo">
 
                 <h2>Sign in to your account</h2>
                 <p class="subtitle">Welcome back.</p>

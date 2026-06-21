@@ -401,6 +401,31 @@ if (!function_exists('getActiveCompany')) {
     }
 }
 
+if (!function_exists('getFirstCompany')) {
+    function getFirstCompany()
+    {
+        return Company::orderBy('id')->first();
+    }
+}
+
+if (!function_exists('systemLogoUrl')) {
+    function systemLogoUrl()
+    {
+        $company = getFirstCompany();
+
+        if ($company?->logo && file_exists(public_path('uploads/company_logos/' . $company->logo))) {
+            return asset('uploads/company_logos/' . $company->logo);
+        }
+
+        $front = getFrontData();
+        if ($front?->logo) {
+            return asset('storage/uploads/front/' . $front->logo);
+        }
+
+        return asset('admin_assets/img/logo.png');
+    }
+}
+
 if (!function_exists('companyLogoUrl')) {
     function companyLogoUrl($company = null)
     {
