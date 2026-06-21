@@ -3,9 +3,9 @@
 @php
     $logoUrl = systemLogoUrl();
     $heroImage = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1280&h=900&fit=crop&q=80';
-    $googleEnabled = (bool) env('GOOGLE_CLIENT_ID');
-    $azureEnabled = (bool) env('AZURE_CLIENT_ID');
-    $passwordLogin = env('PASSWORD_LOGIN');
+    $googleEnabled = filled(config('services.google.client_id'));
+    $azureEnabled = filled(config('services.microsoft.client_id'));
+    $passwordLogin = config('app.password_login');
 @endphp
 <head>
     <meta charset="utf-8">
@@ -13,7 +13,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet">
     <meta name="googlebot" content="noindex, nofollow, noarchive, nosnippet">
-    <title>Sign in — {{ env('APP_NAME') }}</title>
+    <title>Sign in — {{ config('app.name') }}</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -374,7 +374,7 @@
 
         <section class="auth-panel">
             <div class="auth-card">
-                <img src="{{ $logoUrl }}" alt="{{ env('APP_NAME') }}" class="auth-logo">
+                <img src="{{ $logoUrl }}" alt="{{ config('app.name') }}" class="auth-logo">
 
                 <h2>Sign in to your account</h2>
                 <p class="subtitle">Welcome back.</p>

@@ -134,7 +134,7 @@ return [
     |
     */
 
-    'password_login' => env('PASSWORD_LOGIN'),
+    'password_login' => filter_var(env('PASSWORD_LOGIN', true), FILTER_VALIDATE_BOOLEAN),
 
     /*
     |--------------------------------------------------------------------------

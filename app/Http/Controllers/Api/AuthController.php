@@ -19,16 +19,16 @@ class AuthController extends Controller
      */
     public function checkloginOptions(Request $request)
     {
-        $passwordLogin = env('PASSWORD_LOGIN');
-        $googleLogin = env('GOOGLE_LOGIN');
-        $azureLogin = env('AZURE_LOGIN');
+        $passwordLogin = config('app.password_login');
+        $googleLogin = filled(config('services.google.client_id'));
+        $azureLogin = filled(config('services.microsoft.client_id'));
 
         return response()->json([
             'passwordLogin' => (bool) $passwordLogin,
-            'googleLogin' => (bool) $googleLogin,
-            'azureLogin' => (bool) $azureLogin,
-            'azureClientId' => $azureLogin ? env('AZURE_CLIENT_ID') : null,
-            'azureTenantId' => $azureLogin ? env('AZURE_TENANT_ID') : null,
+            'googleLogin' => $googleLogin,
+            'azureLogin' => $azureLogin,
+            'azureClientId' => $azureLogin ? config('services.microsoft.client_id') : null,
+            'azureTenantId' => $azureLogin ? config('services.microsoft.tenant') : null,
             'organizationName' => config('app.name'),
             'applicationTitle' => config('app.name'),
         ]);
