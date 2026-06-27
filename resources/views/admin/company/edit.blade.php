@@ -77,15 +77,63 @@
                                         <small class="text-muted">Determines which statutory PAYE and deduction rules apply during payroll processing.</small>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="control-label">Currency<span class="validateRq">*</span></label>
+                                        <label class="control-label">Payroll Base Currency (Statutory)<span class="validateRq">*</span></label>
                                         @include('admin.partials.currency-select', [
-                                            'selected' => old('currency', $company->currency ?? \App\Lib\Enumerations\Currency::DEFAULT),
+                                            'name' => 'currency',
+                                            'selected' => old('currency', $company->currency ?? $company->getPayrollBaseCurrency()),
                                         ])
-                                        <small class="text-muted">Default currency for company payroll and financial display.</small>
+                                        <small class="text-muted">All statutory payroll calculations (PAYE, pension, levies) are performed in this currency. For Rwanda use RWF.</small>
                                     </div>
                                 </div>
 
                                 <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-6">
+                                        <label class="control-label">Explicit Payroll Base Currency Override</label>
+                                        @include('admin.partials.currency-select', [
+                                            'name' => 'payroll_base_currency',
+                                            'selected' => old('payroll_base_currency', $company->payroll_base_currency),
+                                            'required' => false,
+                                        ])
+                                        <small class="text-muted">Optional. Leave blank to use the currency above or derive from payroll country.</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="control-label">Default Payment Currency</label>
+                                        @include('admin.partials.currency-select', [
+                                            'name' => 'default_payment_currency',
+                                            'selected' => old('default_payment_currency', $company->default_payment_currency ?? $company->getPayrollBaseCurrency()),
+                                            'required' => false,
+                                        ])
+                                    </div>
+                                </div>
+
+                                <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-6">
+                                        <label class="control-label">Exchange Rate Source</label>
+                                        <select class="form-control" name="exchange_rate_source">
+                                            @foreach (\App\Lib\Enumerations\ExchangeRateSource::toArray() as $value => $label)
+                                                <option value="{{ $value }}" {{ old('exchange_rate_source', $company->exchange_rate_source ?? 'manual') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="control-label">Exchange Rate Effective Date Policy</label>
+                                        <select class="form-control" name="exchange_rate_effective_date_policy">
+                                            @foreach (\App\Lib\Enumerations\ExchangeRateEffectiveDatePolicy::toArray() as $value => $label)
+                                                <option value="{{ $value }}" {{ old('exchange_rate_effective_date_policy', $company->exchange_rate_effective_date_policy ?? 'payroll_period_end') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-6">
+                                        <label class="control-label">Allow Employee Payment Currency</label>
+                                        <select class="form-control" name="allow_employee_payment_currency">
+                                            <option value="0" {{ !old('allow_employee_payment_currency', $company->allow_employee_payment_currency) ? 'selected' : '' }}>No — all employees paid in base currency</option>
+                                            <option value="1" {{ old('allow_employee_payment_currency', $company->allow_employee_payment_currency) ? 'selected' : '' }}>Yes — employees may be paid in a different currency</option>
+                                        </select>
+                                        <small class="text-muted">Enable for companies paying some staff in USD while statutory payroll remains in local currency.</small>
+                                    </div>
                                     <div class="col-md-6">
                                         <label class="control-label">Status<span class="validateRq">*</span></label>
                                         <select class="form-control" name="status" required>

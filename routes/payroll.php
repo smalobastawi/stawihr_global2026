@@ -461,6 +461,16 @@ Route::group(['module' => 'Payroll', 'prefix' => 'payroll', 'middleware' => ['au
         Route::post('/generate-periods', [PayrollPeriodController::class, 'generatePeriods'])->name('payroll.settings.periods.generate-periods');
     });
 
+    Route::group(['section' => 'settings', 'sub_section' => 'exchange_rates', 'prefix' => 'settings/exchange-rates'], function () {
+        Route::get('/', [\App\Http\Controllers\Payroll\CurrencyExchangeRateController::class, 'index'])->name('payroll.settings.exchange-rates.index');
+        Route::get('/create', [\App\Http\Controllers\Payroll\CurrencyExchangeRateController::class, 'create'])->name('payroll.settings.exchange-rates.create');
+        Route::post('/store', [\App\Http\Controllers\Payroll\CurrencyExchangeRateController::class, 'store'])->name('payroll.settings.exchange-rates.store');
+        Route::get('/{exchangeRate}/edit', [\App\Http\Controllers\Payroll\CurrencyExchangeRateController::class, 'edit'])->name('payroll.settings.exchange-rates.edit');
+        Route::put('/{exchangeRate}', [\App\Http\Controllers\Payroll\CurrencyExchangeRateController::class, 'update'])->name('payroll.settings.exchange-rates.update');
+        Route::delete('/{exchangeRate}', [\App\Http\Controllers\Payroll\CurrencyExchangeRateController::class, 'destroy'])->name('payroll.settings.exchange-rates.destroy');
+        Route::post('/validate-for-period', [\App\Http\Controllers\Payroll\CurrencyExchangeRateController::class, 'validateForPeriod'])->name('payroll.settings.exchange-rates.validate-for-period');
+    });
+
     // Reports Section
     Route::group(['section' => 'reports', 'sub_section' => 'statutory_reports', 'prefix' => 'reports'], function () {
         Route::get('/', [ReportsController::class, 'index'])->name('reports.index');

@@ -88,10 +88,39 @@
                                         </div>
                                         <div class="col-md-6">
                                             <div class="form-group">
-                                                <label class="control-label col-md-3">@lang('payroll.currency')</label>
+                                                <label class="control-label col-md-3">Salary Currency</label>
                                                 <div class="col-md-9">
                                                     @include('admin.partials.currency-select', [
+                                                        'name' => 'currency',
                                                         'selected' => old('currency', \App\Lib\Enumerations\Currency::DEFAULT),
+                                                    ])
+                                                    <small class="text-muted">Currency in which basic salary and contract amounts are expressed.</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label class="control-label col-md-3">Payment Currency</label>
+                                                <div class="col-md-9">
+                                                    @include('admin.partials.currency-select', [
+                                                        'name' => 'payment_currency',
+                                                        'selected' => old('payment_currency'),
+                                                        'required' => false,
+                                                    ])
+                                                    <small class="text-muted">Currency paid to the employee. Leave blank to use company default.</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <label class="control-label col-md-3">Bank Payment Currency</label>
+                                                <div class="col-md-9">
+                                                    @include('admin.partials.currency-select', [
+                                                        'name' => 'bank_payment_currency',
+                                                        'selected' => old('bank_payment_currency'),
+                                                        'required' => false,
                                                     ])
                                                 </div>
                                             </div>

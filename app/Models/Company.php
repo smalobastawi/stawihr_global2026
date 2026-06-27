@@ -24,6 +24,11 @@ class Company extends Model
         'print_head_description',
         'payroll_country',
         'currency',
+        'payroll_base_currency',
+        'default_payment_currency',
+        'exchange_rate_source',
+        'exchange_rate_effective_date_policy',
+        'allow_employee_payment_currency',
         'status',
         'kra_pin',
         'registration_number',
@@ -36,7 +41,28 @@ class Company extends Model
 
     protected $casts = [
         'payroll_country' => 'integer',
+        'allow_employee_payment_currency' => 'boolean',
     ];
+
+    /**
+     * Statutory payroll base currency: explicit setting, legacy currency field, or country default.
+     */
+    public function getPayrollBaseCurrency(): string
+    {
+        if (!empty($this->payroll_base_currency) && \App\Lib\Enumerations\Currency::isValid($this->payroll_base_currency)) {
+            return strtoupper($this->payroll_base_currency);
+        }
+
+        if (!empty($this->currency) && \App\Lib\Enumerations\Currency::isValid($this->currency)) {
+            return strtoupper($this->currency);
+        }
+
+        if ($this->payroll_country) {
+            return \App\Lib\Enumerations\PayrollCountry::currencyCode((int) $this->payroll_country);
+        }
+
+        return \App\Lib\Enumerations\Currency::DEFAULT;
+    }
 
     public function users(): HasMany
     {

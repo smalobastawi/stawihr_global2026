@@ -55,6 +55,9 @@ class DatabaseSeeder extends Seeder
         // PIP (Performance Improvement Plan)
         $this->call(PipSeeder::class);
 
+        // Personal Development Plans
+        $this->call(PdpSeeder::class);
+
         // Frontend settings
         $this->call(FrontSettingsSeeder::class);
         Artisan::call('permission:create-permission-routes'); // Create permissions for all routes

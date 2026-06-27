@@ -207,6 +207,15 @@
                             </li>
                         @endcan
 
+                        @can('ess.pdp.myPlans')
+                            <li>
+                                <a href="{{ route('ess.pdp.myPlans') }}">
+                                    <i data-icon="/" class="linea-icon linea-basic fa-fw"></i>
+                                    <span class="hideMenu">My Development Plans</span>
+                                </a>
+                            </li>
+                        @endcan
+
                         @can('ess.vehicle.myVehicle')
                             <li>
                                 <a href="{{ route('ess.vehicle.myVehicle') }}">
@@ -1267,6 +1276,25 @@
                              </li>
                          @endcan
 
+                        {{-- Personal Development Plans --}}
+                         @can('pdp.setting.index')
+                             <li>
+                                 <a href="{{ route('pdp.setting.index') }}">
+                                     <i data-icon="/" class="linea-icon linea-basic fa-fw"></i>
+                                     <span class="hideMenu">PDP Policy Settings</span>
+                                 </a>
+                             </li>
+                         @endcan
+
+                         @can('pdp.plan.index')
+                             <li>
+                                 <a href="{{ route('pdp.plan.index') }}">
+                                     <i data-icon="/" class="linea-icon linea-basic fa-fw"></i>
+                                     <span class="hideMenu">Personal Development Plans</span>
+                                 </a>
+                             </li>
+                         @endcan
+
                          {{-- Performance Reports --}}
                          <li>
                              <a href="javascript:void(0)" class="module">
@@ -1303,6 +1331,26 @@
                                  @can('pip.report.byOutcome')
                                      <li><a class="hideMenu" href="{{ route('pip.report.byOutcome') }}"><i
                                                  class="fa fa-circle-o"></i> PIP By Outcome</a></li>
+                                 @endcan
+
+                                 @can('pdp.report.dashboard')
+                                     <li><a class="hideMenu" href="{{ route('pdp.report.dashboard') }}"><i
+                                                 class="fa fa-circle-o"></i> PDP Dashboard</a></li>
+                                 @endcan
+
+                                 @can('pdp.report.byDepartment')
+                                     <li><a class="hideMenu" href="{{ route('pdp.report.byDepartment') }}"><i
+                                                 class="fa fa-circle-o"></i> PDP By Department</a></li>
+                                 @endcan
+
+                                 @can('pdp.report.byEmployee')
+                                     <li><a class="hideMenu" href="{{ route('pdp.report.byEmployee') }}"><i
+                                                 class="fa fa-circle-o"></i> PDP By Employee</a></li>
+                                 @endcan
+
+                                 @can('pdp.report.progressSummary')
+                                     <li><a class="hideMenu" href="{{ route('pdp.report.progressSummary') }}"><i
+                                                 class="fa fa-circle-o"></i> PDP Progress Summary</a></li>
                                  @endcan
                              </ul>
                          </li>
@@ -1464,7 +1512,7 @@
                              <li class="">
                                  <a class="hideMenu" href="{{ route('reports.annalytics.view') }}"> <i data-icon="/"
                                          class="linea-icon linea-basic fa-fw"></i>
-                                     HR Insights</a>
+                                     Report and Analytics</a>
 
                              </li>
                          @endcan
@@ -1590,6 +1638,13 @@
                                   <a class="hideMenu" href="{{ route('moduleSettings.index') }}"> <i data-icon="/"
                                           class="linea-icon linea-basic fa-fw"></i>
                                       Module Settings</a>
+                              </li>
+                          @endcan
+                          @can('dummyData.index')
+                              <li class="">
+                                  <a class="hideMenu" href="{{ route('dummyData.index') }}"> <i data-icon="/"
+                                          class="linea-icon linea-basic fa-fw"></i>
+                                      Dummy Test Data</a>
                               </li>
                           @endcan
                       </ul>

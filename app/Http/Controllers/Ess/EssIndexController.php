@@ -73,6 +73,9 @@ use App\Models\Performance\PerformanceAppraisal;
 use App\Models\Performance\PerformanceAppraisalScore;
 use App\Models\Performance\PerformanceAppraisalBehavioralScore;
 use App\Models\Pip\PipPlan;
+use App\Models\Pdp\PdpPlan;
+use App\Models\Pdp\PdpSetting;
+use App\Services\Pdp\PdpPlanPdfService;
 
 class EssIndexController extends Controller
 {
@@ -1750,6 +1753,113 @@ class EssIndexController extends Controller
             ->findOrFail($id);
 
         return view('admin.ess.pip.show', compact('plan'));
+    }
+
+    /**
+     * Show my personal development plans for ESS user
+     */
+    public function myPdpPlans()
+    {
+        $employee = $this->employee;
+
+        if (!$employee || !$employee->employee_id) {
+            return view('admin.ess.pdp.my_plans', [
+                'results' => collect(),
+                'setting' => PdpSetting::current(),
+            ])->with('warning', 'No employee record found for your account.');
+        }
+
+        $results = PdpPlan::with(['employee', 'supervisor', 'goals'])
+            ->where('employee_id', $employee->employee_id)
+            ->orderByDesc('plan_year')
+            ->orderByDesc('created_at')
+            ->get();
+
+        return view('admin.ess.pdp.my_plans', [
+            'results' => $results,
+            'setting' => PdpSetting::current(),
+        ]);
+    }
+
+    public function createPdpPlan()
+    {
+        $employee = $this->employee;
+        $setting = PdpSetting::current();
+
+        if (!$employee || !$employee->employee_id) {
+            return redirect()->route('ess.pdp.myPlans')->with('error', 'No employee record found.');
+        }
+
+        if (!$setting->allow_employee_self_service) {
+            return redirect()->route('ess.pdp.myPlans')->with('error', 'Self-service PDP creation is disabled by HR policy.');
+        }
+
+        return view('admin.ess.pdp.form', [
+            'employee' => $employee,
+            'setting' => $setting,
+        ]);
+    }
+
+    public function storePdpPlan(Request $request)
+    {
+        $employee = $this->employee;
+        $setting = PdpSetting::current();
+
+        if (!$employee || !$employee->employee_id || !$setting->allow_employee_self_service) {
+            return redirect()->route('ess.pdp.myPlans')->with('error', 'You are not allowed to create a development plan.');
+        }
+
+        $input = $request->validate([
+            'plan_title' => 'required|string|max:255',
+            'plan_year' => 'required|integer|min:2000|max:2100',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'review_frequency' => 'required|in:quarterly,bi_annually,annually',
+            'development_focus' => 'nullable|string',
+            'career_aspirations' => 'nullable|string',
+        ]);
+
+        $input['employee_id'] = $employee->employee_id;
+        $input['department_id'] = $employee->department_id;
+        $input['designation_id'] = $employee->designation_id;
+        $input['supervisor_id'] = $employee->supervisor_id;
+        $input['status'] = 'draft';
+        $input['created_by'] = $employee->employee_id;
+
+        try {
+            $plan = PdpPlan::create($input);
+            return redirect()->route('ess.pdp.show', $plan->pdp_plan_id)->with('success', 'Personal development plan created successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->withInput()->with('error', 'An error occurred: ' . $e->getMessage());
+        }
+    }
+
+    public function showPdpPlan($id)
+    {
+        $employee = $this->employee;
+
+        if (!$employee || !$employee->employee_id) {
+            return redirect()->route('ess.pdp.myPlans')->with('error', 'No employee record found.');
+        }
+
+        $plan = PdpPlan::with(['employee', 'supervisor', 'department', 'goals.progressEntries', 'progressEntries.goal'])
+            ->where('employee_id', $employee->employee_id)
+            ->findOrFail($id);
+
+        return view('admin.ess.pdp.show', compact('plan'));
+    }
+
+    public function exportPdpPlanPdf($id)
+    {
+        $employee = $this->employee;
+
+        if (!$employee || !$employee->employee_id) {
+            return redirect()->route('ess.pdp.myPlans')->with('error', 'No employee record found.');
+        }
+
+        $plan = PdpPlan::where('employee_id', $employee->employee_id)->findOrFail($id);
+
+        return app(PdpPlanPdfService::class)->download($plan);
     }
 
     /**

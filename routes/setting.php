@@ -5,6 +5,7 @@ use App\Http\Controllers\Setting\ApprovalSettingController;
 use App\Http\Controllers\Setting\FinancialYearController;
 use App\Http\Controllers\Setting\SystemSettingController;
 use App\Http\Controllers\Setting\ModuleSettingsController;
+use App\Http\Controllers\Setting\DummyDataController;
 
 Route::group(['module' => 'Settings', 'section' => 'settings', 'prefix' => 'settings', 'middleware' => ['prevent-back-history', 'auth', 'permission']], function () {
 
@@ -42,6 +43,13 @@ Route::group(['module' => 'Settings', 'section' => 'settings', 'prefix' => 'sett
     Route::group(['sub_section' => 'Module Settings', 'prefix' => 'module-settings'], function () {
         Route::get('/', [ModuleSettingsController::class, 'index'])->name('moduleSettings.index');
         Route::put('/', [ModuleSettingsController::class, 'update'])->name('moduleSettings.update');
+    });
+
+    // Dummy / test data generator
+    Route::group(['sub_section' => 'Dummy Test Data', 'prefix' => 'dummy-data'], function () {
+        Route::get('/', [DummyDataController::class, 'index'])->name('dummyData.index');
+        Route::post('/generate', [DummyDataController::class, 'generate'])->name('dummyData.generate');
+        Route::delete('/', [DummyDataController::class, 'destroy'])->name('dummyData.destroy');
     });
 
 });

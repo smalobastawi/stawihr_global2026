@@ -32,7 +32,7 @@
     <article class="guide-content">
       <div class="guide-breadcrumb"><a href="../index.html">User Guide</a> / <a href="index.html">Admin</a> / Payroll</div>
       <h1>Payroll</h1>
-      <p class="guide-lead">Configure pay components, process monthly payroll, manage loans, and generate statutory reports.</p>
+      <p class="guide-lead">Configure pay components, process monthly payroll, manage loans, handle multi-currency disbursements, and generate statutory reports.</p>
 
       <figure class="guide-figure">
         <img src="/docs/user-guide/assets/images/screenshots/admin-payroll.svg" alt="Process Payroll screen">
@@ -75,6 +75,72 @@
         <li>Payment Reports Dashboard, Salary Change History, P9, NSSF, SHIF, AHL, PAYE.</li>
         <li>Earnings report, Deductions report, Variance report.</li>
       </ul>
+
+      <h2 id="multi-currency">Multi-currency payroll</h2>
+      <p>StawiHR supports employers who must calculate statutory payroll in a <strong>local base currency</strong> (for example RWF in Rwanda) while paying some employees in a <strong>foreign payment currency</strong> (for example USD). Local-currency employees are unaffected — the workflow is identical to standard payroll.</p>
+
+      <div class="guide-callout guide-callout-info">
+        <strong>Two currencies, two purposes</strong>
+        <ul style="margin-bottom:0">
+          <li><strong>Payroll base currency</strong> — used for PAYE, pension, social security, and all statutory returns.</li>
+          <li><strong>Payment currency</strong> — the currency sent to the employee’s bank account.</li>
+        </ul>
+      </div>
+
+      <h3 id="multi-currency-company">Company currency settings</h3>
+      <p>Configure under <strong>Settings → Companies → Edit Company</strong> (payroll section):</p>
+      <div class="guide-table-wrap">
+        <table class="guide-table">
+          <thead><tr><th>Setting</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td>Payroll country</td><td>Determines statutory rules (PAYE bands, pension, etc.)</td></tr>
+            <tr><td>Payroll base currency</td><td>Statutory calculation currency (e.g. RWF, KES)</td></tr>
+            <tr><td>Default payment currency</td><td>Default bank payment currency when not set per employee</td></tr>
+            <tr><td>Allow employee payment currency</td><td>Enables per-employee payment currency overrides</td></tr>
+            <tr><td>Exchange rate effective date policy</td><td>Which date selects the rate during payroll (period end, start, payment date, or latest on/before period end)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="multi-currency-employee">Employee currency settings</h3>
+      <p>Under <strong>Payroll → Employees → Create/Edit Employee Payroll</strong>:</p>
+      <ul>
+        <li><strong>Salary currency</strong> — currency of the contract basic salary (e.g. USD).</li>
+        <li><strong>Payment currency</strong> — currency paid to the bank (leave blank to use company default).</li>
+        <li><strong>Bank payment currency</strong> — optional override for bank upload file labels.</li>
+      </ul>
+      <p>Payment currency fields appear only when <strong>Allow employee payment currency</strong> is enabled at company level.</p>
+
+      <h3 id="exchange-rates">Exchange rates</h3>
+      <p>Manage rates under <strong>Payroll → Settings → Exchange Rates</strong>.</p>
+      <ol class="guide-steps">
+        <li>Before each payroll run, enter rates for required currency pairs (e.g. USD → RWF and RWF → USD).</li>
+        <li>Set the <strong>rate</strong>, <strong>effective date</strong>, and optional payroll period.</li>
+        <li>Click <strong>Save Rate</strong> — the rate is available immediately for payroll.</li>
+        <li>After a rate is used in processed payroll, it is <strong>locked</strong> and cannot be edited (historical payslip integrity).</li>
+      </ol>
+
+      <h3 id="multi-currency-process">Processing and validation</h3>
+      <p>When payroll runs for a foreign-currency employee, the system:</p>
+      <ol class="guide-steps">
+        <li>Converts salary and fixed foreign-currency earnings to the base currency.</li>
+        <li>Calculates all statutory deductions in the base currency only.</li>
+        <li>Converts net pay to the employee’s payment currency for bank disbursement.</li>
+        <li>Saves both currency sets and the exchange rate snapshot on the payslip record.</li>
+      </ol>
+      <p>If exchange rates are missing, the <strong>Process Payroll</strong> screen shows a warning listing affected employees. Payroll for those employees cannot complete until rates are entered.</p>
+
+      <h3 id="multi-currency-payslips">Payslips and bank files</h3>
+      <ul>
+        <li><strong>Payslips</strong> — show statutory amounts in base currency; when payment currency differs, an additional section shows amount paid, exchange rate, and effective date.</li>
+        <li><strong>Statutory reports</strong> (PAYE, pension, etc.) — always use base currency amounts only.</li>
+        <li><strong>Bank upload</strong> — uses net pay in payment currency; generate separate files per payment currency when your bank requires it.</li>
+      </ul>
+
+      <div class="guide-callout guide-callout-tip">
+        <strong>Recommended monthly workflow</strong>
+        Enter exchange rates before payroll cut-off → review rate warnings on Process Payroll → verify payslips show correct base and payment amounts → generate bank files by currency → submit statutory returns in base currency only.
+      </div>
 
       <p class="guide-footer-note">StawiHR User Guide · Payroll</p>
     </article>

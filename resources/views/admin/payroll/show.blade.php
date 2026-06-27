@@ -61,6 +61,8 @@
             </div>
         </div>
 
+        @include('admin.payroll.partials.currency-summary')
+
         <!-- Employee & Period Information -->
         <div class="row">
             <div class="col-md-6">
@@ -224,7 +226,7 @@
                                 <div class="col-md-3">
                                     <div class="well text-center">
                                         <h4 class="text-primary">Gross Salary</h4>
-                                        <h3><strong>KES {{ number_format($payrollRecord->gross_salary, 2) }}</strong></h3>
+                                        <h3><strong>{{ $payrollRecord->getStatutoryCurrency() }} {{ number_format($payrollRecord->gross_salary, 2) }}</strong></h3>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
@@ -237,7 +239,10 @@
                                 <div class="col-md-3">
                                     <div class="well text-center" style="background-color: #d4edda;">
                                         <h4 class="text-success">Net Salary</h4>
-                                        <h3><strong>KES {{ number_format($payrollRecord->net_salary, 2) }}</strong></h3>
+                                        <h3><strong>{{ $payrollRecord->getStatutoryCurrency() }} {{ number_format($payrollRecord->net_salary, 2) }}</strong></h3>
+                                        @if ($payrollRecord->isMultiCurrencyPayout())
+                                            <p class="text-muted m-b-0">Payment: <strong>{{ number_format($payrollRecord->getDisbursementAmount(), 2) }} {{ strtoupper($payrollRecord->payment_currency) }}</strong></p>
+                                        @endif
                                     </div>
                                 </div>
                             </div>

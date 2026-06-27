@@ -186,6 +186,15 @@ Route::group(['module' => 'Self Service', 'prefix' => 'ess', 'as' => 'ess.', 'mi
         Route::get('/{plan}/show', [EssIndexController::class, 'showPipPlan'])->name('show');
     });
 
+    // My Personal Development Plans
+    Route::group(['section' => 'performance', 'sub_section' => 'my_pdp', 'prefix' => 'pdp', 'as' => 'pdp.'], function () {
+        Route::get('/my-plans', [EssIndexController::class, 'myPdpPlans'])->name('myPlans');
+        Route::get('/create', [EssIndexController::class, 'createPdpPlan'])->name('create');
+        Route::post('/store', [EssIndexController::class, 'storePdpPlan'])->name('store');
+        Route::get('/{plan}/show', [EssIndexController::class, 'showPdpPlan'])->name('show');
+        Route::get('/{plan}/pdf', [EssIndexController::class, 'exportPdpPlanPdf'])->name('pdf');
+    });
+
     // My Vehicle & Assignment History
     Route::group(['section' => 'vehicles', 'sub_section' => 'my_vehicle', 'prefix' => 'vehicle', 'as' => 'vehicle.'], function () {
         Route::get('/my-vehicle', [EssIndexController::class, 'myVehicle'])->name('myVehicle');

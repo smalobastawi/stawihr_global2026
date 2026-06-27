@@ -3,6 +3,7 @@
 namespace App\Models\Payroll;
 
 use App\Lib\Enumerations\PayrollStatus;
+use App\Models\Payroll\CurrencyExchangeRate;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -55,6 +56,16 @@ class PayrollRecord extends Model
         'shif_company_contribution',
         'unpaid_amount',
         'metadata',
+        'base_currency',
+        'payment_currency',
+        'exchange_rate_used',
+        'exchange_rate_date',
+        'exchange_rate_id',
+        'taxable_income_base_currency',
+        'gross_payment_currency',
+        'total_deductions_payment_currency',
+        'net_pay_payment_currency',
+        'currency_conversion_notes',
         'nssf_tier1_contribution',
         'nssf_tier2_contribution',
     ];
@@ -83,6 +94,12 @@ class PayrollRecord extends Model
         'employer_pension_contribution' => 'decimal:2',
         'shif_company_contribution' => 'decimal:2',
         'unpaid_amount' => 'decimal:2',
+        'exchange_rate_used' => 'decimal:8',
+        'exchange_rate_date' => 'date',
+        'taxable_income_base_currency' => 'decimal:2',
+        'gross_payment_currency' => 'decimal:2',
+        'total_deductions_payment_currency' => 'decimal:2',
+        'net_pay_payment_currency' => 'decimal:2',
     ];
 
     // Payroll status
@@ -107,6 +124,32 @@ class PayrollRecord extends Model
         self::STATUS_PAID => 'Paid',
         self::STATUS_CANCELLED => 'Cancelled'
     ];
+
+    public function exchangeRate()
+    {
+        return $this->belongsTo(CurrencyExchangeRate::class, 'exchange_rate_id');
+    }
+
+    public function getStatutoryCurrency(): string
+    {
+        return strtoupper($this->base_currency ?? $this->employeePayroll?->employee?->company?->getPayrollBaseCurrency() ?? 'KES');
+    }
+
+    public function getDisbursementAmount(): float
+    {
+        if ($this->net_pay_payment_currency !== null) {
+            return (float) $this->net_pay_payment_currency;
+        }
+
+        return (float) $this->net_salary;
+    }
+
+    public function isMultiCurrencyPayout(): bool
+    {
+        return $this->base_currency
+            && $this->payment_currency
+            && strtoupper($this->base_currency) !== strtoupper($this->payment_currency);
+    }
 
     /**
      * Relationship with Employee Payroll

@@ -1,14 +1,20 @@
- <div id="area_select" class="col-md-10 col-sm-12" style="margin-top: 20px;">
-     <table class="table table-bordered table-striped">
+ <div id="area_select" class="col-md-12 col-sm-12" style="margin-top: 20px;">
+     <table class="table table-bordered table-striped role-permissions-matrix">
          <thead>
              <tr>
                  <th>Module</th>
                  <th>Menu</th>
                  <th>Section</th>
-                 <th>Permissions</th>
+                 <th class="text-center {{ $actionTypeColors['CREATE'] ?? '' }}">Create</th>
+                 <th class="text-center {{ $actionTypeColors['READ'] ?? '' }}">Read</th>
+                 <th class="text-center {{ $actionTypeColors['UPDATE'] ?? '' }}">Update</th>
+                 <th class="text-center {{ $actionTypeColors['DELETE'] ?? '' }}">Delete</th>
              </tr>
          </thead>
          <tbody>
+             @php
+                 $permissionActionColumns = ['CREATE', 'READ', 'UPDATE', 'DELETE'];
+             @endphp
              @foreach ($modules as $module)
                  <?php
                  $menu_id = 'mn__' . str_replace(' ', '_', $module->name);
@@ -90,24 +96,23 @@
 
                  </td>
 
-                 <td>
+                 @php
+                     $actionTypes = $module
+                         ->permissionGroups()
+                         ->select('actiontype')
+                         ->where('permission_group', $pmg->permission_group)
+                         ->where('module_id', $module->id)
+                         ->where('sub_section', $sub_section->sub_section)
+                         ->distinct('actiontype')
+                         ->groupBy('actiontype')
+                         ->pluck('actiontype')
+                         ->toArray();
+                 @endphp
 
-                     <!-- Permissions -->
+                 @foreach ($permissionActionColumns as $actiontype)
                      @php
-                         $actionTypes = $module
-                             ->permissionGroups()
-                             ->select('actiontype')
-                             ->where('permission_group', $pmg->permission_group)
-                             ->where('module_id', $module->id)
-                             ->where('sub_section', $sub_section->sub_section)
-                             ->distinct('actiontype')
-                             ->groupBy('actiontype')
-                             ->pluck('actiontype')
-                             ->toArray();
-                     @endphp
-                     @foreach ($actionTypes as $actiontype)
-                         @php
-                             $actionTypePermissions = $module
+                         $actionTypePermissions = in_array($actiontype, $actionTypes, true)
+                             ? $module
                                  ->permissionGroups()
                                  ->select('permission')
                                  ->where('permission_group', $pmg->permission_group)
@@ -118,30 +123,25 @@
                                  ->groupBy('permission')
                                  ->orderBy('permission', 'asc')
                                  ->pluck('permission')
-                                 ->toArray();
-                             $actionTypeId = $subSectionId . '__' . $actiontype;
-                            // dd($actionTypePermissions);
-                         @endphp
-
-
-                         <div class="checkbox checkbox-inline checkbox-primary {{ $actionTypeColors[$actiontype] }}">
+                                 ->toArray()
+                             : [];
+                         $actionTypeId = $subSectionId . '__' . $actiontype;
+                     @endphp
+                     <td class="text-center permission-action-cell">
+                         @if (!empty($actionTypePermissions))
                              <input type="checkbox" @checked(empty(array_diff($actionTypePermissions, $role_permissions)))
-                                 class="menucls__{{ $menu_id }} pmgcls__{{ $permission_group_id }} subSectionCls__{{ $subSectionId }} action_type_cls"
-                                 id="actionCls__{{ $actionTypeId }}" {{-- value="{{ $actiontype }}" data-formenu="{{ $module->menu_name }}"
-                                   name="{{$module->id}}__{{$pmg->permission_group}}__{{$sub_section->sub_section}}__{{ $actiontype }}" --}}>
-                             <label for="inlineCheckbox{{ $actiontype }}" style="vertical-align: middle;">
-                                 {{ $actiontype }}
-                             </label>
+                                 class="menucls__{{ $menu_id }} pmgcls__{{ $permission_group_id }} subSectionCls__{{ $subSectionId }} action_type_cls permission-action-checkbox"
+                                 id="actionCls__{{ $actionTypeId }}"
+                                 title="{{ $actiontype }}">
                              @foreach ($actionTypePermissions as $actionTypePm)
-                                 <input type="checkbox" @checked(in_array($actionTypePm, $role_permissions)) hidden 
-                                 class="menucls__{{ $menu_id }} pmgcls__{{ $permission_group_id }} subSectionCls__{{ $subSectionId }} actionCls__{{ $actionTypeId }}"
+                                 <input type="checkbox" @checked(in_array($actionTypePm, $role_permissions)) hidden
+                                     class="menucls__{{ $menu_id }} pmgcls__{{ $permission_group_id }} subSectionCls__{{ $subSectionId }} actionCls__{{ $actionTypeId }}"
                                      id="inlineCheckbox{{ $actionTypeId }}__{{ $actionTypePm }}"
                                      value="{{ $actionTypePm }}" name="permission[]">
                              @endforeach
-                         </div>
-                     @endforeach
-
-                 </td>
+                         @endif
+                     </td>
+                 @endforeach
 
                  @if (!$secondGroup)
                      </tr>
@@ -154,7 +154,7 @@
              @php $firstGroup = false; @endphp
              @endforeach
              @if ($module->permissionGroups->isEmpty())
-                 <td colspan="3">No Permission Groups</td>
+                 <td colspan="6">No Permission Groups</td>
              @endif
              </tr>
              @php
@@ -164,3 +164,19 @@
          </tbody>
      </table>
  </div>
+ <style>
+     .role-permissions-matrix th.text-center {
+         width: 90px;
+         white-space: nowrap;
+     }
+     .role-permissions-matrix .permission-action-cell {
+         vertical-align: middle;
+         width: 90px;
+     }
+     .role-permissions-matrix .permission-action-checkbox {
+         width: 16px;
+         height: 16px;
+         margin: 0;
+         cursor: pointer;
+     }
+ </style>

@@ -351,7 +351,7 @@
                         <thead>
                             <tr>
                                 <th>Description</th>
-                                <th class="amount">Amount (KES)</th>
+                                <th class="amount">Amount ({{ $payrollRecord->getStatutoryCurrency() }})</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -409,7 +409,7 @@
                             <thead>
                                 <tr>
                                     <th>Description</th>
-                                    <th class="amount">Amount (KES)</th>
+                                    <th class="amount">Amount ({{ $payrollRecord->getStatutoryCurrency() }})</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -462,7 +462,7 @@
                         <thead>
                             <tr>
                                 <th>Description</th>
-                                <th class="amount">Amount (KES)</th>
+                                <th class="amount">Amount ({{ $payrollRecord->getStatutoryCurrency() }})</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -516,25 +516,40 @@
         </div>
 
         <!-- Summary Section -->
+        @php $statutoryCurrency = $payrollRecord->getStatutoryCurrency(); @endphp
         <div class="summary-section">
             <div class="summary-row">
-                <span>Gross Pay:</span>
-                <span class="currency">KES {{ number_format($payrollRecord->gross_salary, 2) }}</span>
+                <span>Gross Pay (statutory {{ $statutoryCurrency }}):</span>
+                <span class="currency">{{ $statutoryCurrency }} {{ number_format($payrollRecord->gross_salary, 2) }}</span>
             </div>
             <div class="summary-row">
-                <span>Total Deductions:</span>
-                <span class="currency">KES {{ number_format($payrollRecord->total_deductions, 2) }}</span>
+                <span>Total Deductions ({{ $statutoryCurrency }}):</span>
+                <span class="currency">{{ $statutoryCurrency }} {{ number_format($payrollRecord->total_deductions, 2) }}</span>
             </div>
             @if ($payrollRecord->loan_deductions > 0)
                 <div class="summary-row">
-                    <span>Loan Deductions:</span>
-                    <span class="currency">KES {{ number_format($payrollRecord->loan_deductions, 2) }}</span>
+                    <span>Loan Deductions ({{ $statutoryCurrency }}):</span>
+                    <span class="currency">{{ $statutoryCurrency }} {{ number_format($payrollRecord->loan_deductions, 2) }}</span>
                 </div>
             @endif
             <div class="summary-row net-pay">
-                <span>Net Pay:</span>
-                <span class="currency">KES {{ number_format($payrollRecord->net_salary, 2) }}</span>
+                <span>Net Pay (statutory {{ $statutoryCurrency }}):</span>
+                <span class="currency">{{ $statutoryCurrency }} {{ number_format($payrollRecord->net_salary, 2) }}</span>
             </div>
+            @if ($payrollRecord->isMultiCurrencyPayout())
+                <div class="summary-row net-pay" style="border-top: 1px dashed #ccc; margin-top: 8px; padding-top: 8px;">
+                    <span>Amount Paid ({{ strtoupper($payrollRecord->payment_currency) }}):</span>
+                    <span class="currency"><strong>{{ number_format($payrollRecord->getDisbursementAmount(), 2) }} {{ strtoupper($payrollRecord->payment_currency) }}</strong></span>
+                </div>
+                @if ($payrollRecord->exchange_rate_used)
+                    <div class="summary-row">
+                        <span>Exchange Rate:</span>
+                        <span>1 {{ $statutoryCurrency }} = {{ number_format($payrollRecord->exchange_rate_used, 6) }} {{ strtoupper($payrollRecord->payment_currency) }}
+                            @if($payrollRecord->exchange_rate_date) ({{ $payrollRecord->exchange_rate_date->format('Y-m-d') }}) @endif
+                        </span>
+                    </div>
+                @endif
+            @endif
         </div>
 
         <!-- Footer -->

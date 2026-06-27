@@ -41,6 +41,12 @@
                     </div>
                 @endif
 
+                <div id="exchangeRateWarning" class="alert alert-warning" style="display:none;">
+                    <strong><i class="fa fa-warning"></i> Missing exchange rates</strong>
+                    <p class="m-b-0" id="exchangeRateWarningBody"></p>
+                    <p class="m-t-10 m-b-0"><a href="{{ route('payroll.settings.exchange-rates.index') }}">Manage exchange rates</a></p>
+                </div>
+
                 <form id="payrollForm" method="POST" action="{{ route('payroll.process') }}" class="form-horizontal">
                     @csrf
 
@@ -466,6 +472,36 @@
                 }
 
                 toggleCompanySelector();
+
+                $('select[name="period_id"]').on('change', function() {
+                    checkExchangeRates($(this).val());
+                });
+
+                function checkExchangeRates(periodId) {
+                    if (!periodId) {
+                        $('#exchangeRateWarning').hide();
+                        return;
+                    }
+
+                    $.post('{{ route('payroll.settings.exchange-rates.validate-for-period') }}', {
+                        _token: '{{ csrf_token() }}',
+                        period_id: periodId
+                    }).done(function(response) {
+                        if (!response.ok && response.missing && response.missing.length) {
+                            var lines = response.missing.map(function(item) {
+                                return item.employee_name + ': ' + item.message;
+                            }).join('<br>');
+                            $('#exchangeRateWarningBody').html(lines);
+                            $('#exchangeRateWarning').show();
+                        } else {
+                            $('#exchangeRateWarning').hide();
+                        }
+                    });
+                }
+
+                @if ($currentPeriod)
+                    checkExchangeRates('{{ $currentPeriod->id }}');
+                @endif
 
                 $('#payrollForm').on('submit', function(e) {
                     e.preventDefault();

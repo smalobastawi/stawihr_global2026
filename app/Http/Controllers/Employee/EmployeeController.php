@@ -103,15 +103,6 @@ class EmployeeController extends Controller
         $departmentList = Department::where('status', 1)->get();
         $designationList = Designation::where('status', 1)->get();
         $roleList = Role::get();
-        $today = Carbon::today();
-        $threeMonthsToCome = Carbon::today()->addMonth(3);
-
-        $activeContracts =  StaffContract::whereDate('end_date', '>=', $today)->count();
-        $expiringContracts =  StaffContract::whereDate('end_date', '<=', $threeMonthsToCome)->count(); // contracts expiring within the next 3 months.
-
-        $staffByGender = Employee::selectRaw('gender, COUNT(*) as count')
-            ->groupBy('gender')
-            ->pluck('count', 'gender');
 
         $results = Employee::with([
             'userName' => function ($q) {
@@ -155,7 +146,7 @@ class EmployeeController extends Controller
 
 
             $results = $results->paginate(10000);
-            return view('admin.employee.employee.pagination')->with(['signed_in_user_role' => $signed_in_user_role, 'results' => $results, 'activeContracts' => $activeContracts, 'expiredContracts' => $expiringContracts]);
+            return view('admin.employee.employee.pagination')->with(['signed_in_user_role' => $signed_in_user_role, 'results' => $results]);
         }
 
 
@@ -168,9 +159,6 @@ class EmployeeController extends Controller
             'designationList' => $designationList,
             'roleList' => $roleList,
             'leaveTypes' => $leaveTypes,
-            'activeContracts' => $activeContracts,
-            'expiringContracts' => $expiringContracts,
-            'genderCounts' => $staffByGender,
         ]);
     }
 
@@ -190,17 +178,6 @@ class EmployeeController extends Controller
         $departmentList = Department::where('status', 1)->get();
         $designationList = Designation::where('status', 1)->get();
         $roleList = Role::get();
-        $today = Carbon::today();
-        $threeMonthsToCome = Carbon::today()->addMonth(3);
-
-        $activeContracts =  StaffContract::whereDate('end_date', '>=', $today)->count();
-        $expiringContracts =  StaffContract::whereDate('end_date', '<=', $threeMonthsToCome)->count();
-
-        $staffByGender = Employee::withTrashed()
-            ->where('status', '!=', GeneralStatus::ACTIVE)
-            ->selectRaw('gender, COUNT(*) as count')
-            ->groupBy('gender')
-            ->pluck('count', 'gender');
 
         $results = $this->inactiveEmployeeQuery($restorableEmployeeIds);
 
@@ -232,8 +209,6 @@ class EmployeeController extends Controller
             return view('admin.employee.employee.pagination')->with([
                 'signed_in_user_role' => $signed_in_user_role,
                 'results' => $results,
-                'activeContracts' => $activeContracts,
-                'expiredContracts' => $expiringContracts,
                 'restorableEmployeeIds' => $restorableEmployeeIds->all(),
                 'isInactiveList' => true,
             ]);
@@ -248,9 +223,6 @@ class EmployeeController extends Controller
             'designationList' => $designationList,
             'roleList' => $roleList,
             'leaveTypes' => $leaveTypes,
-            'activeContracts' => $activeContracts,
-            'expiringContracts' => $expiringContracts,
-            'genderCounts' => $staffByGender,
             'restorableEmployeeIds' => $restorableEmployeeIds->all(),
             'isInactiveList' => true,
         ]);

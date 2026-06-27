@@ -14,12 +14,14 @@ class BankUploadExport implements FromView, WithTitle, ShouldAutoSize
     protected $payrollPeriod;
     protected $debitAccount;
     protected $branchSortCode;
+    protected $paymentCurrency;
 
-    public function __construct(PayrollPeriod $payrollPeriod, $debitAccount = '1324380276', $branchSortCode = '01307')
+    public function __construct(PayrollPeriod $payrollPeriod, $debitAccount = '1324380276', $branchSortCode = '01307', ?string $paymentCurrency = null)
     {
         $this->payrollPeriod = $payrollPeriod;
         $this->debitAccount = $debitAccount;
         $this->branchSortCode = $branchSortCode;
+        $this->paymentCurrency = $paymentCurrency ? strtoupper($paymentCurrency) : null;
     }
 
     public function view(): View
@@ -37,6 +39,14 @@ class BankUploadExport implements FromView, WithTitle, ShouldAutoSize
                 }
             ])
             ->get();
+
+        if ($this->paymentCurrency) {
+            $payrollRecords = $payrollRecords->filter(function ($record) {
+                $currency = strtoupper($record->payment_currency ?? $record->base_currency ?? 'KES');
+
+                return $currency === $this->paymentCurrency;
+            })->values();
+        }
             
         // Process the data for the template
         $bankUploadData = $payrollRecords->map(function ($record) {
@@ -64,16 +74,18 @@ class BankUploadExport implements FromView, WithTitle, ShouldAutoSize
                 'branch' => $bankBranch,
                 'bic_sort_code' => $bicSortCode,
                 'account_number' => $accountNumber,
-                'net_amount' => number_format($record->net_salary, 2)
+                'currency' => strtoupper($record->payment_currency ?? $record->base_currency ?? 'KES'),
+                'net_amount' => number_format($record->getDisbursementAmount(), 2)
             ];
         })->filter(); // Remove null entries
 
-        $totalAmount = $payrollRecords->sum('net_salary');
+        $totalAmount = $payrollRecords->sum(fn ($record) => $record->getDisbursementAmount());
 
         return view('admin.exports.bankUploadExport', [
             'bankUploadData' => $bankUploadData,
             'totalAmount' => $totalAmount,
-            'payrollPeriod' => $this->payrollPeriod
+            'payrollPeriod' => $this->payrollPeriod,
+            'paymentCurrency' => $this->paymentCurrency,
         ]);
     }
 

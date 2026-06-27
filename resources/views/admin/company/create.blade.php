@@ -74,11 +74,30 @@
                                         <small class="text-muted">Determines which statutory PAYE and deduction rules apply during payroll processing.</small>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="control-label">Currency<span class="validateRq">*</span></label>
+                                        <label class="control-label">Payroll Base Currency (Statutory)<span class="validateRq">*</span></label>
                                         @include('admin.partials.currency-select', [
+                                            'name' => 'currency',
                                             'selected' => old('currency', \App\Lib\Enumerations\Currency::DEFAULT),
                                         ])
-                                        <small class="text-muted">Default currency for company payroll and financial display.</small>
+                                        <small class="text-muted">All statutory payroll calculations are performed in this currency.</small>
+                                    </div>
+                                </div>
+
+                                <div class="row" style="margin-top: 20px;">
+                                    <div class="col-md-6">
+                                        <label class="control-label">Default Payment Currency</label>
+                                        @include('admin.partials.currency-select', [
+                                            'name' => 'default_payment_currency',
+                                            'selected' => old('default_payment_currency'),
+                                            'required' => false,
+                                        ])
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="control-label">Allow Employee Payment Currency</label>
+                                        <select class="form-control" name="allow_employee_payment_currency">
+                                            <option value="0" selected>No</option>
+                                            <option value="1">Yes</option>
+                                        </select>
                                     </div>
                                 </div>
 

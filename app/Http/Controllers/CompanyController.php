@@ -186,6 +186,18 @@ class CompanyController extends Controller
             $data['currency'] = strtoupper($data['currency']);
         }
 
+        foreach (['payroll_base_currency', 'default_payment_currency'] as $currencyField) {
+            if (array_key_exists($currencyField, $data) && $data[$currencyField] === '') {
+                $data[$currencyField] = null;
+            } elseif (isset($data[$currencyField])) {
+                $data[$currencyField] = strtoupper($data[$currencyField]);
+            }
+        }
+
+        if (array_key_exists('allow_employee_payment_currency', $data)) {
+            $data['allow_employee_payment_currency'] = (bool) $data['allow_employee_payment_currency'];
+        }
+
         return $data;
     }
 

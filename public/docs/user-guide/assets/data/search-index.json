@@ -101,8 +101,8 @@
     "title": "Payroll",
     "href": "admin/payroll.html",
     "section": "Sidebar Modules",
-    "description": "Process payroll, loans, earnings, deductions, statutory reports.",
-    "keywords": "payroll process paye nssf shif ahl p9 loans earnings deductions variance payment reports salary"
+    "description": "Process payroll, loans, earnings, deductions, statutory reports, multi-currency payroll.",
+    "keywords": "payroll process paye nssf shif ahl p9 loans earnings deductions variance payment reports salary multi currency exchange rate usd rwf"
   },
   {
     "title": "Disciplinary",
@@ -115,8 +115,8 @@
     "title": "Performance Management",
     "href": "admin/performance.html",
     "section": "Sidebar Modules",
-    "description": "Appraisals, rating scales, supervisor and HOD evaluations, PIP plans.",
-    "keywords": "performance appraisal review period rating scale focus areas behavioral supervisor hod pip improvement"
+    "description": "Appraisals, rating scales, supervisor and HOD evaluations, PIP plans, and Personal Development Plans.",
+    "keywords": "performance appraisal review period rating scale focus areas behavioral supervisor hod pip improvement pdp development plans goals"
   },
   {
     "title": "Recruitment",
@@ -150,8 +150,8 @@
     "title": "Analytics",
     "href": "admin/analytics.html",
     "section": "Sidebar Modules",
-    "description": "HR Insights dashboard with workforce metrics and charts.",
-    "keywords": "analytics hr insights charts metrics headcount turnover reports"
+    "description": "HR Insights hub with workforce, payroll, attendance, leave, PDP, and other interactive charts.",
+    "keywords": "analytics hr insights charts metrics headcount turnover gender contracts pdp recruitment training feedback explore"
   },
   {
     "title": "Employee Feedback",
@@ -264,5 +264,54 @@
     "section": "Getting Started",
     "description": "Reset your password via email from the login page.",
     "keywords": "forgot password reset recover email"
+  },
+  {
+    "title": "Multi-Currency Payroll",
+    "href": "admin/payroll.html#multi-currency",
+    "section": "Payroll",
+    "description": "Pay statutory payroll in base currency while paying employees in USD or other foreign currencies.",
+    "keywords": "multi currency payroll rwf usd exchange rate payment currency base currency statutory bank upload foreign currency rwanda"
+  },
+  {
+    "title": "Exchange Rates",
+    "href": "admin/payroll.html#exchange-rates",
+    "section": "Payroll",
+    "description": "Enter and manage payroll exchange rates before processing foreign-currency employees.",
+    "keywords": "exchange rate currency conversion usd rwf kes rate effective date locked active save rate"
+  },
+  {
+    "title": "Analytics Hub",
+    "href": "admin/analytics.html#hub",
+    "section": "Analytics",
+    "description": "HR Insights dashboard with interactive charts for headcount, payroll, attendance, leave, and more.",
+    "keywords": "analytics hr insights dashboard charts metrics explore headcount turnover reports annalytics"
+  },
+  {
+    "title": "Headcount Analytics",
+    "href": "admin/analytics.html#headcount",
+    "section": "Analytics",
+    "description": "Gender distribution, staff contracts, hires, exits, turnover, and department breakdown charts.",
+    "keywords": "headcount gender distribution contracts active expiring department hires exits turnover retention"
+  },
+  {
+    "title": "Personal Development Plans",
+    "href": "admin/performance.html#pdp",
+    "section": "Performance Management",
+    "description": "PDP goals, progress tracking, supervisor approval, and development reports.",
+    "keywords": "pdp personal development plan goals smart progress quarterly development career growth"
+  },
+  {
+    "title": "My Development Plans",
+    "href": "ess/more.html#performance",
+    "section": "Self Service",
+    "description": "Create development plans, add goals, and record progress from Self Service.",
+    "keywords": "ess pdp my development plans goals progress self service career"
+  },
+  {
+    "title": "Multi-Currency Payslips",
+    "href": "ess/payroll.html#multi-currency-payslip",
+    "section": "Self Service",
+    "description": "Understanding payslips when paid in a currency different from statutory payroll currency.",
+    "keywords": "payslip multi currency usd rwf payment amount exchange rate dual currency"
   }
 ]

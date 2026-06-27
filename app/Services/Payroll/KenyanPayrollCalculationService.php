@@ -27,9 +27,11 @@ use App\Models\ApprovalWorkflow;
 use DateTime;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\Payroll\Concerns\HandlesPayrollMultiCurrency;
 
 class KenyanPayrollCalculationService
 {
+    use HandlesPayrollMultiCurrency;
     /**
      * Calculate payroll for an employee
      */
@@ -44,17 +46,20 @@ class KenyanPayrollCalculationService
 
     public function calculateEmployeePayroll(EmployeePayroll $employeePayroll, PayrollPeriod $period)
     {
+        $this->initializePayrollCurrencyContext($employeePayroll, $period);
+        $statutoryPayroll = $this->preparePayrollForStatutoryCalculation($employeePayroll);
+
         // Get basic salary - now using prorated calculation that handles salary changes
-        $basicSalary = $this->calculateProratedBasicSalary($employeePayroll, $period);
+        $basicSalary = $this->calculateProratedBasicSalary($statutoryPayroll, $period);
 
 
         $employeeDetails = Employee::findOrFail($employeePayroll->employee_id);
 
         // Calculate allowances
-        $allowances = $this->calculateAllowances($employeePayroll);
+        $allowances = $this->calculateAllowances($statutoryPayroll);
         // Calculate overtime earnings
-        $overtimeEarnings = $this->calculateOvertimeEarnings($employeePayroll, $period);
-        $allEarnings = array_merge($allowances, $overtimeEarnings);
+        $overtimeEarnings = $this->calculateOvertimeEarnings($statutoryPayroll, $period);
+        $allEarnings = $this->convertPayrollEarningsToBaseCurrency(array_merge($allowances, $overtimeEarnings));
 
         $totalAllowances = array_sum(array_column($allEarnings, 'amount'));
 
@@ -62,7 +67,7 @@ class KenyanPayrollCalculationService
 
         // Calculate gross salary
         $grossSalary = $basicSalary + $totalAllowances;
-        $allInsurances = $this->getallInsurances($employeePayroll, $grossSalary);
+        $allInsurances = $this->getallInsurances($statutoryPayroll, $grossSalary);
         $insuranceRelief_all = $this->calculateInsuranceRelief_All($allInsurances);
 
         // Check if gross salary is zero and assign zeros to all deductions
@@ -79,7 +84,7 @@ class KenyanPayrollCalculationService
         $shifContribution = $this->calculateShifContribution($grossSalary);
         $housingLevy = $this->calculateHousingLevy($grossSalary);
         $housingLevyRelief = $this->getAHLRelief($housingLevy);
-        $pensionContribution = $this->calculatePensionContribution($employeePayroll, $pensionablePay);
+        $pensionContribution = $this->calculatePensionContribution($statutoryPayroll, $pensionablePay);
 
         // Calculate taxable income (gross salary minus non-taxable allowances)
         $taxableIncome = $this->calculateTaxableIncome($grossSalary, $allEarnings, $nssfContribution, $shifContribution, $housingLevy, $pensionContribution);
@@ -87,10 +92,10 @@ class KenyanPayrollCalculationService
         $insuranceRelief = $this->calculateInsuranceRelief_SHIF($shifContribution);
 
         // Calculate statutory deductions
-        $payeTax = $this->calculatePayeTax($taxableIncome, $employeePayroll, $insuranceRelief_all);
+        $payeTax = $this->calculatePayeTax($taxableIncome, $statutoryPayroll, $insuranceRelief_all);
 
         // Calculate non-statutory deductions
-        $nonStatutoryDeductions = $this->calculateNonStatutoryDeductions($employeePayroll, $grossSalary);
+        $nonStatutoryDeductions = $this->calculateNonStatutoryDeductions($statutoryPayroll, $grossSalary);
 
         // Calculate claim recoveries
         $claimRecoveries = $this->calculateClaimRecoveries($employeePayroll, $period);
@@ -110,11 +115,11 @@ class KenyanPayrollCalculationService
         $netSalary = $grossSalary - $totalDeductions;
 
         // Calculate company contributions
-        $industrialTrainingLevy = $this->calculateIndustrialTrainingLevy($employeePayroll);
+        $industrialTrainingLevy = $this->calculateIndustrialTrainingLevy($statutoryPayroll);
         $nssfTier1Company = $this->calculateNssfTier1Company($employeeDetails, $grossSalary, $this->currentPayrollPeriod);
         $nssfTier2Company = $this->calculateNssfTier2Company($employeeDetails, $grossSalary, $this->currentPayrollPeriod);
         $housingLevyCompany = $this->calculateHousingLevyCompany($grossSalary);
-        $employerPensionContribution = $this->calculateEmployerPensionContribution($employeePayroll, $grossSalary);
+        $employerPensionContribution = $this->calculateEmployerPensionContribution($statutoryPayroll, $grossSalary);
 
         $shifCompanyContribution = 0; // Employer is not required to contribute shif
 
@@ -158,7 +163,7 @@ class KenyanPayrollCalculationService
             ->first();
 
         // Collect detailed metadata for display
-        $detailedMetadata = [
+        $detailedMetadata = $this->enrichPayrollMetadataWithCurrency([
             'calculation_type' => $termination ? 'terminated_prorated' : ($salaryChanges->isEmpty() ? 'normal' : 'prorated'),
             'salary_changes_during_period' => $salaryChanges->count(),
             'salary_segments' => $this->getSalarySegmentsInfo($employeePayroll, $period),
@@ -173,7 +178,7 @@ class KenyanPayrollCalculationService
                 'days_worked' => $this->getWorkingDaysInPeriod(Carbon::parse($period->input_period_start), Carbon::parse($termination->termination_date)),
                 'total_working_days' => $this->getWorkingDaysInPeriod(Carbon::parse($period->input_period_start), Carbon::parse($period->input_period_end))
             ] : null
-        ];
+        ]);
 
         // Check if there's an approval workflow for PayrollRecord
         $hasApprovalWorkflow = ApprovalWorkflow::forModel(PayrollRecord::class) !== null;
@@ -193,7 +198,6 @@ class KenyanPayrollCalculationService
         }
 
         $payrollRecord = PayrollRecord::create(
-
             [
                 'employee_payroll_id' => $employeePayroll->id,
                 'payroll_period_id' => $period->id,
@@ -278,6 +282,9 @@ class KenyanPayrollCalculationService
             'employer_pension' => $employerPensionContribution,
             'shif_company' => $shifCompanyContribution
         ]);
+
+        $this->finalizePayrollRecordCurrency($payrollRecord, (float) $taxableIncome);
+        $this->lockExchangeRatesForProcessedPayroll();
 
         return $payrollRecord;
     }
@@ -2088,6 +2095,9 @@ class KenyanPayrollCalculationService
             'employer_pension' => 0,
             'shif_company' => 0
         ]);
+
+        $this->finalizePayrollRecordCurrency($payrollRecord, 0);
+        $this->lockExchangeRatesForProcessedPayroll();
 
         return $payrollRecord;
     }

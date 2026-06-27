@@ -100,6 +100,9 @@ class EmployeePayrollController extends Controller
             'phone_number' => 'nullable|string|max:20|regex:/^[\+0-9\-\(\)\s]*$/',
             'basic_salary' => 'required|numeric|min:0',
             'currency' => ['required', 'string', 'size:3', Rule::in(Currency::codes())],
+            'payment_currency' => ['nullable', 'string', 'size:3', Rule::in(Currency::codes())],
+            'bank_payment_currency' => ['nullable', 'string', 'size:3', Rule::in(Currency::codes())],
+            'exchange_rate_type' => 'nullable|string|max:30',
             'income_frequency' => 'required|in:daily,weekly,monthly',
             'payment_method' => 'required|in:bank_transfer,mobile_money,cash,cheque',
             'bank_name' => 'nullable|string|max:255',
@@ -207,6 +210,9 @@ class EmployeePayrollController extends Controller
                 'phone_number' => $request->phone_number,
                 'basic_salary' => $request->basic_salary,
                 'currency' => strtoupper($request->currency),
+                'payment_currency' => $request->filled('payment_currency') ? strtoupper($request->payment_currency) : null,
+                'bank_payment_currency' => $request->filled('bank_payment_currency') ? strtoupper($request->bank_payment_currency) : null,
+                'exchange_rate_type' => $request->input('exchange_rate_type', 'standard'),
                 'income_frequency' => $request->income_frequency ?? 'monthly',
                 'payment_method' => $request->payment_method,
                 'bank_name' => $request->bank_name,
@@ -365,6 +371,9 @@ class EmployeePayrollController extends Controller
             'phone_number' => 'nullable|string|max:20|regex:/^[\+0-9\-\(\)\s]*$/',
             'basic_salary' => 'required|numeric|min:0',
             'currency' => ['required', 'string', 'size:3', Rule::in(Currency::codes())],
+            'payment_currency' => ['nullable', 'string', 'size:3', Rule::in(Currency::codes())],
+            'bank_payment_currency' => ['nullable', 'string', 'size:3', Rule::in(Currency::codes())],
+            'exchange_rate_type' => 'nullable|string|max:30',
             'income_frequency' => 'required|in:daily,weekly,monthly',
             'payment_method' => 'required|in:bank_transfer,mobile_money,cash,cheque',
             'bank_name' => 'nullable|string|max:255',
@@ -476,6 +485,9 @@ class EmployeePayrollController extends Controller
 
                 $employeePayroll->update([
                     'currency' => strtoupper($request->currency),
+                'payment_currency' => $request->filled('payment_currency') ? strtoupper($request->payment_currency) : null,
+                'bank_payment_currency' => $request->filled('bank_payment_currency') ? strtoupper($request->bank_payment_currency) : null,
+                'exchange_rate_type' => $request->input('exchange_rate_type', 'standard'),
                 ]);
             } else {
                 // Regular update without salary change
@@ -483,6 +495,9 @@ class EmployeePayrollController extends Controller
                     'phone_number' => $request->phone_number,
                     'basic_salary' => $newSalary,
                     'currency' => strtoupper($request->currency),
+                'payment_currency' => $request->filled('payment_currency') ? strtoupper($request->payment_currency) : null,
+                'bank_payment_currency' => $request->filled('bank_payment_currency') ? strtoupper($request->bank_payment_currency) : null,
+                'exchange_rate_type' => $request->input('exchange_rate_type', 'standard'),
                     'income_frequency' => $request->income_frequency ?? $employeePayroll->income_frequency,
                     'payment_method' => $request->payment_method,
                     'bank_name' => $request->bank_name,

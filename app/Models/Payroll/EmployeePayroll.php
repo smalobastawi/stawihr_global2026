@@ -28,6 +28,9 @@ class EmployeePayroll extends Model
         'income_frequency',
         'phone_number',
         'currency',
+        'payment_currency',
+        'exchange_rate_type',
+        'bank_payment_currency',
         'payment_method',
         'bank_name',
         'bank_branch',
@@ -557,17 +560,50 @@ class EmployeePayroll extends Model
 
     public function getDisplayCurrency(): string
     {
+        return $this->getSalaryCurrency();
+    }
+
+    public function getSalaryCurrency(): string
+    {
         if (!empty($this->currency) && Currency::isValid($this->currency)) {
             return strtoupper($this->currency);
         }
 
-        $companyCurrency = $this->employee?->company?->currency;
+        $companyCurrency = $this->employee?->company?->getPayrollBaseCurrency();
 
         if (!empty($companyCurrency) && Currency::isValid($companyCurrency)) {
             return strtoupper($companyCurrency);
         }
 
         return Currency::DEFAULT;
+    }
+
+    public function getPaymentCurrency(): string
+    {
+        $company = $this->employee?->company;
+
+        if ($company && !$company->allow_employee_payment_currency) {
+            return $company->getPayrollBaseCurrency();
+        }
+
+        if (!empty($this->payment_currency) && Currency::isValid($this->payment_currency)) {
+            return strtoupper($this->payment_currency);
+        }
+
+        if (!empty($company?->default_payment_currency) && Currency::isValid($company->default_payment_currency)) {
+            return strtoupper($company->default_payment_currency);
+        }
+
+        return $this->getSalaryCurrency();
+    }
+
+    public function getBankPaymentCurrency(): string
+    {
+        if (!empty($this->bank_payment_currency) && Currency::isValid($this->bank_payment_currency)) {
+            return strtoupper($this->bank_payment_currency);
+        }
+
+        return $this->getPaymentCurrency();
     }
 
     public function getApprovalDetails(): array
@@ -578,7 +614,8 @@ class EmployeePayroll extends Model
             'Payroll Number' => $this->payroll_number ?? 'N/A',
             'Basic Salary' => number_format($this->basic_salary, 2),
             'Income Frequency' => $this->income_frequency ?? 'N/A',
-            'Currency' => $this->getDisplayCurrency(),
+            'Currency' => $this->getSalaryCurrency(),
+            'Payment Currency' => $this->getPaymentCurrency(),
             'Payment Method' => $this->payment_method ?? 'N/A',
             'Bank Details' => $this->bank_name ? "{$this->bank_name} ({$this->bank_branch}) - ••••" . substr($this->account_number, -4) : 'N/A',
             'Account Name' => $this->account_name ?? 'N/A',
