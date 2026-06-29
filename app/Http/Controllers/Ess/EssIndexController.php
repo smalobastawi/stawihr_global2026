@@ -2288,6 +2288,53 @@ class EssIndexController extends Controller
         return redirect()->route('ess.trainings.index')->with(['error' => $training->subject . ' attendance has been declined']);
     }
 
+    public function notifications()
+    {
+        $notifications = $this->user->notifications()->paginate(20);
+
+        return view('admin.ess.notifications.index', compact('notifications'));
+    }
+
+    public function markAllNotificationsRead()
+    {
+        $this->user->unreadNotifications->markAsRead();
+
+        return back()->with('success', 'All notifications marked as read');
+    }
+
+    public function markNotificationRead(Request $request, $id)
+    {
+        $notification = $this->user->notifications()->where('id', $id)->first();
+
+        if ($notification) {
+            $notification->markAsRead();
+        }
+
+        if ($request->filled('redirect')) {
+            return redirect($request->redirect);
+        }
+
+        return back()->with('success', 'Notification marked as read');
+    }
+
+    public function destroyNotification($id)
+    {
+        try {
+            $this->user->notifications()->where('id', $id)->delete();
+            $bug = 0;
+        } catch (\Exception $e) {
+            $bug = $e->getMessage();
+        }
+
+        if ($bug == 0) {
+            echo 'success';
+        } elseif ($bug == 1451) {
+            echo 'hasForeignKey';
+        } else {
+            echo 'error';
+        }
+    }
+
     /**
      * Display published notices targeted at the logged-in employee.
      */
