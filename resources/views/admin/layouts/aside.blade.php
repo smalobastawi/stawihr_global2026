@@ -862,6 +862,14 @@
                                          </a>
                                      </li>
                                  @endcan
+                                 @can('payroll.settings.exchange-rates.index')
+                                     <li>
+                                         <a href="{{ route('payroll.settings.exchange-rates.index') }}">
+                                             <i data-icon="/" class="linea-icon linea-basic fa-fw"></i>
+                                             <span class="hideMenu">Exchange Rates</span>
+                                         </a>
+                                     </li>
+                                 @endcan
                                  @can('banks.index')
                                      <li>
                                          <a href="{{ route('banks.index') }}">
