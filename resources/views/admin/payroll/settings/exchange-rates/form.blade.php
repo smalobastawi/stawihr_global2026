@@ -20,6 +20,22 @@
                     @endif
 
                     <div class="form-group">
+                        <label>Payroll Period <span class="text-danger">*</span></label>
+                        <select name="payroll_period_id" class="form-control" required>
+                            <option value="">Select payroll period</option>
+                            @foreach ($periods as $period)
+                                <option value="{{ $period->id }}" {{ (int) old('payroll_period_id', $rate->payroll_period_id) === (int) $period->id ? 'selected' : '' }}>
+                                    {{ $period->name }}
+                                    @if ($period->start_date && $period->end_date)
+                                        ({{ $period->start_date->format('M d') }} – {{ $period->end_date->format('M d, Y') }})
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="text-muted">Rates are matched to the payroll period being processed. One rate per currency pair per period.</small>
+                    </div>
+
+                    <div class="form-group">
                         <label>From Currency <span class="text-danger">*</span></label>
                         @include('admin.partials.currency-select', [
                             'name' => 'from_currency',
@@ -38,26 +54,8 @@
                     <div class="form-group">
                         <label>Rate <span class="text-danger">*</span></label>
                         <input type="number" step="0.00000001" min="0" name="rate" class="form-control" required
-                            value="{{ old('rate', $rate->rate) }}" placeholder="e.g. 0.00075 for USD to RWF">
+                            value="{{ old('rate', $rate->rate) }}" placeholder="e.g. 130 for USD to KES">
                         <small class="text-muted">1 unit of <em>from</em> currency equals this many units of <em>to</em> currency.</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Effective Date <span class="text-danger">*</span></label>
-                        <input type="date" name="effective_date" class="form-control" required
-                            value="{{ old('effective_date', optional($rate->effective_date)->format('Y-m-d')) }}">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Payroll Period (optional)</label>
-                        <select name="payroll_period_id" class="form-control">
-                            <option value="">General rate (all periods)</option>
-                            @foreach ($periods as $period)
-                                <option value="{{ $period->id }}" {{ (int) old('payroll_period_id', $rate->payroll_period_id) === (int) $period->id ? 'selected' : '' }}>
-                                    {{ $period->name }}
-                                </option>
-                            @endforeach
-                        </select>
                     </div>
 
                     <div class="form-group">

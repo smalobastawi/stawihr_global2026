@@ -27,7 +27,6 @@ class Company extends Model
         'payroll_base_currency',
         'default_payment_currency',
         'exchange_rate_source',
-        'exchange_rate_effective_date_policy',
         'allow_employee_payment_currency',
         'status',
         'kra_pin',

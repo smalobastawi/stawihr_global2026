@@ -2,8 +2,6 @@
 
 namespace App\Services\Payroll\Currency;
 
-use App\Lib\Enumerations\Currency;
-use App\Lib\Enumerations\ExchangeRateEffectiveDatePolicy;
 use App\Models\Company;
 use App\Models\Payroll\CurrencyExchangeRate;
 use App\Models\Payroll\PayrollPeriod;
@@ -11,25 +9,10 @@ use Carbon\Carbon;
 
 class ExchangeRateService
 {
-    public function resolveEffectiveDate(Company $company, PayrollPeriod $period): string
-    {
-        $policy = $company->exchange_rate_effective_date_policy
-            ?? ExchangeRateEffectiveDatePolicy::PAYROLL_PERIOD_END;
-
-        return match ($policy) {
-            ExchangeRateEffectiveDatePolicy::PAYROLL_PERIOD_START => $this->formatDate($period->start_date ?? $period->input_period_start),
-            ExchangeRateEffectiveDatePolicy::PAYMENT_DATE => now()->format('Y-m-d'),
-            ExchangeRateEffectiveDatePolicy::LATEST_APPROVED,
-            ExchangeRateEffectiveDatePolicy::PAYROLL_PERIOD_END => $this->formatDate($period->end_date ?? $period->input_period_end),
-            default => $this->formatDate($period->end_date ?? $period->input_period_end),
-        };
-    }
-
     public function getRate(
         string $fromCurrency,
         string $toCurrency,
-        string $effectiveDate,
-        ?PayrollPeriod $period = null,
+        PayrollPeriod $period,
         ?int $companyId = null
     ): ?CurrencyExchangeRate {
         $from = strtoupper($fromCurrency);
@@ -42,8 +25,7 @@ class ExchangeRateService
         $query = CurrencyExchangeRate::query()
             ->forPayroll()
             ->forPair($from, $to)
-            ->where('effective_date', '<=', $effectiveDate)
-            ->orderByDesc('effective_date')
+            ->where('payroll_period_id', $period->id)
             ->orderByDesc('id');
 
         if ($companyId) {
@@ -53,17 +35,7 @@ class ExchangeRateService
             });
         }
 
-        if ($period) {
-            $periodSpecific = (clone $query)
-                ->where('payroll_period_id', $period->id)
-                ->first();
-
-            if ($periodSpecific) {
-                return $periodSpecific;
-            }
-        }
-
-        return $query->whereNull('payroll_period_id')->first();
+        return $query->first();
     }
 
     public function lockRatesForPayrollRecord(CurrencyExchangeRate ...$rates): void
@@ -95,6 +67,11 @@ class ExchangeRateService
         }
 
         return $missing;
+    }
+
+    public function periodSnapshotDate(PayrollPeriod $period): string
+    {
+        return $this->formatDate($period->end_date ?? $period->input_period_end);
     }
 
     protected function formatDate($date): string

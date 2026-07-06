@@ -115,14 +115,6 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="control-label">Exchange Rate Effective Date Policy</label>
-                                        <select class="form-control" name="exchange_rate_effective_date_policy">
-                                            @foreach (\App\Lib\Enumerations\ExchangeRateEffectiveDatePolicy::toArray() as $value => $label)
-                                                <option value="{{ $value }}" {{ old('exchange_rate_effective_date_policy', $company->exchange_rate_effective_date_policy ?? 'payroll_period_end') === $value ? 'selected' : '' }}>{{ $label }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
                                 </div>
 
                                 <div class="row" style="margin-top: 20px;">

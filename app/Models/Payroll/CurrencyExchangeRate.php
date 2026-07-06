@@ -73,4 +73,9 @@ class CurrencyExchangeRate extends Model
         return $query->where('from_currency', strtoupper($from))
             ->where('to_currency', strtoupper($to));
     }
+
+    public function scopeForPeriod($query, int $payrollPeriodId)
+    {
+        return $query->where('payroll_period_id', $payrollPeriodId);
+    }
 }

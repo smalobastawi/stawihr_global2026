@@ -25,7 +25,7 @@
                 <div class="row">
                     <div class="col-md-8">
                         <h3 class="box-title m-b-0">Currency Exchange Rates</h3>
-                        <p class="text-muted m-b-30">Enter rates used when converting salary and net pay between currencies. Rates are available for payroll immediately after saving.</p>
+                        <p class="text-muted m-b-30">Enter exchange rates per payroll period. When payroll is processed, the system uses the rate configured for that period and currency pair.</p>
                     </div>
                     <div class="col-md-4 text-right">
                         <a href="{{ route('payroll.settings.exchange-rates.create') }}" class="btn btn-success btn-outline">
@@ -38,11 +38,10 @@
                     <table class="table table-striped">
                         <thead>
                             <tr>
+                                <th>Period</th>
                                 <th>From</th>
                                 <th>To</th>
                                 <th>Rate</th>
-                                <th>Effective Date</th>
-                                <th>Period</th>
                                 <th>Source</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -51,11 +50,10 @@
                         <tbody>
                             @forelse($rates as $rate)
                                 <tr>
+                                    <td>{{ $rate->payrollPeriod?->name ?? '—' }}</td>
                                     <td><code>{{ $rate->from_currency }}</code></td>
                                     <td><code>{{ $rate->to_currency }}</code></td>
                                     <td>{{ number_format($rate->rate, 6) }}</td>
-                                    <td>{{ $rate->effective_date->format('Y-m-d') }}</td>
-                                    <td>{{ $rate->payrollPeriod?->name ?? '—' }}</td>
                                     <td>{{ ucfirst($rate->source) }}</td>
                                     <td>
                                         @if ($rate->status === \App\Lib\Enumerations\ExchangeRateStatus::LOCKED)
@@ -79,7 +77,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted">No exchange rates configured yet.</td>
+                                    <td colspan="7" class="text-center text-muted">No exchange rates configured yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>

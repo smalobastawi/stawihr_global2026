@@ -3,7 +3,6 @@
 namespace App\Http\Requests;
 
 use App\Lib\Enumerations\Currency;
-use App\Lib\Enumerations\ExchangeRateEffectiveDatePolicy;
 use App\Lib\Enumerations\ExchangeRateSource;
 use App\Lib\Enumerations\PayrollCountry;
 use Illuminate\Foundation\Http\FormRequest;
@@ -39,7 +38,6 @@ class UpdateCompanyRequest extends FormRequest
             'payroll_base_currency' => ['nullable', 'string', 'size:3', Rule::in(Currency::codes())],
             'default_payment_currency' => ['nullable', 'string', 'size:3', Rule::in(Currency::codes())],
             'exchange_rate_source' => ['nullable', Rule::in(array_keys(ExchangeRateSource::toArray()))],
-            'exchange_rate_effective_date_policy' => ['nullable', Rule::in(array_keys(ExchangeRateEffectiveDatePolicy::toArray()))],
             'allow_employee_payment_currency' => 'nullable|boolean',
             'status' => 'required',
             'kra_pin' => 'nullable|string|max:50',

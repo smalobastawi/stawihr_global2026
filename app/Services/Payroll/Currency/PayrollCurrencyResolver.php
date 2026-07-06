@@ -22,59 +22,56 @@ class PayrollCurrencyResolver
         $baseCurrency = $this->resolveBaseCurrency($company);
         $salaryCurrency = $this->resolveSalaryCurrency($employeePayroll, $company);
         $paymentCurrency = $this->resolvePaymentCurrency($employeePayroll, $company, $salaryCurrency);
-
-        $effectiveDate = $this->exchangeRateService->resolveEffectiveDate($company, $period);
+        $periodLabel = $period->name ?? (string) $period->id;
 
         $salaryToBaseRate = 1.0;
-        $salaryToBaseRecord = null;
+        $salaryToBaseRateRecord = null;
         $requiresSalaryConversion = strtoupper($salaryCurrency) !== strtoupper($baseCurrency);
 
         if ($requiresSalaryConversion) {
-            $salaryToBaseRecord = $this->exchangeRateService->getRate(
+            $salaryToBaseRateRecord = $this->exchangeRateService->getRate(
                 $salaryCurrency,
                 $baseCurrency,
-                $effectiveDate,
                 $period,
-                $company->id
+                $company?->id
             );
 
-            if (!$salaryToBaseRecord) {
+            if (!$salaryToBaseRateRecord) {
                 throw new RuntimeException(sprintf(
-                    'No exchange rate from %s to %s for employee %s (payroll period %s).',
+                    'No exchange rate from %s to %s configured for payroll period "%s" (employee %s). Add the rate under Payroll → Setup → Exchange Rates.',
                     $salaryCurrency,
                     $baseCurrency,
-                    $employeePayroll->payroll_number ?? $employeePayroll->employee_id,
-                    $period->period_name ?? $period->id
+                    $periodLabel,
+                    $employeePayroll->payroll_number ?? $employeePayroll->employee_id
                 ));
             }
 
-            $salaryToBaseRate = (float) $salaryToBaseRecord->rate;
+            $salaryToBaseRate = (float) $salaryToBaseRateRecord->rate;
         }
 
         $baseToPaymentRate = 1.0;
-        $baseToPaymentRecord = null;
+        $baseToPaymentRateRecord = null;
         $requiresPaymentConversion = strtoupper($paymentCurrency) !== strtoupper($baseCurrency);
 
         if ($requiresPaymentConversion) {
-            $baseToPaymentRecord = $this->exchangeRateService->getRate(
+            $baseToPaymentRateRecord = $this->exchangeRateService->getRate(
                 $baseCurrency,
                 $paymentCurrency,
-                $effectiveDate,
                 $period,
-                $company->id
+                $company?->id
             );
 
-            if (!$baseToPaymentRecord) {
+            if (!$baseToPaymentRateRecord) {
                 throw new RuntimeException(sprintf(
-                    'No exchange rate from %s to %s for employee %s (payroll period %s).',
+                    'No exchange rate from %s to %s configured for payroll period "%s" (employee %s). Add the rate under Payroll → Setup → Exchange Rates.',
                     $baseCurrency,
                     $paymentCurrency,
-                    $employeePayroll->payroll_number ?? $employeePayroll->employee_id,
-                    $period->period_name ?? $period->id
+                    $periodLabel,
+                    $employeePayroll->payroll_number ?? $employeePayroll->employee_id
                 ));
             }
 
-            $baseToPaymentRate = (float) $baseToPaymentRecord->rate;
+            $baseToPaymentRate = (float) $baseToPaymentRateRecord->rate;
         }
 
         return new PayrollCurrencyContext(
@@ -83,11 +80,12 @@ class PayrollCurrencyResolver
             paymentCurrency: strtoupper($paymentCurrency),
             salaryToBaseRate: $salaryToBaseRate,
             baseToPaymentRate: $baseToPaymentRate,
-            salaryToBaseRateRecord: $salaryToBaseRecord,
-            baseToPaymentRateRecord: $baseToPaymentRecord,
+            salaryToBaseRateRecord: $salaryToBaseRateRecord,
+            baseToPaymentRateRecord: $baseToPaymentRateRecord,
             requiresSalaryConversion: $requiresSalaryConversion,
             requiresPaymentConversion: $requiresPaymentConversion,
-            exchangeRateDate: $effectiveDate,
+            exchangeRateDate: $this->exchangeRateService->periodSnapshotDate($period),
+            payrollPeriodName: $periodLabel,
         );
     }
 

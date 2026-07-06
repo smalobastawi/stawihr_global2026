@@ -22,6 +22,7 @@ class PayrollCurrencyContext
         public readonly bool $requiresSalaryConversion,
         public readonly bool $requiresPaymentConversion,
         public readonly ?string $exchangeRateDate = null,
+        public readonly ?string $payrollPeriodName = null,
     ) {
     }
 
@@ -54,11 +55,11 @@ class PayrollCurrencyContext
 
         if ($this->requiresSalaryConversion) {
             $parts[] = sprintf(
-                'Salary %s converted to statutory base %s at rate %s (effective %s).',
+                'Salary %s converted to statutory base %s at rate %s (payroll period %s).',
                 $this->salaryCurrency,
                 $this->baseCurrency,
                 number_format($this->salaryToBaseRate, 6),
-                $this->salaryToBaseRateRecord?->effective_date?->format('Y-m-d') ?? $this->exchangeRateDate ?? 'N/A'
+                $this->payrollPeriodName ?? 'N/A'
             );
         }
 

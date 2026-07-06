@@ -11,13 +11,14 @@ use App\Models\Payroll\PayrollPeriod;
 use App\Support\CompanyContext;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CurrencyExchangeRateController extends Controller
 {
     public function index(Request $request)
     {
         $query = CurrencyExchangeRate::with(['payrollPeriod', 'creator'])
-            ->orderByDesc('effective_date')
+            ->orderByDesc('payroll_period_id')
             ->orderByDesc('id');
 
         $companyId = CompanyContext::sessionCompanyId();
@@ -37,6 +38,10 @@ class CurrencyExchangeRateController extends Controller
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
+        }
+
+        if ($request->filled('payroll_period_id')) {
+            $query->where('payroll_period_id', $request->payroll_period_id);
         }
 
         $rates = $query->paginate(25);
@@ -89,7 +94,7 @@ class CurrencyExchangeRateController extends Controller
                 ->with('error', 'Locked exchange rates cannot be edited.');
         }
 
-        $data = $this->validateRate($request);
+        $data = $this->validateRate($request, $exchangeRate);
         $exchangeRate->update($data);
 
         return redirect()->route('payroll.settings.exchange-rates.index')
@@ -140,20 +145,51 @@ class CurrencyExchangeRateController extends Controller
         ]);
     }
 
-    protected function validateRate(Request $request): array
+    protected function validateRate(Request $request, ?CurrencyExchangeRate $existing = null): array
     {
         $validated = $request->validate([
             'from_currency' => ['required', 'string', 'size:3', Rule::in(Currency::codes())],
             'to_currency' => ['required', 'string', 'size:3', Rule::in(Currency::codes()), 'different:from_currency'],
             'rate' => 'required|numeric|gt:0',
-            'effective_date' => 'required|date',
-            'payroll_period_id' => 'nullable|exists:payroll_periods,id',
+            'payroll_period_id' => 'required|exists:payroll_periods,id',
             'source' => ['required', Rule::in(array_keys(ExchangeRateSource::toArray()))],
         ]);
 
         $validated['from_currency'] = strtoupper($validated['from_currency']);
         $validated['to_currency'] = strtoupper($validated['to_currency']);
         $validated['status'] = ExchangeRateStatus::ACTIVE;
+
+        $period = PayrollPeriod::findOrFail($validated['payroll_period_id']);
+        $validated['effective_date'] = ($period->end_date ?? $period->input_period_end)?->format('Y-m-d')
+            ?? now()->format('Y-m-d');
+
+        $companyId = CompanyContext::sessionCompanyId();
+        $duplicateQuery = CurrencyExchangeRate::query()
+            ->forPair($validated['from_currency'], $validated['to_currency'])
+            ->forPeriod((int) $validated['payroll_period_id']);
+
+        if ($companyId) {
+            $duplicateQuery->where(function ($builder) use ($companyId) {
+                $builder->where('company_id', $companyId)->orWhereNull('company_id');
+            });
+        } else {
+            $duplicateQuery->whereNull('company_id');
+        }
+
+        if ($existing) {
+            $duplicateQuery->where('id', '!=', $existing->id);
+        }
+
+        if ($duplicateQuery->exists()) {
+            throw ValidationException::withMessages([
+                'payroll_period_id' => sprintf(
+                    'An exchange rate from %s to %s already exists for payroll period "%s".',
+                    $validated['from_currency'],
+                    $validated['to_currency'],
+                    $period->name
+                ),
+            ]);
+        }
 
         return $validated;
     }
