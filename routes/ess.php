@@ -68,6 +68,7 @@ Route::group(['module' => 'Self Service', 'prefix' => 'ess', 'as' => 'ess.', 'mi
     Route::group(['section' => 'approvals', 'sub_section' => 'approval', 'as' => 'approval.', 'prefix' => 'approval'], function () {
         Route::get('/', [EssIndexController::class, 'approval'])->name('index');
         Route::get('/show/{modelType}/{modelId}', [EssIndexController::class, 'approvalShow'])->name('show');
+        Route::get('/payroll/export', [EssIndexController::class, 'exportPayrollApprovals'])->name('payroll.export');
     
       // Approval delegation management
       Route::get('approval-delegations', [EssIndexController::class, 'approvalDelegations'])->name('delegations.index');

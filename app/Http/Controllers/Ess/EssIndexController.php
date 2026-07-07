@@ -158,31 +158,7 @@ class EssIndexController extends Controller
         );
 
         // For payroll records (special handling) - Get both direct and delegated approvals
-        // Get all user IDs that this user can act on behalf of (including delegations)
-        $delegateUserIds = [$currentUserId];
-
-        // Get delegations where current user is the delegate
-        $delegations = ApprovalDelegation::where('delegate_to_user_id', $currentUserId)
-            ->where('is_active', true)
-            ->where(function ($query) {
-                $query->whereNull('start_date')
-                    ->orWhere('start_date', '<=', now());
-            })
-            ->where(function ($query) {
-                $query->whereNull('end_date')
-                    ->orWhere('end_date', '>=', now());
-            })
-            ->where(function ($query) {
-                $query->where('delegation_type', 'all')
-                    ->orWhere(function ($subQuery) {
-                        $subQuery->where('delegation_type', 'specific')
-                            ->where('model_type', 'App\Models\Payroll\PayrollRecord');
-                    });
-            })
-            ->pluck('user_id')
-            ->toArray();
-
-        $delegateUserIds = array_merge($delegateUserIds, $delegations);
+        $delegateUserIds = $this->getPayrollApprovalDelegateUserIds($currentUserId);
 
         $payrollRecordApprovalsQuery = ApprovalLog::with([
             'approvable.employee',
@@ -223,349 +199,10 @@ class EssIndexController extends Controller
         $payrollRecordApprovals = $payrollRecordApprovalsQuery->paginate($perPage);
         $payrollRecordSubmissions = $payrollRecordSubmissionsQuery->paginate($perPage);
 
-        // Define payroll record column mappings
-        $payrollColumns = [
-            // Employee basic info
-            'employee_code' => 'Employee Code',
-            'employee_surname' => 'Employee Surname',
-            'employee_first_name' => 'Employee First name',
-            'employee_second_name' => 'Employee Second name',
-            'job_title' => 'Job Title',
-            'location' => 'Locations (HA)',
-            'sub_program' => 'Sub_Programs (HA)',
-            'income_frequency' => 'Income Frequency',
-
-            // ===== EARNINGS SECTION =====
-            'basic_income' => 'Basic Income (Earning)',
-            'overtime_totals' => 'OT_Totals (Earning)',
-
-            'earning_total' => 'Earning Total',
-            'unpaid' => 'Unpaid Leave/Deductions',
-            'effective_earning' => 'Effective Earning',
-
-            // ===== COMPANY CONTRIBUTIONS SECTION =====
-            'nita' => 'NITA',
-            'nssf_tier1_company' => 'NSSF Tier I (CompanyContribution)',
-            'nssf_tier2_company' => 'NSSF Tier II (CompanyContribution)',
-            'total_nssf_company' => 'TOTAL NSSF (CompanyContribution)',
-            'housing_levy_company' => 'Affordable Housing Levy (Company Contribution)',
-
-            'pension_employer_total' => 'Pension Employer Total',
-            'company_contribution_total' => 'CompanyContribution Total',
-            'total_cost' => 'Total Cost',
-
-            // ===== DEDUCTIONS SECTION =====
-            'paye' => 'PAYE (Deduction)',
-            'nssf_tier1_deduction' => 'NSSF Tier I (Deduction)',
-            'nssf_tier2_deduction' => 'NSSF Tier II (Deduction)',
-            'total_nssf_deduction' => 'TOTAL NSSF (Deduction)',
-            'shif_deduction' => 'SHIF (Deduction)',
-            'housing_levy_deduction' => 'Affordable Housing Levy (Deduction)',
-            'pension_employee_total' => 'Pension Employee Total',
-            'salary_advance' => 'Salary Advance (Deduction)',
-            'total_deductions' => 'Total Deductions',
-
-            // ===== FINAL VALUES SECTION =====
-            'netpay' => 'NetPay',
-            'deductions_vs_earnings' => 'Deductions vs Earnings (%)',
-            'payment_reference' => 'Payment Reference',
-
-            // ===== PROJECT ALLOCATIONS SECTION =====
-            'primary_grant' => 'PRIMARY GRANT',
-            'primary_loe' => 'LOE',
-            'sec_grant' => 'SEC. GRANT',
-            'sec_loe' => 'LOE',
-            'tertiary_project' => 'Tertiary project',
-            'tertiary_loe' => 'LOE',
-
-            // Status
-            'status' => 'Status'
-        ];
-
-        // Define which columns should be summed (numeric columns)
-        $summableColumns = [
-            'basic_income',
-            'overtime_totals',
-            'earning_total',
-            'unpaid',
-            'effective_earning',
-            'nita',
-            'nssf_tier1_company',
-            'nssf_tier2_company',
-            'total_nssf_company',
-            'housing_levy_company',
-            'pension_employer_total',
-            'company_contribution_total',
-            'total_cost',
-            'paye',
-            'nssf_tier1_deduction',
-            'nssf_tier2_deduction',
-            'total_nssf_deduction',
-            'shif_deduction',
-            'housing_levy_deduction',
-            'pension_employee_total',
-            'salary_advance',
-            'total_deductions',
-            'netpay'
-        ];
-
-        // Initialize totals array
-        $totals = array_fill_keys($summableColumns, 0);
-        $totalDeductionsVsEarnings = 0;
-        $recordCount = 0;
-
-        // Process payroll records to extract data for table display
-        $processedPayrollRecords = [];
-        foreach ($payrollRecordApprovals as $approval) {
-            // Mark approval as delegated if user_id is not the current user
-            $approval->is_delegated = ($approval->user_id !== $currentUserId);
-
-            if ($approval->approvable instanceof \App\Models\Payroll\PayrollRecord) {
-                $record = $approval->approvable;
-
-                // Get employee information
-                $employeeName = 'N/A';
-                $employeeCode = 'N/A';
-                $jobTitle = 'N/A';
-                $location = 'N/A';
-                $subProgram = 'N/A';
-                $incomeFrequency = 'N/A';
-                $paymentReference = 'N/A';
-
-                if ($record->employee) {
-                    // Employee details
-                    $employeeSurname = $record->employee->last_name ?? '';
-                    $employeeFirstName = $record->employee->first_name ?? '';
-                    $employeeSecondName = $record->employee->middle_name ?? '';
-
-                    // Employee code
-                    if (isset($record->employee->payroll_number)) {
-                        $employeeCode = $record->employee->payroll_number;
-                    } elseif (isset($record->employee->employee_code)) {
-                        $employeeCode = $record->employee->employee_code;
-                    }
-
-                    // Job title
-                    if ($record->employee->designation) {
-                        $jobTitle = $record->employee->designation->designation_name ?? 'N/A';
-                    }
-
-                    // Location
-                    if ($record->employee->branch) {
-                        $location = $record->employee->branch->branch_name ?? 'N/A';
-                    }
-
-                    // Sub program (department)
-                    if ($record->employee->department) {
-                        $subProgram = $record->employee->department->department_name ?? 'N/A';
-                    }
-                }
-
-                // Get income frequency and payment reference from employee payroll
-                if ($record->employeePayroll) {
-                    $incomeFrequency = $record->employeePayroll->income_frequency ?? 'N/A';
-                    $paymentReference = $record->employeePayroll->payment_method ?? 'N/A';
-                }
-
-                // Calculate values from details
-                $overtimeTotal = 0;
-                $salaryAdvance = 0;
-                $unpaidAmount = 0;
-
-                foreach ($record->details as $detail) {
-                    // Calculate overtime
-                    if (($detail->type === 'allowance' || $detail->type === 'earning') &&
-                        $this->isOvertimeDetail($detail)
-                    ) {
-                        $overtimeTotal += $detail->amount;
-                    }
-
-                    // Calculate salary advance
-                    if (
-                        $detail->type === 'deduction' &&
-                        (stripos($detail->name, 'salary advance') !== false || $detail->code === 'salary_advance')
-                    ) {
-                        $salaryAdvance += $detail->amount;
-                    }
-
-                    // Calculate unpaid
-                    if (
-                        $detail->type === 'deduction' &&
-                        (stripos($detail->name, 'unpaid') !== false ||
-                            stripos($detail->name, 'absenteeism') !== false ||
-                            $detail->code === 'unpaid_leave' ||
-                            $detail->code === 'absenteeism')
-                    ) {
-                        $unpaidAmount += $detail->amount;
-                    }
-                }
-
-                // Calculate effective earning
-                $effectiveEarning = ($record->gross_salary ?? 0) - $unpaidAmount;
-
-                // Calculate deductions vs earnings percentage
-                $deductionsVsEarnings = 0;
-                if (($record->gross_salary ?? 0) > 0) {
-                    $deductionsVsEarnings = round(($record->total_deductions ?? 0) / ($record->gross_salary ?? 1) * 100, 2);
-                }
-
-                // Calculate pension totals
-                $pensionEmployeeTotal = $record->pension_contribution ?? 0;
-                $pensionEmployerTotal = $record->pension_employer_contribution ?? 0;
-
-                // Calculate company contribution total
-                $companyContributionTotal = ($record->nssf_tier1_company_contribution ?? 0) +
-                    ($record->nssf_tier2_company_contribution ?? 0) +
-                    ($record->housing_levy_company_contribution ?? 0) +
-                    ($record->shif_company_contribution ?? 0) +
-                    ($record->industrial_training_levy ?? 0) +
-                    $pensionEmployerTotal;
-
-                // Calculate total cost
-                $totalCost = ($record->gross_salary ?? 0) + $companyContributionTotal;
-
-                // GET PROJECT ALLOCATIONS - ADD THIS SECTION
-                $projectAllocations = $record->employee->projectAllocations()
-                    ->with(['project', 'project.parent'])
-                    ->where('status', 'active')
-                    ->orderBy('percentage_allocated', 'desc')
-                    ->get();
-
-                // Process project allocations using the same method as in export
-                $processedAllocations = $this->processProjectAllocations($projectAllocations);
-
-                // TEMPORARY: If no allocations found, try without status filter
-                if (empty($processedAllocations) && $record->employee->projectAllocations()->count() > 0) {
-                    $allAllocations = $record->employee->projectAllocations()
-                        ->with(['project', 'project.parent'])
-                        ->orderBy('percentage_allocated', 'desc')
-                        ->get();
-                    $processedAllocations = $this->processProjectAllocations($allAllocations);
-                }
-
-                // Store the record data
-                $recordData = [
-                    // Employee basic info
-                    'employee_code' => $employeeCode,
-                    'employee_surname' => $record->employee->last_name ?? '',
-                    'employee_first_name' => $record->employee->first_name ?? '',
-                    'employee_second_name' => $record->employee->middle_name ?? '',
-                    'job_title' => $jobTitle,
-                    'location' => $location,
-                    'sub_program' => $subProgram,
-                    'income_frequency' => $incomeFrequency,
-
-                    // Earnings section
-                    'basic_income' => (float)($record->basic_salary ?? 0),
-                    'overtime_totals' => (float)$overtimeTotal,
-                    'earning_total' => (float)($record->gross_salary ?? 0),
-                    'unpaid' => (float)$unpaidAmount,
-                    'effective_earning' => (float)$effectiveEarning,
-
-                    // Company contributions section
-                    'nita' => (float)($record->industrial_training_levy ?? 0),
-                    'nssf_tier1_company' => (float)($record->nssf_tier1_company_contribution ?? 0),
-                    'nssf_tier2_company' => (float)($record->nssf_tier2_company_contribution ?? 0),
-                    'total_nssf_company' => (float)(($record->nssf_tier1_company_contribution ?? 0) + ($record->nssf_tier2_company_contribution ?? 0)),
-                    'housing_levy_company' => (float)($record->housing_levy_company_contribution ?? 0),
-
-                    'pension_employer_total' => (float)$pensionEmployerTotal,
-                    'company_contribution_total' => (float)$companyContributionTotal,
-                    'total_cost' => (float)$totalCost,
-
-                    // Deductions section
-                    'paye' => (float)($record->paye_tax ?? 0),
-                    'nssf_tier1_deduction' => (float)($record->nssf_tier1_contribution ?? 0),
-                    'nssf_tier2_deduction' => (float)($record->nssf_tier2_contribution ?? 0),
-                    'total_nssf_deduction' => (float)($record->nssf_contribution ?? 0),
-                    'shif_deduction' => (float)($record->shif_contribution ?? 0),
-                    'housing_levy_deduction' => (float)($record->housing_levy ?? 0),
-                    'pension_employee_total' => (float)$pensionEmployeeTotal,
-                    'salary_advance' => (float)$salaryAdvance,
-                    'total_deductions' => (float)($record->total_deductions ?? 0),
-
-                    // Final values section
-                    'netpay' => (float)($record->net_salary ?? 0),
-                    'deductions_vs_earnings' => $deductionsVsEarnings,
-                    'payment_reference' => $paymentReference,
-
-                    // Project allocations section
-                    'primary_grant' => $processedAllocations['primary_grant'] ?? '',
-                    'primary_loe' => $processedAllocations['primary_loe'] ?? '',
-                    'sec_grant' => $processedAllocations['sec_grant'] ?? '',
-                    'sec_loe' => $processedAllocations['sec_loe'] ?? '',
-                    'tertiary_project' => $processedAllocations['tertiary_project'] ?? '',
-                    'tertiary_loe' => $processedAllocations['tertiary_loe'] ?? '',
-
-                    // Status
-                    'status' => $record->payroll_record_status ?? 'Pending'
-                ];
-
-                // Add to processed records
-                $processedPayrollRecords[$approval->id] = $recordData;
-
-                // Calculate totals
-                foreach ($summableColumns as $column) {
-                    $totals[$column] += $recordData[$column] ?? 0;
-                }
-                $totalDeductionsVsEarnings += $deductionsVsEarnings;
-                $recordCount++;
-            }
-        }
-
-        // Create totals row (as the second row)
-        $totalsRow = [];
-        foreach ($payrollColumns as $key => $label) {
-            if (in_array($key, $summableColumns)) {
-                // Format numeric totals with 2 decimal places
-                $totalsRow[$key] = number_format($totals[$key], 2);
-            } elseif ($key === 'deductions_vs_earnings') {
-                // Calculate average for deductions vs earnings percentage
-                $average = $recordCount > 0 ? $totalDeductionsVsEarnings / $recordCount : 0;
-                $totalsRow[$key] = round($average, 2) . '%';
-            } else {
-                // For non-numeric columns, show appropriate labels
-                switch ($key) {
-                    case 'employee_code':
-                        $totalsRow[$key] = 'TOTALS';
-                        break;
-                    case 'employee_surname':
-                    case 'employee_first_name':
-                    case 'employee_second_name':
-                        $totalsRow[$key] = '';
-                        break;
-                    case 'job_title':
-                        $totalsRow[$key] = '';
-                        break;
-                    case 'location':
-                    case 'sub_program':
-                        $totalsRow[$key] = '';
-                        break;
-                    case 'income_frequency':
-                        $totalsRow[$key] = '';
-                        break;
-                    case 'payment_reference':
-                        $totalsRow[$key] = '';
-                        break;
-                    case 'primary_grant':
-                    case 'sec_grant':
-                    case 'tertiary_project':
-                        $totalsRow[$key] = 'N/A';
-                        break;
-                    case 'primary_loe':
-                    case 'sec_loe':
-                    case 'tertiary_loe':
-                        $totalsRow[$key] = '';
-                        break;
-                    case 'status':
-                        $totalsRow[$key] = 'TOTAL';
-                        break;
-                    default:
-                        $totalsRow[$key] = '';
-                        break;
-                }
-            }
-        }
+        $tableData = $this->buildPayrollApprovalTableData($currentUserId, $payrollRecordApprovals);
+        $payrollColumns = $tableData['payrollColumns'];
+        $processedPayrollRecords = $tableData['processedPayrollRecords'];
+        $totalsRow = $tableData['totalsRow'];
 
         // Get delegation data for the view
         $myDelegations = \App\Models\ApprovalDelegation::with('delegate')
@@ -670,6 +307,341 @@ class EssIndexController extends Controller
         return stripos($detail->name, 'overtime') !== false ||
             stripos($detail->code, 'ot') !== false ||
             stripos($detail->name, 'OT') !== false;
+    }
+
+    public function exportPayrollApprovals()
+    {
+        $currentUserId = auth()->id();
+        $delegateUserIds = $this->getPayrollApprovalDelegateUserIds($currentUserId);
+
+        $payrollRecordApprovals = ApprovalLog::with([
+            'approvable.employee',
+            'approvable.payrollPeriod',
+            'approvable.details',
+            'approvable.employee.designation',
+            'approvable.employee.branch',
+            'approvable.employee.department',
+            'approvable.employeePayroll',
+            'step.assignments.user',
+            'user',
+        ])
+            ->whereIn('user_id', $delegateUserIds)
+            ->whereIn('action', [null, 'pending', 'queued'])
+            ->where('approvable_type', 'App\Models\Payroll\PayrollRecord')
+            ->whereHas('approvable')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $tableData = $this->buildPayrollApprovalTableData($currentUserId, $payrollRecordApprovals);
+        $payrollColumns = $tableData['payrollColumns'];
+        $processedPayrollRecords = $tableData['processedPayrollRecords'];
+        $totalsRow = $tableData['totalsRow'];
+
+        $headings = array_values($payrollColumns);
+        $rows = [];
+
+        foreach ($processedPayrollRecords as $recordData) {
+            $row = [];
+            foreach (array_keys($payrollColumns) as $key) {
+                $value = $recordData[$key] ?? '';
+                $row[] = is_numeric($value) ? number_format((float) $value, 2, '.', '') : $value;
+            }
+            $rows[] = $row;
+        }
+
+        if (!empty($totalsRow)) {
+            $totalRow = [];
+            foreach (array_keys($payrollColumns) as $key) {
+                $totalRow[] = $totalsRow[$key] ?? '';
+            }
+            $rows[] = $totalRow;
+        }
+
+        $filename = 'payroll-approvals-' . now()->format('Y-m-d') . '.xlsx';
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\PayrollApprovalExport($headings, $rows),
+            $filename
+        );
+    }
+
+    private function getPayrollApprovalDelegateUserIds(int $currentUserId): array
+    {
+        $delegateUserIds = [$currentUserId];
+
+        $delegations = ApprovalDelegation::where('delegate_to_user_id', $currentUserId)
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->whereNull('start_date')
+                    ->orWhere('start_date', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('end_date')
+                    ->orWhere('end_date', '>=', now());
+            })
+            ->where(function ($query) {
+                $query->where('delegation_type', 'all')
+                    ->orWhere(function ($subQuery) {
+                        $subQuery->where('delegation_type', 'specific')
+                            ->where('model_type', 'App\Models\Payroll\PayrollRecord');
+                    });
+            })
+            ->pluck('user_id')
+            ->toArray();
+
+        return array_values(array_unique(array_merge($delegateUserIds, $delegations)));
+    }
+
+    private function payrollApprovalColumnDefinitions(): array
+    {
+        $payrollColumns = [
+            'employee_code' => 'Employee Code',
+            'employee_surname' => 'Employee Surname',
+            'employee_first_name' => 'Employee First name',
+            'employee_second_name' => 'Employee Second name',
+            'job_title' => 'Job Title',
+            'location' => 'Locations (HA)',
+            'sub_program' => 'Sub_Programs (HA)',
+            'income_frequency' => 'Income Frequency',
+            'basic_income' => 'Basic Income (Earning)',
+            'overtime_totals' => 'OT_Totals (Earning)',
+            'earning_total' => 'Earning Total',
+            'unpaid' => 'Unpaid Leave/Deductions',
+            'effective_earning' => 'Effective Earning',
+            'nita' => 'NITA',
+            'nssf_tier1_company' => 'NSSF Tier I (CompanyContribution)',
+            'nssf_tier2_company' => 'NSSF Tier II (CompanyContribution)',
+            'total_nssf_company' => 'TOTAL NSSF (CompanyContribution)',
+            'housing_levy_company' => 'Affordable Housing Levy (Company Contribution)',
+            'pension_employer_total' => 'Pension Employer Total',
+            'company_contribution_total' => 'CompanyContribution Total',
+            'total_cost' => 'Total Cost',
+            'paye' => 'PAYE (Deduction)',
+            'nssf_tier1_deduction' => 'NSSF Tier I (Deduction)',
+            'nssf_tier2_deduction' => 'NSSF Tier II (Deduction)',
+            'total_nssf_deduction' => 'TOTAL NSSF (Deduction)',
+            'shif_deduction' => 'SHIF (Deduction)',
+            'housing_levy_deduction' => 'Affordable Housing Levy (Deduction)',
+            'pension_employee_total' => 'Pension Employee Total',
+            'salary_advance' => 'Salary Advance (Deduction)',
+            'total_deductions' => 'Total Deductions',
+            'netpay' => 'NetPay',
+            'deductions_vs_earnings' => 'Deductions vs Earnings (%)',
+            'payment_reference' => 'Payment Reference',
+            'primary_grant' => 'PRIMARY GRANT',
+            'primary_loe' => 'LOE',
+            'sec_grant' => 'SEC. GRANT',
+            'sec_loe' => 'LOE',
+            'tertiary_project' => 'Tertiary project',
+            'tertiary_loe' => 'LOE',
+            'status' => 'Status',
+        ];
+
+        $summableColumns = [
+            'basic_income',
+            'overtime_totals',
+            'earning_total',
+            'unpaid',
+            'effective_earning',
+            'nita',
+            'nssf_tier1_company',
+            'nssf_tier2_company',
+            'total_nssf_company',
+            'housing_levy_company',
+            'pension_employer_total',
+            'company_contribution_total',
+            'total_cost',
+            'paye',
+            'nssf_tier1_deduction',
+            'nssf_tier2_deduction',
+            'total_nssf_deduction',
+            'shif_deduction',
+            'housing_levy_deduction',
+            'pension_employee_total',
+            'salary_advance',
+            'total_deductions',
+            'netpay',
+        ];
+
+        return compact('payrollColumns', 'summableColumns');
+    }
+
+    private function buildPayrollApprovalTableData(int $currentUserId, iterable $payrollRecordApprovals): array
+    {
+        ['payrollColumns' => $payrollColumns, 'summableColumns' => $summableColumns] = $this->payrollApprovalColumnDefinitions();
+
+        $totals = array_fill_keys($summableColumns, 0);
+        $totalDeductionsVsEarnings = 0;
+        $recordCount = 0;
+        $processedPayrollRecords = [];
+
+        foreach ($payrollRecordApprovals as $approval) {
+            $approval->is_delegated = ($approval->user_id !== $currentUserId);
+
+            if (!$approval->approvable instanceof \App\Models\Payroll\PayrollRecord) {
+                continue;
+            }
+
+            $record = $approval->approvable;
+            $employeeCode = 'N/A';
+            $jobTitle = 'N/A';
+            $location = 'N/A';
+            $subProgram = 'N/A';
+            $incomeFrequency = 'N/A';
+            $paymentReference = 'N/A';
+
+            if ($record->employee) {
+                if (isset($record->employee->payroll_number)) {
+                    $employeeCode = $record->employee->payroll_number;
+                } elseif (isset($record->employee->employee_code)) {
+                    $employeeCode = $record->employee->employee_code;
+                }
+
+                if ($record->employee->designation) {
+                    $jobTitle = $record->employee->designation->designation_name ?? 'N/A';
+                }
+
+                if ($record->employee->branch) {
+                    $location = $record->employee->branch->branch_name ?? 'N/A';
+                }
+
+                if ($record->employee->department) {
+                    $subProgram = $record->employee->department->department_name ?? 'N/A';
+                }
+            }
+
+            if ($record->employeePayroll) {
+                $incomeFrequency = $record->employeePayroll->income_frequency ?? 'N/A';
+                $paymentReference = $record->employeePayroll->payment_method ?? 'N/A';
+            }
+
+            $overtimeTotal = 0;
+            $salaryAdvance = 0;
+            $unpaidAmount = 0;
+
+            foreach ($record->details as $detail) {
+                if (($detail->type === 'allowance' || $detail->type === 'earning') && $this->isOvertimeDetail($detail)) {
+                    $overtimeTotal += $detail->amount;
+                }
+
+                if ($detail->type === 'deduction' &&
+                    (stripos($detail->name, 'salary advance') !== false || $detail->code === 'salary_advance')) {
+                    $salaryAdvance += $detail->amount;
+                }
+
+                if ($detail->type === 'deduction' &&
+                    (stripos($detail->name, 'unpaid') !== false ||
+                        stripos($detail->name, 'absenteeism') !== false ||
+                        $detail->code === 'unpaid_leave' ||
+                        $detail->code === 'absenteeism')) {
+                    $unpaidAmount += $detail->amount;
+                }
+            }
+
+            $effectiveEarning = ($record->gross_salary ?? 0) - $unpaidAmount;
+            $deductionsVsEarnings = ($record->gross_salary ?? 0) > 0
+                ? round(($record->total_deductions ?? 0) / ($record->gross_salary ?? 1) * 100, 2)
+                : 0;
+
+            $pensionEmployeeTotal = $record->pension_contribution ?? 0;
+            $pensionEmployerTotal = $record->pension_employer_contribution ?? 0;
+            $companyContributionTotal = ($record->nssf_tier1_company_contribution ?? 0) +
+                ($record->nssf_tier2_company_contribution ?? 0) +
+                ($record->housing_levy_company_contribution ?? 0) +
+                ($record->shif_company_contribution ?? 0) +
+                ($record->industrial_training_levy ?? 0) +
+                $pensionEmployerTotal;
+            $totalCost = ($record->gross_salary ?? 0) + $companyContributionTotal;
+
+            $processedAllocations = [];
+            if ($record->employee) {
+                $projectAllocations = $record->employee->projectAllocations()
+                    ->with(['project', 'project.parent'])
+                    ->where('status', 'active')
+                    ->orderBy('percentage_allocated', 'desc')
+                    ->get();
+
+                $processedAllocations = $this->processProjectAllocations($projectAllocations);
+
+                if (empty($processedAllocations) && $record->employee->projectAllocations()->count() > 0) {
+                    $allAllocations = $record->employee->projectAllocations()
+                        ->with(['project', 'project.parent'])
+                        ->orderBy('percentage_allocated', 'desc')
+                        ->get();
+                    $processedAllocations = $this->processProjectAllocations($allAllocations);
+                }
+            }
+
+            $recordData = [
+                'employee_code' => $employeeCode,
+                'employee_surname' => $record->employee->last_name ?? '',
+                'employee_first_name' => $record->employee->first_name ?? '',
+                'employee_second_name' => $record->employee->middle_name ?? '',
+                'job_title' => $jobTitle,
+                'location' => $location,
+                'sub_program' => $subProgram,
+                'income_frequency' => $incomeFrequency,
+                'basic_income' => (float) ($record->basic_salary ?? 0),
+                'overtime_totals' => (float) $overtimeTotal,
+                'earning_total' => (float) ($record->gross_salary ?? 0),
+                'unpaid' => (float) $unpaidAmount,
+                'effective_earning' => (float) $effectiveEarning,
+                'nita' => (float) ($record->industrial_training_levy ?? 0),
+                'nssf_tier1_company' => (float) ($record->nssf_tier1_company_contribution ?? 0),
+                'nssf_tier2_company' => (float) ($record->nssf_tier2_company_contribution ?? 0),
+                'total_nssf_company' => (float) (($record->nssf_tier1_company_contribution ?? 0) + ($record->nssf_tier2_company_contribution ?? 0)),
+                'housing_levy_company' => (float) ($record->housing_levy_company_contribution ?? 0),
+                'pension_employer_total' => (float) $pensionEmployerTotal,
+                'company_contribution_total' => (float) $companyContributionTotal,
+                'total_cost' => (float) $totalCost,
+                'paye' => (float) ($record->paye_tax ?? 0),
+                'nssf_tier1_deduction' => (float) ($record->nssf_tier1_contribution ?? 0),
+                'nssf_tier2_deduction' => (float) ($record->nssf_tier2_contribution ?? 0),
+                'total_nssf_deduction' => (float) ($record->nssf_contribution ?? 0),
+                'shif_deduction' => (float) ($record->shif_contribution ?? 0),
+                'housing_levy_deduction' => (float) ($record->housing_levy ?? 0),
+                'pension_employee_total' => (float) $pensionEmployeeTotal,
+                'salary_advance' => (float) $salaryAdvance,
+                'total_deductions' => (float) ($record->total_deductions ?? 0),
+                'netpay' => (float) ($record->net_salary ?? 0),
+                'deductions_vs_earnings' => $deductionsVsEarnings,
+                'payment_reference' => $paymentReference,
+                'primary_grant' => $processedAllocations['primary_grant'] ?? '',
+                'primary_loe' => $processedAllocations['primary_loe'] ?? '',
+                'sec_grant' => $processedAllocations['sec_grant'] ?? '',
+                'sec_loe' => $processedAllocations['sec_loe'] ?? '',
+                'tertiary_project' => $processedAllocations['tertiary_project'] ?? '',
+                'tertiary_loe' => $processedAllocations['tertiary_loe'] ?? '',
+                'status' => $record->payroll_record_status ?? 'Pending',
+            ];
+
+            $processedPayrollRecords[$approval->id] = $recordData;
+
+            foreach ($summableColumns as $column) {
+                $totals[$column] += $recordData[$column] ?? 0;
+            }
+            $totalDeductionsVsEarnings += $deductionsVsEarnings;
+            $recordCount++;
+        }
+
+        $totalsRow = [];
+        foreach ($payrollColumns as $key => $label) {
+            if (in_array($key, $summableColumns, true)) {
+                $totalsRow[$key] = number_format($totals[$key], 2);
+            } elseif ($key === 'deductions_vs_earnings') {
+                $average = $recordCount > 0 ? $totalDeductionsVsEarnings / $recordCount : 0;
+                $totalsRow[$key] = round($average, 2) . '%';
+            } else {
+                $totalsRow[$key] = match ($key) {
+                    'employee_code' => 'TOTALS',
+                    'primary_grant', 'sec_grant', 'tertiary_project' => 'N/A',
+                    'status' => 'TOTAL',
+                    default => '',
+                };
+            }
+        }
+
+        return compact('payrollColumns', 'processedPayrollRecords', 'totalsRow');
     }
 
     /**
