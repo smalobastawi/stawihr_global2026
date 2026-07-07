@@ -187,21 +187,8 @@ class EmployeePayrollController extends Controller
             DB::beginTransaction();
 
             // Check if approval workflow exists for EmployeePayroll model
-            $workflowExists = ApprovalWorkflow::where('model_type', EmployeePayroll::class)->exists();
-
-            // Determine initial status based on workflow existence
-            if ($workflowExists) {
-                $initialStatus = GeneralStatus::INACTIVE;
-                $initialApprovalStatus = ApprovalStatus::DRAFT;
-                $initialIsActive = false;
-                $dateApproved = null;
-            } else {
-                // No workflow - save as fully approved and active
-                $initialStatus = GeneralStatus::ACTIVE;
-                $initialApprovalStatus = ApprovalStatus::APPROVED;
-                $initialIsActive = true;
-                $dateApproved = now();
-            }
+            $workflowExists = $this->employeePayrollWorkflowExists();
+            $approvalState = $this->resolveEmployeePayrollApprovalState($workflowExists);
 
             // Create employee payroll record
             $employeePayroll = EmployeePayroll::create([
@@ -228,11 +215,12 @@ class EmployeePayrollController extends Controller
                 'overtime_rate_weekend' => $request->overtime_rate_weekend ?? 2.0,
                 'overtime_rate_holiday' => $request->overtime_rate_holiday ?? 2.0,
                 'effective_date' => $request->effective_date,
-                'is_active' => $initialIsActive,
                 'created_by' => auth()->id(),
-                'status' => $initialStatus,
-                'approval_status' => $initialApprovalStatus,
-                'date_approved' => $dateApproved,
+                'is_active' => $approvalState['is_active'],
+                'status' => $approvalState['status'],
+                'approval_status' => $approvalState['approval_status'],
+                'date_approved' => $approvalState['date_approved'],
+                'approved_by' => $approvalState['approved_by'] ?? null,
             ]);
 
             // Attach pension schemes with custom rates
@@ -312,8 +300,12 @@ class EmployeePayrollController extends Controller
 
             DB::commit();
 
+            $successMessage = $workflowExists
+                ? 'Employee payroll record created successfully and is pending approval.'
+                : 'Employee payroll record created successfully and is active.';
+
             return redirect()->route('payroll.employees.index')
-                ->with('success', 'Employee payroll record created successfully.');
+                ->with('success', $successMessage);
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()
@@ -395,13 +387,12 @@ class EmployeePayrollController extends Controller
             'overtime_rate_weekend' => 'nullable|numeric|min:0|max:5',
             'overtime_rate_holiday' => 'nullable|numeric|min:0|max:5',
             'is_active' => 'boolean',
-            'salary_change_reason' => 'nullable:basic_salary_changed,true|string|max:1000', // NEW FIELD
-            'salary_effective_date' => 'nullable:basic_salary_changed,true|date', // NEW FIELD
-            'salary_change_type' => 'nullable:basic_salary_changed,true|in:promotion,annual_increment,adjustment,market_correction,other', // NEW FIELD
+            'salary_change_reason' => 'nullable|string|max:1000',
+            'salary_effective_date' => 'nullable|date',
+            'salary_change_type' => 'nullable|in:promotion,annual_increment,adjustment,market_correction,other',
         ]);
 
-        // Add custom validation for total employer rate
-        $validator->after(function ($validator) use ($request) {
+        $validator->after(function ($validator) use ($request, $employeePayroll) {
             if ($request->filled('pension_rates')) {
                 $totalEmployerRate = 0;
 
@@ -417,29 +408,30 @@ class EmployeePayrollController extends Controller
                     );
                 }
             }
+
+            if ($this->salaryIsChanging($employeePayroll, $request)) {
+                if (!$request->filled('salary_change_type')) {
+                    $validator->errors()->add(
+                        'salary_change_type',
+                        'Change type is required when modifying basic salary.'
+                    );
+                }
+
+                if (!$request->filled('salary_change_reason')) {
+                    $validator->errors()->add(
+                        'salary_change_reason',
+                        'Salary change reason is required when modifying basic salary.'
+                    );
+                }
+
+                if (!$request->filled('salary_effective_date')) {
+                    $validator->errors()->add(
+                        'salary_effective_date',
+                        'Effective date is required when modifying basic salary.'
+                    );
+                }
+            }
         });
-
-        // NEW: Validate salary change if basic salary is being modified
-
-        $oldSalary = $employeePayroll->basic_salary;
-        $newSalary = $request->basic_salary;
-
-        if ($oldSalary != $newSalary) {
-            if (!$request->filled('salary_change_reason')) {
-                $validator->errors()->add(
-                    'salary_change_reason',
-                    "Salary change reason is required when modifying basic salary"
-                );
-            }
-
-            if (!$request->filled('salary_effective_date')) {
-                $validator->errors()->add(
-                    'salary_effective_date',
-                    "Effective date is required when modifying basic salary"
-                );
-            }
-        }
-
 
         // Check if validation fails
         if ($validator->fails()) {
@@ -447,7 +439,8 @@ class EmployeePayrollController extends Controller
                 ->withErrors($validator)
                 ->withInput();
         }
-
+      
+      
         $employeeDetails = Employee::where('employee_id', $request->employee_id)->first();
         $employeeDetails->nssf_rate_type = $request->nssf_rate_type;
         $employeeDetails->KRA_Pin = $request->kra_pin;
@@ -458,14 +451,12 @@ class EmployeePayrollController extends Controller
         $employeeDetails->bank_account_number = $request->account_number;
         $employeeDetails->bank_account_name = $request->account_name;
         $employeeDetails->save();
-
+       
         try {
             DB::beginTransaction();
 
-            // Check if basic salary is being changed
-            $oldSalary = $employeePayroll->basic_salary;
             $newSalary = $request->basic_salary;
-            $salaryChanged = ($oldSalary != $newSalary);
+            $salaryChanged = $this->salaryIsChanging($employeePayroll, $request);
 
             if ($salaryChanged) {
                 // Use PayrollChangeService to handle salary change with history
@@ -544,16 +535,17 @@ class EmployeePayrollController extends Controller
             } else {
                 $employeePayroll->pensionSchemes()->detach();
             }
-            $employeePayroll->update([
-                'is_active' => false,
-                'updated_by' => auth()->id(),
-                'status' => GeneralStatus::INACTIVE,
-                'approval_status' => ApprovalStatus::DRAFT,
-                'date_approved' => null,
-            ]);
+
+            $workflowExists = $this->employeePayrollWorkflowExists();
+            $employeePayroll->update(array_merge(
+                $this->resolveEmployeePayrollApprovalState($workflowExists),
+                ['updated_by' => auth()->id()]
+            ));
             DB::commit();
 
-            $message = 'Employee payroll record updated successfully.';
+            $message = $workflowExists
+                ? 'Employee payroll record updated successfully and is pending approval.'
+                : 'Employee payroll record updated successfully and is active.';
             if ($salaryChanged) {
                 $message .= ' Salary change has been recorded in history.';
             }
@@ -562,10 +554,42 @@ class EmployeePayrollController extends Controller
                 ->with('success', $message);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Error updating employee payroll record: ' . $e->getMessage());
         }
+    }
+
+    private function salaryIsChanging(EmployeePayroll $employeePayroll, Request $request): bool
+    {
+        return round((float) $employeePayroll->basic_salary, 2) !== round((float) $request->input('basic_salary'), 2);
+    }
+
+    private function employeePayrollWorkflowExists(): bool
+    {
+        return ApprovalWorkflow::where('model_type', EmployeePayroll::class)->exists();
+    }
+
+    private function resolveEmployeePayrollApprovalState(bool $workflowExists): array
+    {
+        if ($workflowExists) {
+            return [
+                'is_active' => false,
+                'status' => GeneralStatus::INACTIVE,
+                'approval_status' => ApprovalStatus::DRAFT,
+                'date_approved' => null,
+                'approved_by' => null,
+            ];
+        }
+
+        return [
+            'is_active' => true,
+            'status' => GeneralStatus::ACTIVE,
+            'approval_status' => ApprovalStatus::APPROVED,
+            'date_approved' => now(),
+            'approved_by' => auth()->id(),
+        ];
     }
 
     /**

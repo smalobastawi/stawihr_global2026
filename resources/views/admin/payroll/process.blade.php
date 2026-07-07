@@ -318,6 +318,7 @@
                                         <th>Company</th>
                                         <th>@lang('payroll.payroll_number')</th>
                                         <th>@lang('payroll.department')</th>
+                                        <th>@lang('payroll.currency')</th>
                                         <th>@lang('payroll.basic_salary')</th>
                                         <th>@lang('payroll.gross_salary')</th>
                                         <th>@lang('payroll.status')</th>
@@ -335,6 +336,13 @@
                                                 <td>{{ $employee->company->name ?? 'N/A' }}</td>
                                                 <td>{{ $employee->payroll_number }}</td>
                                                 <td>{{ $employee->department->department_name ?? 'N/A' }}</td>
+                                                <td>
+                                                    @if ($employee->employeePayroll)
+                                                        {{ $employee->employeePayroll->currency }}
+                                                    @else
+                                                        N/A
+                                                    @endif
+                                                </td>
                                                 <td>
                                                     @if ($employee->employeePayroll)
                                                         {{ number_format($employee->employeePayroll->basic_salary, 2) }}

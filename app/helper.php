@@ -374,7 +374,6 @@ if (!function_exists('helper_companyInfo')) {
             'representative_phone' => $company->representative_phone,
             'representative_email' => $company->representative_email,
             'KRA_PIN' => $company->kra_pin,
-            'employer_number' => $company->employer_number,
             'NSSF_employer_number' => $company->nssf_employer_number,
             'NHIF_employer_code' => $company->shif_employer_code,
         ];

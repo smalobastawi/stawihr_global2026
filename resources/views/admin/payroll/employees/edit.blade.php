@@ -21,12 +21,7 @@
                 <div class="panel-heading"><i class="mdi mdi-table fa-fw"></i> @yield('title')</div>
                 <div class="panel-wrapper collapse in" aria-expanded="true">
                     <div class="panel-body">
-                        @if ($errors->any())
-                            <div class="alert alert-danger alert-dismissable">
-                                <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
-                                <i class="glyphicon glyphicon-remove"></i> <strong>{{ $errors->first() }}</strong>
-                            </div>
-                        @endif
+                        @include('admin.partials.alert')
                         <form method="POST" action="{{ route('payroll.employees.update', $employeePayroll) }}"
                             class="form-horizontal">
                             @csrf
@@ -131,12 +126,15 @@
                                                     <select name="salary_change_type" class="form-control"
                                                         id="salary_change_type">
                                                         <option value="">@lang('common.select')</option>
-                                                        <option value="promotion">@lang('payroll.promotion')</option>
-                                                        <option value="annual_increment">@lang('payroll.annual_increment')</option>
-                                                        <option value="adjustment">@lang('payroll.adjustment')</option>
-                                                        <option value="market_correction">@lang('payroll.market_correction')</option>
-                                                        <option value="other">@lang('payroll.other')</option>
+                                                        @foreach (['promotion', 'annual_increment', 'adjustment', 'market_correction', 'other'] as $changeType)
+                                                            <option value="{{ $changeType }}" {{ old('salary_change_type') === $changeType ? 'selected' : '' }}>
+                                                                @lang('payroll.' . $changeType)
+                                                            </option>
+                                                        @endforeach
                                                     </select>
+                                                    @error('salary_change_type')
+                                                        <span class="text-danger">{{ $message }}</span>
+                                                    @enderror
                                                 </div>
                                             </div>
                                         </div>
@@ -147,7 +145,10 @@
                                                 <div class="col-md-9">
                                                     <input type="date" name="salary_effective_date"
                                                         class="form-control" id="salary_effective_date"
-                                                        value="{{ date('Y-m-d') }}">
+                                                        value="{{ old('salary_effective_date', date('Y-m-d')) }}">
+                                                    @error('salary_effective_date')
+                                                        <span class="text-danger">{{ $message }}</span>
+                                                    @enderror
                                                 </div>
                                             </div>
                                         </div>
@@ -160,7 +161,10 @@
                                                         class="validateRq">*</span></label>
                                                 <div class="col-md-10">
                                                     <textarea name="salary_change_reason" class="form-control" rows="3" id="salary_change_reason"
-                                                        placeholder="@lang('payroll.change_reason_placeholder')"></textarea>
+                                                        placeholder="@lang('payroll.change_reason_placeholder')">{{ old('salary_change_reason') }}</textarea>
+                                                    @error('salary_change_reason')
+                                                        <span class="text-danger">{{ $message }}</span>
+                                                    @enderror
                                                 </div>
                                             </div>
                                         </div>
@@ -835,6 +839,7 @@
             if (salaryChanged) {
                 salaryChangeSection.show();
                 basicSalaryChanged.val('true');
+                $('#salary_change_type, #salary_effective_date, #salary_change_reason').prop('required', true);
 
                 const changeAmount = currentSalary - originalSalary;
                 const changePercentage = originalSalary > 0 ? ((changeAmount / originalSalary) * 100) : 0;
@@ -847,6 +852,7 @@
             } else {
                 salaryChangeSection.hide();
                 basicSalaryChanged.val('false');
+                $('#salary_change_type, #salary_effective_date, #salary_change_reason').prop('required', false);
                 salaryChangeInfo.html(
                     `@lang('payroll.current_salary'): <strong>KES ${originalSalary.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong>`
                 );

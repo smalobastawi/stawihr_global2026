@@ -2,6 +2,7 @@
 
 namespace App\Services\Payroll\Currency;
 
+use App\Lib\Enumerations\ExchangeRateStatus;
 use App\Models\Company;
 use App\Models\Payroll\CurrencyExchangeRate;
 use App\Models\Payroll\PayrollPeriod;
@@ -26,6 +27,10 @@ class ExchangeRateService
             ->forPayroll()
             ->forPair($from, $to)
             ->where('payroll_period_id', $period->id)
+            ->orderByRaw("CASE WHEN status = ? THEN 0 WHEN status = ? THEN 1 ELSE 2 END", [
+                ExchangeRateStatus::ACTIVE,
+                ExchangeRateStatus::LOCKED,
+            ])
             ->orderByDesc('id');
 
         if ($companyId) {
@@ -47,14 +52,14 @@ class ExchangeRateService
         }
     }
 
-    public function validateRatesForPeriod(array $employeePayrolls, PayrollPeriod $period, Company $company): array
+    public function validateRatesForPeriod(array $employeePayrolls, PayrollPeriod $period, ?Company $company = null): array
     {
         $resolver = app(PayrollCurrencyResolver::class);
         $missing = [];
 
         foreach ($employeePayrolls as $employeePayroll) {
             try {
-                $resolver->resolve($employeePayroll, $period, $company);
+                $resolver->resolve($employeePayroll, $period);
             } catch (\Throwable $e) {
                 $employee = $employeePayroll->employee;
                 $missing[] = [

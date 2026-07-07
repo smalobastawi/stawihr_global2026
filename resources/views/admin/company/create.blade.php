@@ -62,7 +62,10 @@
 
                                 <div class="row" style="margin-top: 20px;">
                                     <div class="col-md-6">
-                                        <label class="control-label">Payroll Country<span class="validateRq">*</span></label>
+                                        <label class="control-label">
+                                            Payroll Country<span class="validateRq">*</span>
+                                            @include('admin.partials.field-tooltip', ['tooltip' => 'Which country\'s tax and statutory deduction rules apply when payroll is processed (e.g. Kenya PAYE, NSSF, SHIF).'])
+                                        </label>
                                         <select class="form-control" name="payroll_country" required>
                                             <option value="">Select payroll country</option>
                                             @foreach ($payrollCountries as $id => $label)
@@ -71,33 +74,40 @@
                                                 </option>
                                             @endforeach
                                         </select>
-                                        <small class="text-muted">Determines which statutory PAYE and deduction rules apply during payroll processing.</small>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="control-label">Payroll Base Currency (Statutory)<span class="validateRq">*</span></label>
+                                        <label class="control-label">
+                                            Statutory Base Currency<span class="validateRq">*</span>
+                                            @include('admin.partials.field-tooltip', ['tooltip' => 'Currency used for all statutory payroll calculations: PAYE, NSSF, SHIF, housing levy, and pension.'])
+                                        </label>
                                         @include('admin.partials.currency-select', [
                                             'name' => 'currency',
                                             'selected' => old('currency', \App\Lib\Enumerations\Currency::DEFAULT),
                                         ])
-                                        <small class="text-muted">All statutory payroll calculations are performed in this currency.</small>
                                     </div>
                                 </div>
 
                                 <div class="row" style="margin-top: 20px;">
                                     <div class="col-md-6">
-                                        <label class="control-label">Default Payment Currency</label>
+                                        <label class="control-label">
+                                            Multi-Currency Payroll
+                                            @include('admin.partials.field-tooltip', ['tooltip' => 'Enable when some employees are paid in USD while statutory payroll remains in the local base currency.'])
+                                        </label>
+                                        <select class="form-control" name="allow_employee_payment_currency" id="allow_employee_payment_currency">
+                                            <option value="0" selected>Disabled</option>
+                                            <option value="1">Enabled</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6" id="default_payment_currency_group" style="display: none;">
+                                        <label class="control-label">
+                                            Default Payment Currency
+                                            @include('admin.partials.field-tooltip', ['tooltip' => 'Default bank payment currency for employees without an individual payment currency on their payroll profile.'])
+                                        </label>
                                         @include('admin.partials.currency-select', [
                                             'name' => 'default_payment_currency',
                                             'selected' => old('default_payment_currency'),
                                             'required' => false,
                                         ])
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="control-label">Allow Employee Payment Currency</label>
-                                        <select class="form-control" name="allow_employee_payment_currency">
-                                            <option value="0" selected>No</option>
-                                            <option value="1">Yes</option>
-                                        </select>
                                     </div>
                                 </div>
 
@@ -243,4 +253,19 @@
                 </div>
             </div>
         </div>
-    @endsection
+    </div>
+@endsection
+
+@section('page_scripts')
+    <script>
+        (function() {
+            function togglePaymentCurrencyField() {
+                var enabled = document.getElementById('allow_employee_payment_currency').value === '1';
+                document.getElementById('default_payment_currency_group').style.display = enabled ? '' : 'none';
+            }
+
+            document.getElementById('allow_employee_payment_currency').addEventListener('change', togglePaymentCurrencyField);
+            togglePaymentCurrencyField();
+        })();
+    </script>
+@endsection

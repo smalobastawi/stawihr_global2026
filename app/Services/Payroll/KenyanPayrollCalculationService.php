@@ -178,7 +178,7 @@ class KenyanPayrollCalculationService
                 'days_worked' => $this->getWorkingDaysInPeriod(Carbon::parse($period->input_period_start), Carbon::parse($termination->termination_date)),
                 'total_working_days' => $this->getWorkingDaysInPeriod(Carbon::parse($period->input_period_start), Carbon::parse($period->input_period_end))
             ] : null
-        ]);
+        ], $basicSalary, $netSalary);
 
         // Check if there's an approval workflow for PayrollRecord
         $hasApprovalWorkflow = ApprovalWorkflow::forModel(PayrollRecord::class) !== null;

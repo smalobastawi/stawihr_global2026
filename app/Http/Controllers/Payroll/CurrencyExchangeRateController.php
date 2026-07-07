@@ -52,11 +52,9 @@ class CurrencyExchangeRateController extends Controller
 
     public function create()
     {
-        $periods = PayrollPeriod::orderByDesc('start_date')->limit(24)->get();
-
         return view('admin.payroll.settings.exchange-rates.form', [
             'rate' => new CurrencyExchangeRate(),
-            'periods' => $periods,
+            'periods' => $this->exchangeRateFormPeriods(),
         ]);
     }
 
@@ -79,11 +77,9 @@ class CurrencyExchangeRateController extends Controller
                 ->with('error', 'Locked exchange rates cannot be edited.');
         }
 
-        $periods = PayrollPeriod::orderByDesc('start_date')->limit(24)->get();
-
         return view('admin.payroll.settings.exchange-rates.form', [
             'rate' => $exchangeRate,
-            'periods' => $periods,
+            'periods' => $this->exchangeRateFormPeriods($exchangeRate),
         ]);
     }
 
@@ -137,7 +133,7 @@ class CurrencyExchangeRateController extends Controller
         }
 
         $missing = app(\App\Services\Payroll\Currency\ExchangeRateService::class)
-            ->validateRatesForPeriod($employees->all(), $period, $company);
+            ->validateRatesForPeriod($employees->all(), $period);
 
         return response()->json([
             'missing' => $missing,
@@ -192,5 +188,19 @@ class CurrencyExchangeRateController extends Controller
         }
 
         return $validated;
+    }
+
+    protected function exchangeRateFormPeriods(?CurrencyExchangeRate $existing = null)
+    {
+        return PayrollPeriod::query()
+            ->where(function ($query) use ($existing) {
+                $query->selectableForExchangeRates();
+
+                if ($existing?->payroll_period_id) {
+                    $query->orWhere('id', $existing->payroll_period_id);
+                }
+            })
+            ->orderByDesc('start_date')
+            ->get();
     }
 }

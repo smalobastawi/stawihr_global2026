@@ -65,20 +65,42 @@ trait HandlesPayrollMultiCurrency
             ->applyPaymentCurrencyToRecord($payrollRecord, $this->payrollCurrencyContext, $taxableIncome);
     }
 
-    protected function enrichPayrollMetadataWithCurrency(array $metadata): array
-    {
-        if (!$this->payrollCurrencyContext || !$this->payrollCurrencyContext->isMultiCurrency()) {
+    protected function enrichPayrollMetadataWithCurrency(
+        array $metadata,
+        ?float $basicSalaryBase = null,
+        ?float $netSalaryBase = null
+    ): array {
+        if (!$this->payrollCurrencyContext) {
             return $metadata;
         }
 
+        $context = $this->payrollCurrencyContext;
+        $conversionService = app(CurrencyConversionService::class);
+
         $metadata['currency'] = [
-            'base_currency' => $this->payrollCurrencyContext->baseCurrency,
-            'salary_currency' => $this->payrollCurrencyContext->salaryCurrency,
-            'payment_currency' => $this->payrollCurrencyContext->paymentCurrency,
-            'salary_to_base_rate' => $this->payrollCurrencyContext->salaryToBaseRate,
-            'base_to_payment_rate' => $this->payrollCurrencyContext->baseToPaymentRate,
-            'exchange_rate_date' => $this->payrollCurrencyContext->exchangeRateDate,
+            'base_currency' => $context->baseCurrency,
+            'salary_currency' => $context->salaryCurrency,
+            'payment_currency' => $context->paymentCurrency,
+            'salary_to_base_rate' => $context->salaryToBaseRate,
+            'base_to_payment_rate' => $context->baseToPaymentRate,
+            'exchange_rate_date' => $context->exchangeRateDate,
         ];
+
+        if ($context->requiresSalaryConversion && $basicSalaryBase !== null) {
+            $metadata['currency']['basic_salary_base_currency'] = $basicSalaryBase;
+            $metadata['currency']['basic_salary_salary_currency'] = $conversionService->roundForCurrency(
+                $basicSalaryBase / $context->salaryToBaseRate,
+                $context->salaryCurrency
+            );
+        }
+
+        if ($context->requiresSalaryConversion && $netSalaryBase !== null) {
+            $metadata['currency']['net_pay_base_currency'] = $netSalaryBase;
+            $metadata['currency']['net_pay_salary_currency'] = $conversionService->roundForCurrency(
+                $netSalaryBase / $context->salaryToBaseRate,
+                $context->salaryCurrency
+            );
+        }
 
         return $metadata;
     }

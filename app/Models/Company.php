@@ -33,9 +33,7 @@ class Company extends Model
         'registration_number',
         'nssf_employer_number',
         'shif_employer_code',
-        'employer_number',
         'nita_registration_number',
-        'ecitizen_identifier',
     ];
 
     protected $casts = [
@@ -48,12 +46,12 @@ class Company extends Model
      */
     public function getPayrollBaseCurrency(): string
     {
-        if (!empty($this->payroll_base_currency) && \App\Lib\Enumerations\Currency::isValid($this->payroll_base_currency)) {
-            return strtoupper($this->payroll_base_currency);
-        }
-
         if (!empty($this->currency) && \App\Lib\Enumerations\Currency::isValid($this->currency)) {
             return strtoupper($this->currency);
+        }
+
+        if (!empty($this->payroll_base_currency) && \App\Lib\Enumerations\Currency::isValid($this->payroll_base_currency)) {
+            return strtoupper($this->payroll_base_currency);
         }
 
         if ($this->payroll_country) {

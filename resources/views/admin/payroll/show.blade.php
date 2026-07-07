@@ -220,7 +220,17 @@
                                 <div class="col-md-3">
                                     <div class="well text-center">
                                         <h4 class="text-info">Basic Income</h4>
-                                        <h3><strong>KES {{ number_format($payrollRecord->basic_salary, 2) }}</strong></h3>
+                                        @if ($payrollRecord->requiresSalaryCurrencyConversion())
+                                            @php
+                                                $salaryCurrency = $payrollRecord->getSalaryCurrency();
+                                                $basicInSalaryCurrency = $payrollRecord->getBasicSalaryInSalaryCurrency();
+                                                $statutoryCurrency = $payrollRecord->getStatutoryCurrency();
+                                            @endphp
+                                            <h3><strong>{{ $salaryCurrency }} {{ number_format($basicInSalaryCurrency, 2) }}</strong></h3>
+                                            <p class="text-muted m-b-0">{{ $statutoryCurrency }} {{ number_format($payrollRecord->basic_salary, 2) }} equivalent</p>
+                                        @else
+                                            <h3><strong>{{ $payrollRecord->getStatutoryCurrency() }} {{ number_format($payrollRecord->basic_salary, 2) }}</strong></h3>
+                                        @endif
                                     </div>
                                 </div>
                                 <div class="col-md-3">
@@ -232,7 +242,7 @@
                                 <div class="col-md-3">
                                     <div class="well text-center">
                                         <h4 class="text-danger">Total Deductions</h4>
-                                        <h3><strong>KES {{ number_format($payrollRecord->total_deductions, 2) }}</strong>
+                                        <h3><strong>{{ $payrollRecord->getStatutoryCurrency() }} {{ number_format($payrollRecord->total_deductions, 2) }}</strong>
                                         </h3>
                                     </div>
                                 </div>
@@ -240,7 +250,9 @@
                                     <div class="well text-center" style="background-color: #d4edda;">
                                         <h4 class="text-success">Net Salary</h4>
                                         <h3><strong>{{ $payrollRecord->getStatutoryCurrency() }} {{ number_format($payrollRecord->net_salary, 2) }}</strong></h3>
-                                        @if ($payrollRecord->isMultiCurrencyPayout())
+                                        @if ($payrollRecord->requiresSalaryCurrencyConversion() && ($netInSalaryCurrency = $payrollRecord->getNetPayInSalaryCurrency()))
+                                            <p class="text-muted m-b-0">({{ $payrollRecord->getSalaryCurrency() }} {{ number_format($netInSalaryCurrency, 2) }})</p>
+                                        @elseif ($payrollRecord->isMultiCurrencyPayout())
                                             <p class="text-muted m-b-0">Payment: <strong>{{ number_format($payrollRecord->getDisbursementAmount(), 2) }} {{ strtoupper($payrollRecord->payment_currency) }}</strong></p>
                                         @endif
                                     </div>

@@ -4,6 +4,7 @@ namespace App\Models\Payroll;
 
 use App\Lib\Enumerations\PayrollStatus;
 use App\Models\Payroll\CurrencyExchangeRate;
+use App\Services\Payroll\Currency\CurrencyConversionService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -149,6 +150,125 @@ class PayrollRecord extends Model
         return $this->base_currency
             && $this->payment_currency
             && strtoupper($this->base_currency) !== strtoupper($this->payment_currency);
+    }
+
+    public function getCurrencyMetadata(): ?array
+    {
+        if (empty($this->metadata)) {
+            return null;
+        }
+
+        $metadata = is_string($this->metadata) ? json_decode($this->metadata, true) : $this->metadata;
+
+        return is_array($metadata) ? ($metadata['currency'] ?? null) : null;
+    }
+
+    public function getSalaryCurrency(): string
+    {
+        $metadata = $this->getCurrencyMetadata();
+        if (!empty($metadata['salary_currency'])) {
+            return strtoupper($metadata['salary_currency']);
+        }
+
+        $profileCurrency = $this->employeePayroll?->currency;
+        if (!empty($profileCurrency)) {
+            return strtoupper($profileCurrency);
+        }
+
+        return $this->getStatutoryCurrency();
+    }
+
+    public function requiresSalaryCurrencyConversion(): bool
+    {
+        return strtoupper($this->getSalaryCurrency()) !== strtoupper($this->getStatutoryCurrency());
+    }
+
+    public function getSalaryToBaseRate(): ?float
+    {
+        $metadata = $this->getCurrencyMetadata();
+        if (isset($metadata['salary_to_base_rate'])) {
+            return (float) $metadata['salary_to_base_rate'];
+        }
+
+        return null;
+    }
+
+    public function getBasicSalaryInSalaryCurrency(): ?float
+    {
+        if (!$this->requiresSalaryCurrencyConversion()) {
+            return null;
+        }
+
+        $metadata = $this->getCurrencyMetadata();
+        if (isset($metadata['basic_salary_salary_currency'])) {
+            return (float) $metadata['basic_salary_salary_currency'];
+        }
+
+        $rate = $this->getSalaryToBaseRate();
+        if ($rate && $rate > 0) {
+            return app(CurrencyConversionService::class)->roundForCurrency(
+                (float) $this->basic_salary / $rate,
+                $this->getSalaryCurrency()
+            );
+        }
+
+        $profileBasic = $this->employeePayroll?->basic_salary;
+        if ($profileBasic !== null && (float) $profileBasic > 0) {
+            return (float) $profileBasic;
+        }
+
+        return null;
+    }
+
+    public function getNetPayInSalaryCurrency(): ?float
+    {
+        if (!$this->requiresSalaryCurrencyConversion()) {
+            return null;
+        }
+
+        if (
+            $this->isMultiCurrencyPayout()
+            && strtoupper($this->payment_currency) === $this->getSalaryCurrency()
+            && $this->net_pay_payment_currency !== null
+        ) {
+            return (float) $this->net_pay_payment_currency;
+        }
+
+        $metadata = $this->getCurrencyMetadata();
+        if (isset($metadata['net_pay_salary_currency'])) {
+            return (float) $metadata['net_pay_salary_currency'];
+        }
+
+        $rate = $this->getSalaryToBaseRate();
+        if ($rate && $rate > 0) {
+            return app(CurrencyConversionService::class)->roundForCurrency(
+                (float) $this->net_salary / $rate,
+                $this->getSalaryCurrency()
+            );
+        }
+
+        return null;
+    }
+
+    public function resolveCompany(): ?\App\Models\Company
+    {
+        if ($this->relationLoaded('company') && $this->company) {
+            return $this->company;
+        }
+
+        if ($this->company_id) {
+            $company = $this->company ?? $this->company()->first();
+            if ($company) {
+                return $company;
+            }
+        }
+
+        $employee = $this->employeePayroll?->employee ?? $this->employee;
+        if ($employee?->company) {
+            return $employee->company;
+        }
+
+        return getActiveCompany();
     }
 
     /**

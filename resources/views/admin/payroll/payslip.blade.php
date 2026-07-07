@@ -263,20 +263,21 @@
 </head>
 
 <body>
+    @php $payslipCompany = $payrollRecord->resolveCompany(); @endphp
     <div class="payslip-container">
         <!-- Header Section -->
         <div class="header">
             <div class="logo-section">
                 <div class="logo-placeholder">
-                    @if(companyLogoUrl())
-                        <img src="{{ companyLogoUrl() }}" alt="{{ companyDisplayName() }}"
+                    @if(companyLogoUrl($payslipCompany))
+                        <img src="{{ companyLogoUrl($payslipCompany) }}" alt="{{ companyDisplayName($payslipCompany) }}"
                             class="logo-light" style="height:80px; width: auto; max-width: 200px;" />
                     @endif
                 </div>
             </div>
             <div class="payslip-title">
                 <h1>Payslip</h1>
-                <div class="company-name">{{ companyDisplayName() }}</div>
+                <div class="company-name">{{ companyDisplayName($payslipCompany) }}</div>
                 <div class="period">Pay Period: {{ $payrollRecord->payrollPeriod->name ?? 'N/A' }}</div>
             </div>
         </div>
@@ -288,19 +289,19 @@
                     <div class="details-title">Company Details</div>
                     <div class="detail-item">
                         <span class="detail-label">Company:</span>
-                        <span class="detail-value">{{ companyDisplayName() }}</span>
+                        <span class="detail-value">{{ companyDisplayName($payslipCompany) }}</span>
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Address:</span>
-                        <span class="detail-value">{{ companyDisplayAddress() ?? 'N/A' }}</span>
+                        <span class="detail-value">{{ companyDisplayAddress($payslipCompany) ?? 'N/A' }}</span>
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Tel:</span>
-                        <span class="detail-value">{{ companyDisplayPhone() ?? 'N/A' }}</span>
+                        <span class="detail-value">{{ companyDisplayPhone($payslipCompany) ?? 'N/A' }}</span>
                     </div>
                     <div class="detail-item">
                         <span class="detail-label">Email:</span>
-                        <span class="detail-value">{{ companyDisplayEmail() ?? 'N/A' }}</span>
+                        <span class="detail-value">{{ companyDisplayEmail($payslipCompany) ?? 'N/A' }}</span>
                     </div>
                 </div>
                 <div class="employee-details">
@@ -357,7 +358,19 @@
                         <tbody>
                             <tr>
                                 <td>Basic Income</td>
-                                <td class="amount currency">{{ number_format($payrollRecord->basic_salary, 2) }}</td>
+                                <td class="amount currency">
+                                    @if ($payrollRecord->requiresSalaryCurrencyConversion())
+                                        @php
+                                            $salaryCurrency = $payrollRecord->getSalaryCurrency();
+                                            $basicInSalaryCurrency = $payrollRecord->getBasicSalaryInSalaryCurrency();
+                                            $statutoryCurrency = $payrollRecord->getStatutoryCurrency();
+                                        @endphp
+                                        {{ number_format($basicInSalaryCurrency, 2) }} {{ $salaryCurrency }}
+                                        <br><small>({{ number_format($payrollRecord->basic_salary, 2) }} {{ $statutoryCurrency }})</small>
+                                    @else
+                                        {{ number_format($payrollRecord->basic_salary, 2) }}
+                                    @endif
+                                </td>
                             </tr>
 
                             <!-- Overtime Total Entry -->
@@ -534,9 +547,14 @@
             @endif
             <div class="summary-row net-pay">
                 <span>Net Pay (statutory {{ $statutoryCurrency }}):</span>
-                <span class="currency">{{ $statutoryCurrency }} {{ number_format($payrollRecord->net_salary, 2) }}</span>
+                <span class="currency">
+                    {{ $statutoryCurrency }} {{ number_format($payrollRecord->net_salary, 2) }}
+                    @if ($payrollRecord->requiresSalaryCurrencyConversion() && ($netInSalaryCurrency = $payrollRecord->getNetPayInSalaryCurrency()))
+                        ({{ $payrollRecord->getSalaryCurrency() }} {{ number_format($netInSalaryCurrency, 2) }})
+                    @endif
+                </span>
             </div>
-            @if ($payrollRecord->isMultiCurrencyPayout())
+            @if ($payrollRecord->isMultiCurrencyPayout() && strtoupper($payrollRecord->payment_currency) !== $payrollRecord->getSalaryCurrency())
                 <div class="summary-row net-pay" style="border-top: 1px dashed #ccc; margin-top: 8px; padding-top: 8px;">
                     <span>Amount Paid ({{ strtoupper($payrollRecord->payment_currency) }}):</span>
                     <span class="currency"><strong>{{ number_format($payrollRecord->getDisbursementAmount(), 2) }} {{ strtoupper($payrollRecord->payment_currency) }}</strong></span>

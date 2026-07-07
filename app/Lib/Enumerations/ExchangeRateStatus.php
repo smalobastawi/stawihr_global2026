@@ -29,6 +29,6 @@ class ExchangeRateStatus
     /** Statuses that payroll may select when looking up a rate. */
     public static function usableForPayroll(): array
     {
-        return [self::ACTIVE, self::DRAFT, self::APPROVED];
+        return [self::ACTIVE, self::LOCKED, self::DRAFT, self::APPROVED];
     }
 }

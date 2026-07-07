@@ -395,6 +395,18 @@ class PayrollPeriod extends Model
     }
 
     /**
+     * Periods available when configuring exchange rates.
+     */
+    public function scopeSelectableForExchangeRates($query)
+    {
+        return $query->where(function ($periodQuery) {
+            $periodQuery->where('is_current', true)
+                ->orWhere('status', self::STATUS_CLOSED)
+                ->orWhere('status', self::STATUS_OPEN);
+        });
+    }
+
+    /**
      * Get input period duration in days
      */
     public function getInputPeriodDurationAttribute()

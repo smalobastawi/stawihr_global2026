@@ -494,7 +494,8 @@ class PayrollController extends Controller
     public function generatePayslip(PayrollRecord $payrollRecord)
     {
         $payrollRecord->load([
-            'employeePayroll.employee',
+            'employeePayroll.employee.company',
+            'company',
             'payrollPeriod',
             'details'
         ]);

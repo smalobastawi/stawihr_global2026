@@ -30,9 +30,7 @@ class CompanySeeder extends Seeder
             'registration_number' => 'CPR/2020/123456',
             'nssf_employer_number' => '11111111',
             'shif_employer_code' => '1111111111',
-            'employer_number' => '11111111',
             'nita_registration_number' => 'NITA123456',
-            'ecitizen_identifier' => 'ECI-123456',
             'created_at' => Carbon::now(),
             'updated_at' => Carbon::now(),
         ]);

@@ -60,7 +60,7 @@ class CurrencyExchangeRate extends Model
 
     public function isUsableForPayroll(): bool
     {
-        return $this->status !== ExchangeRateStatus::LOCKED;
+        return in_array($this->status, ExchangeRateStatus::usableForPayroll(), true);
     }
 
     public function scopeForPayroll($query)

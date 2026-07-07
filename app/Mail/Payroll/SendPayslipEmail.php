@@ -63,7 +63,8 @@ class SendPayslipEmail extends Mailable
     private function generatePayslipPdf()
     {
         $this->payrollRecord->load([
-            'employeePayroll.employee',
+            'employeePayroll.employee.company',
+            'company',
             'payrollPeriod',
             'details'
         ]);
