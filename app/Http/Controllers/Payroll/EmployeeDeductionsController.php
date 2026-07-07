@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Carbon\Carbon;
 use App\Models\User;
+use App\Models\Payroll\PayrollPeriod;
 use Maatwebsite\Excel\Facades\Excel;
 
 class EmployeeDeductionsController extends Controller
@@ -39,12 +40,21 @@ class EmployeeDeductionsController extends Controller
         }
 
         // Filter by payroll period
-        if ($request->has('financial_year_id') && $request->financial_year_id) {
-            $query->where('financial_year_id', $request->financial_year_id);
-        }
+        if ($request->has('payroll_periods') && !empty($request->payroll_periods)) {
+            $selectedPeriods = PayrollPeriod::whereIn('id', $request->payroll_periods)->get();
 
-        if ($request->has('payroll_month') && $request->payroll_month) {
-            $query->where('payroll_month', $request->payroll_month);
+            $query->where(function ($q) use ($selectedPeriods) {
+                foreach ($selectedPeriods as $period) {
+                    $q->orWhere(function ($subQ) use ($period) {
+                        $subQ->applicableForPayrollPeriod($period);
+                    });
+                }
+            });
+        } elseif ($request->has('payroll_period_id') && $request->payroll_period_id) {
+            $period = PayrollPeriod::find($request->payroll_period_id);
+            if ($period) {
+                $query->applicableForPayrollPeriod($period);
+            }
         }
 
         // Search functionality
@@ -84,6 +94,7 @@ class EmployeeDeductionsController extends Controller
 
         $financialYears = \App\Models\FinancialYear::orderBy('start_date', 'desc')->get();
         $activeFinancialYear = getActiveFinancialYear();
+        $payrollPeriods = PayrollPeriod::orderBy('start_date', 'desc')->take(24)->get();
 
         return view('admin.payroll.employee_deductions.index', compact(
             'results',
@@ -91,7 +102,8 @@ class EmployeeDeductionsController extends Controller
             'deductionCategories',
             'statuses',
             'financialYears',
-            'activeFinancialYear'
+            'activeFinancialYear',
+            'payrollPeriods'
         ));
     }
 
@@ -137,9 +149,8 @@ class EmployeeDeductionsController extends Controller
 
         $financialYears = \App\Models\FinancialYear::orderBy('start_date', 'desc')->get();
         $activeFinancialYear = getActiveFinancialYear();
-
-        $financialYears = \App\Models\FinancialYear::orderBy('start_date', 'desc')->get();
-        $activeFinancialYear = getActiveFinancialYear();
+        $payrollPeriods = PayrollPeriod::where('status', '!=', 'closed')->orderBy('start_date', 'desc')->get();
+        $currentPayrollPeriod = getCurrentPayrollPeriod();
 
         return view('admin.payroll.employee_deductions.form', compact(
             'employees',
@@ -149,7 +160,9 @@ class EmployeeDeductionsController extends Controller
             'frequencies',
             'selectedEmployee',
             'financialYears',
-            'activeFinancialYear'
+            'activeFinancialYear',
+            'payrollPeriods',
+            'currentPayrollPeriod',
         ));
     }
 
@@ -168,10 +181,8 @@ class EmployeeDeductionsController extends Controller
                 'exists:deduction_types,id',
                 Rule::unique('employee_deductions', 'deduction_type_id')->where(function ($query) use ($request) {
                     return $query->where('employee_id', $request->employee_id)
-                        ->where(function ($q) {
-                            $q->whereNull('effective_to')
-                                ->orWhere('effective_to', '>=', now());
-                        });
+                        ->where('payroll_period_id', $request->payroll_period_id)
+                        ->whereNull('deleted_at');
                 }),
             ],
             'deduction_category' => 'required|in:loan_repayment,advance_repayment,tax,nssf,nhif,other',
@@ -181,16 +192,18 @@ class EmployeeDeductionsController extends Controller
             'units' => 'nullable|integer|min:0',
             'limit_per_month' => 'nullable|numeric|min:0',
             'limit_per_year' => 'nullable|numeric|min:0',
-            'effective_from' => 'required|date',
-            'effective_to' => 'nullable|date|after:effective_from',
-            'payroll_year' => 'required|integer|min:2020|max:2050',
-            'payroll_month' => 'required|integer|min:1|max:12',
+            'payroll_period_id' => 'required|exists:payroll_periods,id',
+            'end_payroll_period_id' => 'nullable|exists:payroll_periods,id',
             'frequency' => 'required|in:monthly,weekly,bi_weekly,quarterly,annually,one_time',
             'is_tax_deductible' => 'boolean',
             'is_recurring' => 'boolean',
             'description' => 'nullable|string|max:1000',
             'status' => 'required|integer',
         ]);
+
+        $validator->sometimes('end_payroll_period_id', 'required', function ($input) {
+            return !empty($input['is_recurring']) && ($input['frequency'] ?? null) !== 'one_time';
+        });
 
         $request->merge(['calculation_type' => $calculationType]);
 
@@ -203,7 +216,7 @@ class EmployeeDeductionsController extends Controller
         try {
             DB::beginTransaction();
 
-            $input = $request->all();
+            $input = EmployeeDeductions::syncPayrollPeriodInput($request->all());
             $input['created_by'] = Auth::id();
 
             // Check if approval workflow exists for EmployeeDeductions
@@ -228,7 +241,8 @@ class EmployeeDeductionsController extends Controller
             }
 
             // Set boolean values
-            $input['is_recurring'] = $request->has('is_recurring');
+            $input['is_recurring'] = $request->has('is_recurring')
+                && ($request->frequency ?? null) !== 'one_time';
 
             EmployeeDeductions::create($input);
 
@@ -310,6 +324,8 @@ class EmployeeDeductionsController extends Controller
 
         $financialYears = \App\Models\FinancialYear::orderBy('start_date', 'desc')->get();
         $activeFinancialYear = getActiveFinancialYear();
+        $payrollPeriods = PayrollPeriod::where('status', '!=', 'closed')->orderBy('start_date', 'desc')->get();
+        $currentPayrollPeriod = getCurrentPayrollPeriod();
 
         return view('admin.payroll.employee_deductions.form', compact(
             'editModeData',
@@ -319,7 +335,9 @@ class EmployeeDeductionsController extends Controller
             'frequencies',
             'statuses',
             'financialYears',
-            'activeFinancialYear'
+            'activeFinancialYear',
+            'payrollPeriods',
+            'currentPayrollPeriod',
         ));
     }
 
@@ -343,13 +361,15 @@ class EmployeeDeductionsController extends Controller
             'percentage' => 'required_if:calculation_type,percentage_of_basic|nullable|numeric|min:0|max:100',
             'rate' => 'required_if:calculation_type,daily_rate|nullable|numeric|min:0',
             'units' => 'nullable|integer|min:0',
-            'effective_from' => 'required|date',
-            'effective_to' => 'nullable|date|after:effective_from',
-            'payroll_year' => 'required|integer|min:2020|max:2050',
-            'payroll_month' => 'required|integer|between:1,12',
+            'payroll_period_id' => 'required|exists:payroll_periods,id',
+            'end_payroll_period_id' => 'nullable|exists:payroll_periods,id',
             'frequency' => 'required|in:monthly,weekly,bi_weekly,quarterly,annually,one_time',
             'status' => 'nullable|integer',
         ]);
+
+        $validator->sometimes('end_payroll_period_id', 'required', function ($input) {
+            return !empty($input['is_recurring']) && ($input['frequency'] ?? null) !== 'one_time';
+        });
 
         $request->merge(['calculation_type' => $calculationType]);
 
@@ -362,7 +382,7 @@ class EmployeeDeductionsController extends Controller
         try {
             DB::beginTransaction();
 
-            $input = $request->all();
+            $input = EmployeeDeductions::syncPayrollPeriodInput($request->all());
             $input['updated_by'] = Auth::id();
 
             // Check if approval workflow exists for EmployeeDeductions
@@ -382,7 +402,8 @@ class EmployeeDeductionsController extends Controller
             }
 
             // Set boolean values
-            $input['is_recurring'] = $request->has('is_recurring');
+            $input['is_recurring'] = $request->has('is_recurring')
+                && ($request->frequency ?? null) !== 'one_time';
 
             $deduction->update($input);
 
@@ -593,8 +614,7 @@ class EmployeeDeductionsController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'employee_id' => 'required|exists:employee,employee_id',
-            'payroll_year' => 'required|integer|min:2020|max:2050',
-            'payroll_month' => 'required|integer|min:1|max:12',
+            'payroll_period_id' => 'required|exists:payroll_periods,id',
         ]);
 
         if ($validator->fails()) {
@@ -616,10 +636,9 @@ class EmployeeDeductionsController extends Controller
             }
 
             $basicSalary = $employeePayroll->basic_salary;
-
-            // Create a payroll period for calculation
-            $periodStart = Carbon::create($request->payroll_year, $request->payroll_month, 1);
-            $periodEnd = $periodStart->copy()->endOfMonth();
+            $period = PayrollPeriod::findOrFail($request->payroll_period_id);
+            $periodStart = $period->input_period_start ?? $period->start_date;
+            $periodEnd = $period->input_period_end ?? $period->end_date;
 
             // Use the same method as in KenyanPayrollCalculationService to get working days
             $workingDays = $this->getWorkingDaysInMonth($periodStart, $periodEnd);

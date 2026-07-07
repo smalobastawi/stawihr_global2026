@@ -13,14 +13,17 @@ use Spatie\Activitylog\Facades\LogBatch;
 use App\Lib\Enumerations\CalculationTypes;
 use App\Lib\Enumerations\GeneralStatus;
 use App\Lib\Enumerations\PaymentFrequency;
+use App\Models\Concerns\AppliesToPayrollPeriod;
 use App\Models\Payroll\AllowanceType;
+use App\Models\Payroll\PayrollPeriod;
+use App\Lib\Enumerations\ApprovalStatus;
 use App\Traits\HasApprovalWorkflow;
 use App\Traits\ProvidesApprovalDetails;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EmployeeEarnings extends Model
 {
-    use HasFactory, LogsActivity, HasApprovalWorkflow, ProvidesApprovalDetails;
+    use HasFactory, LogsActivity, HasApprovalWorkflow, ProvidesApprovalDetails, AppliesToPayrollPeriod;
     use BelongsToCompany;
 
     protected $table = 'employee_earnings';
@@ -42,6 +45,8 @@ class EmployeeEarnings extends Model
         'effective_from',
         'effective_to',
         'financial_year_id',
+        'payroll_period_id',
+        'end_payroll_period_id',
         'payroll_year',
         'payroll_month',
         'description',
@@ -336,18 +341,21 @@ class EmployeeEarnings extends Model
      */
     public static function getActiveEarningsForEmployee($employeeId, $year = null, $month = null)
     {
-        $query = static::active()
-            ->forEmployee($employeeId)
-            ->with(['payrollEarningType', 'employee']);
+        $query = static::where('employee_id', $employeeId)
+            ->where('status', GeneralStatus::ACTIVE)
+            ->where('approval_status', ApprovalStatus::APPROVED)
+            ->with(['payrollEarningType', 'employee', 'payrollPeriod', 'endPayrollPeriod']);
 
         if ($year && $month) {
-            $query->where(function ($q) use ($year, $month) {
-                $q->forPayrollPeriod($year, $month)
-                    ->orWhere(function ($subQ) use ($year, $month) {
-                        $subQ->recurring()
-                            ->effectiveOn(Carbon::createFromDate($year, $month, 1));
-                    });
-            });
+            $period = PayrollPeriod::whereYear('start_date', $year)
+                ->whereMonth('start_date', $month)
+                ->first();
+
+            if ($period) {
+                return $query->get()
+                    ->filter(fn ($earning) => $earning->appliesToPayrollPeriod($period))
+                    ->values();
+            }
         }
 
         return $query->get();
@@ -378,10 +386,8 @@ class EmployeeEarnings extends Model
             'is_pensionable' => 'boolean',
             'is_recurring' => 'boolean',
             'frequency' => 'required_if:is_recurring,true|in:' . implode(',', PaymentFrequency::toArray()),
-            'effective_from' => 'required|date',
-            'effective_to' => 'nullable|date|after:effective_from',
-            'payroll_year' => 'required|integer|min:2000|max:2100',
-            'payroll_month' => 'required|integer|min:1|max:12',
+            'payroll_period_id' => 'required|exists:payroll_periods,id',
+            'end_payroll_period_id' => 'nullable|exists:payroll_periods,id',
             'description' => 'nullable|string|max:500',
         ];
     }
@@ -410,10 +416,10 @@ class EmployeeEarnings extends Model
             'Is Pensionable' => $this->is_pensionable ? 'Yes' : 'No',
             'Monthly Limit' => $this->limit_per_month ? number_format($this->limit_per_month, 2) : 'No Limit',
             'Yearly Limit' => $this->limit_per_year ? number_format($this->limit_per_year, 2) : 'No Limit',
-            'Effective From' => $this->effective_from->format('Y-m-d'),
-            'Effective To' => $this->effective_to?->format('Y-m-d') ?? 'No End Date',
-            'Payroll Period' => $this->payroll_year && $this->payroll_month ?
-                Carbon::create()->month($this->payroll_month)->year($this->payroll_year)->format('F Y') : 'N/A',
+            'Payroll Period' => $this->payrollPeriod?->name ?? ($this->payroll_year && $this->payroll_month
+                ? Carbon::create()->month($this->payroll_month)->year($this->payroll_year)->format('F Y')
+                : 'N/A'),
+            'End Payroll Period' => $this->endPayrollPeriod?->name ?? 'No End Period',
             'Status' => $this->status == GeneralStatus::ACTIVE ? 'Active' : 'Inactive',
             'Description' => $this->description ?? 'No description',
 

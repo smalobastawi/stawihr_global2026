@@ -236,64 +236,27 @@
 
                         <!-- Effective Period -->
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="form-group">
-                                    <label class="control-label col-md-4" for="effective_from">@lang('employee_deductions.effective_from')<span
-                                            class="validateRq">*</span></label>
-                                    <div class="col-md-8">
-                                        <input type="date" name="effective_from" value="{{ Request::old('effective_from') }}" class="form-control required effective_from" id="effective_from">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="control-label col-md-4"
-                                        for="effective_to">@lang('employee_deductions.effective_to')</label>
-                                    <div class="col-md-8">
-                                        <input type="date" name="effective_to" value="{{ Request::old('effective_to') }}" class="form-control effective_to" id="effective_to">
+                                    <div class="col-md-offset-2 col-md-10">
+                                        <div class="checkbox checkbox-info">
+                                            <input type="hidden" name="is_recurring" value="0">
+                                            <input type="checkbox"
+                                                   name="is_recurring"
+                                                   value="1"
+                                                   id="is_recurring"
+                                                   {{ old('is_recurring', isset($editModeData) ? $editModeData->is_recurring : 0) ? 'checked' : '' }}>
+                                            <label for="is_recurring">
+                                                @lang('employee_deductions.is_recurring')
+                                            </label>
+                                        </div>
+                                        <small class="text-muted">For recurring deductions, select a start and end payroll period below.</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Financial Year and Payroll Month -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="control-label col-md-4" for="payroll_year">Financial Year<span
-                                            class="validateRq">*</span></label>
-                                    <div class="col-md-8">
-                                        <select name="payroll_year" class="form-control required payroll_year" id="payroll_year">
-                                            <option value="">{{ __('common.select_financial_year') }}</option>
-                                            @foreach($financialYears as $financialYear)
-                                                @php
-                                                    $yearValue = \Carbon\Carbon::parse($financialYear->start_date)->year;
-                                                    $selectedYear = isset($editModeData) ? (string)$editModeData->payroll_year : (isset($activeFinancialYear) ? (string)\Carbon\Carbon::parse($activeFinancialYear->start_date)->year : '');
-                                                @endphp
-                                                <option value="{{ $yearValue }}" {{ $selectedYear == (string)$yearValue ? 'selected' : '' }}>{{ $financialYear->name }} ({{ $financialYear->formatted_date_range }})</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="control-label col-md-4" for="payroll_month">@lang('employee_deductions.payroll_month')<span
-                                            class="validateRq">*</span></label>
-                                    <div class="col-md-8">
-                                        <select name="payroll_month" class="form-control required payroll_month" id="payroll_month">
-                                            <option value="">{{ __('common.select_month') }}</option>
-                                            @foreach(range(1,12) as $__m)
-                                                @php
-                                                    $selectedMonth = isset($editModeData) ? (string)$editModeData->payroll_month : (string)date('n');
-                                                @endphp
-                                                <option value="{{ $__m }}" {{ $selectedMonth == (string)$__m ? 'selected' : '' }}>{{ date('F', mktime(0,0,0,$__m,1)) }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        @include('admin.payroll.partials.payroll-period-fields')
 
                         <div class="row">
                             <div class="col-md-6">
@@ -310,23 +273,6 @@
                                                 <option value="{{ $__key }}" {{ $selectedStatus == (string)$__key ? 'selected' : '' }}>{{ $__value }}</option>
                                             @endforeach
                                         </select>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-12">
-                                <div class="form-group">
-                                    <div class="col-md-offset-2 col-md-10">
-
-                                        <div>
-                                            <label for="is_recurring">
-                                                @lang('employee_deductions.is_recurring')
-                                                <input type="checkbox" name="is_recurring" value="1" id="is_recurring" @if((isset($editModeData) ? $editModeData->is_recurring : true)) checked @endif>
-                                                <input type="hidden" name="is_recurring" value="{{ 0 }}">
-                                            </label>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -410,8 +356,8 @@
             }
         });
 
-        // Calculate daily rate when employee or payroll month/year changes
-        $(document).on('change', '#employee_id, #payroll_year, #payroll_month', function() {
+        // Calculate daily rate when employee or payroll period changes
+        $(document).on('change', '#employee_id, #payroll_period_id', function() {
             if ($('#rate_section').is(':visible')) {
                 calculateDailyRate();
             }
@@ -422,24 +368,14 @@
             $('.deduction_type_id').trigger('change');
         @endif
 
-        const today = new Date();
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const firstDayFormatted = firstDayOfMonth.toISOString().split('T')[0];
-
-        // Ensure effective_to is after effective_from
-        $('#effective_from').on('change', function() {
-            $('#effective_to').attr('min', $(this).val());
-        });
-
         function calculateDailyRate() {
             var employeeId = $('#employee_id').val();
-            var payrollYear = $('#payroll_year').val();
-            var payrollMonth = $('#payroll_month').val();
+            var payrollPeriodId = $('#payroll_period_id').val();
 
-            if (!employeeId || !payrollYear || !payrollMonth) {
+            if (!employeeId || !payrollPeriodId) {
                 $('#rate').val('');
                 $('#working_days').val('');
-                $('#rate_calculation_note').text('Please select employee, year, and month first');
+                $('#rate_calculation_note').text('Please select employee and payroll period first');
                 return;
             }
 
@@ -454,8 +390,7 @@
                 data: {
                     _token: '{{ csrf_token() }}',
                     employee_id: employeeId,
-                    payroll_year: payrollYear,
-                    payroll_month: payrollMonth
+                    payroll_period_id: payrollPeriodId
                 },
                 success: function(response) {
                     if (response.success) {
@@ -482,8 +417,9 @@
         }
     });
 
-    $('.employee_id').select2({
-        placeholder: 'Search employee',
+    $('.employee_id, #payroll_period_id, #end_payroll_period_id').select2({
+        placeholder: 'Select option',
+        width: '100%'
     });
 </script>
 @endsection

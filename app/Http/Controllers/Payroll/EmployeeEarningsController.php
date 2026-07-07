@@ -45,19 +45,12 @@ class EmployeeEarningsController extends Controller
 
         // Filter by payroll periods
         if ($request->has('payroll_periods') && !empty($request->payroll_periods)) {
-            $payrollPeriods = $request->payroll_periods;
-
-            // Get the selected periods to extract years and months
-            $selectedPeriods = PayrollPeriod::whereIn('id', $payrollPeriods)->get();
+            $selectedPeriods = PayrollPeriod::whereIn('id', $request->payroll_periods)->get();
 
             $query->where(function ($q) use ($selectedPeriods) {
                 foreach ($selectedPeriods as $period) {
-                    $year = $period->start_date->year;
-                    $month = $period->start_date->month;
-
-                    $q->orWhere(function ($subQ) use ($year, $month) {
-                        $subQ->where('payroll_year', $year)
-                            ->where('payroll_month', $month);
+                    $q->orWhere(function ($subQ) use ($period) {
+                        $subQ->applicableForPayrollPeriod($period);
                     });
                 }
             });
@@ -119,8 +112,8 @@ class EmployeeEarningsController extends Controller
 
         $earningCategories = EarningCategories::toArray();
         $frequencies = EarningFrequencies::toArray();
-        $payrollPeriods = PayrollPeriod::where('status', '!=', 'closed')->get();
-
+        $payrollPeriods = PayrollPeriod::where('status', '!=', 'closed')->orderBy('start_date', 'desc')->get();
+        $currentPayrollPeriod = getCurrentPayrollPeriod();
 
         // Get financial years for dropdown
         $financialYears = FinancialYear::orderBy('start_date', 'desc')->get();
@@ -141,6 +134,7 @@ class EmployeeEarningsController extends Controller
             'financialYears',
             'activeFinancialYear',
             'payrollPeriods',
+            'currentPayrollPeriod',
         ));
     }
 
@@ -159,16 +153,17 @@ class EmployeeEarningsController extends Controller
             'percentage' => 'nullable|numeric|min:0|max:100',
             'rate' => 'nullable|numeric|min:0',
             'units' => 'nullable|integer|min:0',
-            'effective_from' => 'required|date',
-            'effective_to' => 'nullable|date|after:effective_from',
-            'financial_year_id' => 'required|exists:financial_years,id',
-            'payroll_month' => 'required|integer|min:1|max:12',
+            'payroll_period_id' => 'required|exists:payroll_periods,id',
+            'end_payroll_period_id' => 'nullable|exists:payroll_periods,id',
             'frequency' => 'required|' . EarningFrequencies::getValidationRule(),
             'description' => 'nullable|string|max:1000',
             'status' => 'required|integer',
             'is_recurring' => 'boolean',
-
         ]);
+
+        $validator->sometimes('end_payroll_period_id', 'required', function ($input) {
+            return !empty($input['is_recurring']) && ($input['frequency'] ?? null) !== 'one_time';
+        });
 
         $validator->sometimes('amount', 'required', function ($input) use ($earningType) {
             return $earningType->calculation_type == 'fixed_amount';
@@ -217,7 +212,7 @@ class EmployeeEarningsController extends Controller
         try {
             DB::beginTransaction();
 
-            $input = $request->all();
+            $input = EmployeeEarnings::syncPayrollPeriodInput($request->all());
             $input['created_by'] = Auth::id();
 
             // Check if approval workflow exists for EmployeeEarnings
@@ -242,7 +237,8 @@ class EmployeeEarningsController extends Controller
             $input['calculation_type'] = $earningType->calculation_type;
             $input['is_taxable'] = $earningType->taxable;
             $input['is_pensionable'] = $earningType->is_pensionable;
-            $input['is_recurring'] = $request->has('is_recurring');
+            $input['is_recurring'] = $request->has('is_recurring')
+                && ($request->frequency ?? null) !== 'one_time';
 
             EmployeeEarnings::create($input);
 
@@ -310,7 +306,8 @@ class EmployeeEarningsController extends Controller
         // Get financial years for dropdown
         $financialYears = FinancialYear::orderBy('start_date', 'desc')->get();
         $activeFinancialYear = getActiveFinancialYear();
-        $payrollPeriods = PayrollPeriod::where('status', '!=', 'closed')->get();
+        $payrollPeriods = PayrollPeriod::where('status', '!=', 'closed')->orderBy('start_date', 'desc')->get();
+        $currentPayrollPeriod = getCurrentPayrollPeriod();
         return view('admin.payroll.employee_earnings.form', compact(
             'editModeData',
             'employees',
@@ -321,6 +318,7 @@ class EmployeeEarningsController extends Controller
             'financialYears',
             'activeFinancialYear',
             'payrollPeriods',
+            'currentPayrollPeriod',
         ));
     }
 
@@ -340,17 +338,18 @@ class EmployeeEarningsController extends Controller
             'percentage' => 'nullable|numeric|min:0|max:100',
             'rate' => 'nullable|numeric|min:0',
             'units' => 'nullable|integer|min:0',
-            'effective_from' => 'required|date',
-            'effective_to' => 'nullable|date|after:effective_from',
-            'financial_year_id' => 'required|exists:financial_years,id',
-            'payroll_month' => 'required|integer|min:1|max:12',
+            'payroll_period_id' => 'required|exists:payroll_periods,id',
+            'end_payroll_period_id' => 'nullable|exists:payroll_periods,id',
             'frequency' => 'required|' . EarningFrequencies::getValidationRule(),
             'status' => 'required|in:active,inactive,suspended,expired',
             'description' => 'nullable|string|max:1000',
             'status' => 'required|integer',
             'is_recurring' => 'boolean',
-
         ]);
+
+        $validator->sometimes('end_payroll_period_id', 'required', function ($input) {
+            return !empty($input['is_recurring']) && ($input['frequency'] ?? null) !== 'one_time';
+        });
 
         $validator->sometimes('amount', 'required', function ($input) use ($earningType) {
             return $earningType->calculation_type == 'fixed_amount';
@@ -373,7 +372,7 @@ class EmployeeEarningsController extends Controller
         try {
             DB::beginTransaction();
 
-            $input = $request->all();
+            $input = EmployeeEarnings::syncPayrollPeriodInput($request->all());
             $input['updated_by'] = Auth::id();
 
             // Check if approval workflow exists for EmployeeEarnings
@@ -398,7 +397,8 @@ class EmployeeEarningsController extends Controller
             $input['calculation_type'] = $earningType->calculation_type;
             $input['is_taxable'] = $earningType->taxable;
             $input['is_pensionable'] = $earningType->is_pensionable;
-            $input['is_recurring'] = $request->has('is_recurring');
+            $input['is_recurring'] = $request->has('is_recurring')
+                && ($request->frequency ?? null) !== 'one_time';
 
             $earning->update($input);
 

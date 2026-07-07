@@ -14,13 +14,15 @@ use Spatie\Activitylog\Facades\LogBatch;
 use App\Lib\Enumerations\CalculationTypes;
 use App\Lib\Enumerations\GeneralStatus;
 use App\Lib\Enumerations\PaymentFrequency;
+use App\Models\Concerns\AppliesToPayrollPeriod;
 use App\Models\Payroll\DeductionType;
+use App\Models\Payroll\PayrollPeriod;
 use App\Traits\HasApprovalWorkflow;
 use App\Traits\ProvidesApprovalDetails;
 
 class EmployeeDeductions extends Model
 {
-    use HasFactory, LogsActivity, HasApprovalWorkflow, ProvidesApprovalDetails, SoftDeletes;
+    use HasFactory, LogsActivity, HasApprovalWorkflow, ProvidesApprovalDetails, SoftDeletes, AppliesToPayrollPeriod;
     use BelongsToCompany;
 
     protected $table = 'employee_deductions';
@@ -42,6 +44,8 @@ class EmployeeDeductions extends Model
         'frequency',
         'effective_from',
         'effective_to',
+        'payroll_period_id',
+        'end_payroll_period_id',
         'payroll_year',
         'payroll_month',
         'description',
@@ -331,18 +335,21 @@ class EmployeeDeductions extends Model
      */
     public static function getActiveDeductionsForEmployee($employeeId, $year = null, $month = null)
     {
-        $query = static::active()
-            ->forEmployee($employeeId)
-            ->with(['payrollDeductionType', 'employee']);
+        $query = static::where('employee_id', $employeeId)
+            ->where('status', GeneralStatus::ACTIVE)
+            ->where('approval_status', ApprovalStatus::APPROVED)
+            ->with(['payrollDeductionType', 'employee', 'payrollPeriod', 'endPayrollPeriod']);
 
         if ($year && $month) {
-            $query->where(function ($q) use ($year, $month) {
-                $q->forPayrollPeriod($year, $month)
-                    ->orWhere(function ($subQ) use ($year, $month) {
-                        $subQ->recurring()
-                            ->effectiveOn(Carbon::createFromDate($year, $month, 1));
-                    });
-            });
+            $period = PayrollPeriod::whereYear('start_date', $year)
+                ->whereMonth('start_date', $month)
+                ->first();
+
+            if ($period) {
+                return $query->get()
+                    ->filter(fn ($deduction) => $deduction->appliesToPayrollPeriod($period))
+                    ->values();
+            }
         }
 
         return $query->get();
@@ -372,10 +379,8 @@ class EmployeeDeductions extends Model
             'is_tax_deductible' => 'boolean',
             'is_recurring' => 'boolean',
             'frequency' => 'required_if:is_recurring,true|in:' . implode(',', PaymentFrequency::toArray()),
-            'effective_from' => 'required|date',
-            'effective_to' => 'nullable|date|after:effective_from',
-            'payroll_year' => 'required|integer|min:2000|max:2100',
-            'payroll_month' => 'required|integer|min:1|max:12',
+            'payroll_period_id' => 'required|exists:payroll_periods,id',
+            'end_payroll_period_id' => 'nullable|exists:payroll_periods,id',
             'description' => 'nullable|string|max:500',
         ];
     }
@@ -386,8 +391,8 @@ class EmployeeDeductions extends Model
             'Employee' => $this->employee->full_name ?? 'N/A',
             'Deduction Type' => $this->payrollDeductionType->name ?? 'N/A',
             'Amount' => number_format($this->amount, 2),
-            'Effective From' => $this->effective_from->format('Y-m-d'),
-            'Effective To' => $this->effective_to?->format('Y-m-d') ?? 'N/A'
+            'Payroll Period' => $this->payrollPeriod?->name ?? 'N/A',
+            'End Payroll Period' => $this->endPayrollPeriod?->name ?? 'No End Period',
         ];
     }
 }

@@ -267,100 +267,27 @@
                                 </div>
 
                                 <div class="row">
-                                    <div class="col-md-6">
+                                    <div class="col-md-12">
                                         <div class="form-group">
-                                            <label class="control-label col-md-4">
-                                                @lang('employee_earnings.effective_from')
-                                                <span class="validateRq">*</span>
-                                            </label>
-
-                                            <div class="col-md-8">
-                                                @php
-                                                    $defaultEffectiveFrom = old(
-                                                        'effective_from',
-                                                        isset($editModeData)
-                                                            ? $editModeData->effective_from
-                                                            : (isset($activeFinancialYear) ? $activeFinancialYear->start_date : '')
-                                                    );
-                                                @endphp
-
-                                                <input type="date"
-                                                       name="effective_from"
-                                                       value="{{ $defaultEffectiveFrom }}"
-                                                       class="form-control required effective_from"
-                                                       id="effective_from">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label class="control-label col-md-4">
-                                                @lang('employee_earnings.effective_to')
-                                            </label>
-
-                                            <div class="col-md-8">
-                                                <input type="date"
-                                                       name="effective_to"
-                                                       value="{{ old('effective_to', isset($editModeData) ? $editModeData->effective_to : '') }}"
-                                                       class="form-control effective_to"
-                                                       id="effective_to">
+                                            <div class="col-md-offset-2 col-md-10">
+                                                <div class="checkbox checkbox-info">
+                                                    <input type="hidden" name="is_recurring" value="0">
+                                                    <input type="checkbox"
+                                                           name="is_recurring"
+                                                           value="1"
+                                                           id="is_recurring"
+                                                           {{ old('is_recurring', isset($editModeData) ? $editModeData->is_recurring : 0) ? 'checked' : '' }}>
+                                                    <label for="is_recurring">
+                                                        @lang('employee_earnings.is_recurring')
+                                                    </label>
+                                                </div>
+                                                <small class="text-muted">For recurring items, select a start and end payroll period below.</small>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label class="control-label col-md-4">
-                                                Financial Year
-                                                <span class="validateRq">*</span>
-                                            </label>
-
-                                            <div class="col-md-8">
-                                                @php
-                                                    $selectedFinancialYear = old(
-                                                        'financial_year_id',
-                                                        isset($editModeData)
-                                                            ? $editModeData->financial_year_id
-                                                            : (isset($activeFinancialYear) ? $activeFinancialYear->id : '')
-                                                    );
-                                                @endphp
-
-                                                <select name="financial_year_id"
-                                                        class="form-control required financial_year_id"
-                                                        id="financial_year_id">
-                                                    <option value="">@lang('common.select_financial_year')</option>
-                                                    @foreach ($financialYears as $fy)
-                                                        <option value="{{ $fy->id }}"
-                                                            {{ (string) $selectedFinancialYear === (string) $fy->id ? 'selected' : '' }}>
-                                                            {{ $fy->name . ' (' . $fy->formatted_date_range . ')' }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            <label class="control-label col-md-4">
-                                                @lang('employee_earnings.payroll_month')
-                                                <span class="validateRq">*</span>
-                                            </label>
-
-                                            <div class="col-md-8">
-                                                <select name="payroll_month"
-                                                        class="form-control required payroll_month"
-                                                        id="payroll_month"
-                                                        data-selected="{{ old('payroll_month', isset($editModeData) ? $editModeData->payroll_month : '') }}">
-                                                    <option value="">@lang('common.select_month')</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                @include('admin.payroll.partials.payroll-period-fields')
 
                                 <div class="row">
                                     <div class="col-md-6">
@@ -382,26 +309,6 @@
                                                         </option>
                                                     @endforeach
                                                 </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="row">
-                                    <div class="col-md-12">
-                                        <div class="form-group">
-                                            <div class="col-md-offset-2 col-md-10">
-                                                <div class="checkbox checkbox-info">
-                                                    <input type="hidden" name="is_recurring" value="0">
-                                                    <input type="checkbox"
-                                                           name="is_recurring"
-                                                           value="1"
-                                                           id="is_recurring"
-                                                           {{ old('is_recurring', isset($editModeData) ? $editModeData->is_recurring : 1) ? 'checked' : '' }}>
-                                                    <label for="is_recurring">
-                                                        @lang('employee_earnings.is_recurring')
-                                                    </label>
-                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -458,18 +365,11 @@
 
 @section('page_scripts')
 <script>
-    var financialYears = @json($financialYears);
-
     jQuery(function ($) {
         $("#employeeEarningForm").validate();
 
-        $('.employee_id').select2({
-            placeholder: 'Search employee',
-            width: '100%'
-        });
-
-        $('#payroll_month').select2({
-            placeholder: 'Select month',
+        $('.employee_id, #payroll_period_id, #end_payroll_period_id').select2({
+            placeholder: 'Select option',
             width: '100%'
         });
 
@@ -502,59 +402,7 @@
             }
         });
 
-        $(document).on("change", "#financial_year_id", function () {
-            var financialYearId = $(this).val();
-            var monthSelect = $('#payroll_month');
-            var selectedMonth = monthSelect.data('selected');
-
-            monthSelect.empty().append('<option value="">@lang("common.select_month")</option>');
-
-            if (financialYearId) {
-                var selectedFY = financialYears.find(function (fy) {
-                    return fy.id == financialYearId;
-                });
-
-                if (selectedFY) {
-                    var startDate = new Date(selectedFY.start_date);
-                    var endDate = new Date(selectedFY.end_date);
-                    var currentDate = new Date(startDate);
-                    var seen = {};
-
-                    while (currentDate <= endDate) {
-                        var monthNum = currentDate.getMonth() + 1;
-                        var year = currentDate.getFullYear();
-                        var key = year + '-' + monthNum;
-
-                        if (!seen[key]) {
-                            seen[key] = true;
-
-                            var monthName = currentDate.toLocaleString('default', {
-                                month: 'long'
-                            });
-
-                            var isSelected = String(selectedMonth) === String(monthNum) ? 'selected' : '';
-
-                            monthSelect.append(
-                                '<option value="' + monthNum + '" ' + isSelected + '>' +
-                                monthName + ' ' + year +
-                                '</option>'
-                            );
-                        }
-
-                        currentDate.setMonth(currentDate.getMonth() + 1);
-                    }
-                }
-            }
-
-            monthSelect.trigger('change.select2');
-        });
-
         $('.payroll_earning_type_id').trigger('change');
-        $('#financial_year_id').trigger('change');
-
-        $('#effective_from').on('change', function () {
-            $('#effective_to').attr('min', $(this).val());
-        }).trigger('change');
     });
 </script>
 @endsection

@@ -122,44 +122,22 @@ class EmployeePayroll extends Model
     public function allowances()
     {
         $payrollPeriod = getCurrentPayrollPeriod();
-        $periodStart = $payrollPeriod->input_period_start->format('Y-m-d');
-        $periodEnd = $payrollPeriod->input_period_end->format('Y-m-d');
 
         return $this->hasMany(EmployeeEarnings::class, 'employee_id', 'employee_id')
             ->where('earning_category', 'Allowance')
             ->where('status', GeneralStatus::ACTIVE)
             ->where('approval_status', ApprovalStatus::APPROVED)
-            ->where(function ($query) use ($periodStart, $periodEnd) {
-                $query->where(function ($q) use ($periodStart, $periodEnd) {
-                    // Records that are active during ANY part of the payroll period
-                    $q->where('effective_from', '<=', $periodEnd)
-                        ->where(function ($subQ) use ($periodStart) {
-                            $subQ->whereNull('effective_to')
-                                ->orWhere('effective_to', '>=', $periodStart);
-                        });
-                });
-            });
+            ->when($payrollPeriod, fn ($query) => $query->applicableForPayrollPeriod($payrollPeriod));
     }
 
     public function earnings()
     {
         $payrollPeriod = getCurrentPayrollPeriod();
-        $periodStart = $payrollPeriod->input_period_start->format('Y-m-d');
-        $periodEnd = $payrollPeriod->input_period_end->format('Y-m-d');
 
         return $this->hasMany(EmployeeEarnings::class, 'employee_id', 'employee_id')
             ->where('status', GeneralStatus::ACTIVE)
             ->where('approval_status', ApprovalStatus::APPROVED)
-            ->where(function ($query) use ($periodStart, $periodEnd) {
-                $query->where(function ($q) use ($periodStart, $periodEnd) {
-                    // Records that are active during ANY part of the payroll period
-                    $q->where('effective_from', '<=', $periodEnd)
-                        ->where(function ($subQ) use ($periodStart) {
-                            $subQ->whereNull('effective_to')
-                                ->orWhere('effective_to', '>=', $periodStart);
-                        });
-                });
-            });
+            ->when($payrollPeriod, fn ($query) => $query->applicableForPayrollPeriod($payrollPeriod));
     }
 
     /**
@@ -190,66 +168,46 @@ class EmployeePayroll extends Model
             $payrollPeriod = getCurrentPayrollPeriod();
         }
 
-        $periodStart = $payrollPeriod->input_period_start->format('Y-m-d');
-        $periodEnd = $payrollPeriod->input_period_end->format('Y-m-d');
-
-        return EmployeeEarnings::where('employee_id', $this->employee_id)
-            ->where('earning_category', 'Allowance') // Make sure this matches your enum/category value
-            ->where('status', GeneralStatus::ACTIVE)
-            ->where('approval_status', ApprovalStatus::APPROVED)
-            ->where(function ($query) use ($periodStart, $periodEnd) {
-                $query->where(function ($q) use ($periodStart, $periodEnd) {
-                    // Records that are active during ANY part of the payroll period
-                    $q->where('effective_from', '<=', $periodEnd)
-                        ->where(function ($subQ) use ($periodStart) {
-                            $subQ->whereNull('effective_to')
-                                ->orWhere('effective_to', '>=', $periodStart);
-                        });
-                });
-            })
-            ->get();
+        return $this->activeEarningsForPeriod($payrollPeriod)
+            ->where('earning_category', 'Allowance');
     }
 
     public function getAllActiveEarnings()
     {
-        $payrollPeriod = getCurrentPayrollPeriod();
-        $periodStart = $payrollPeriod->input_period_start->format('Y-m-d');
-        $periodEnd = $payrollPeriod->input_period_end->format('Y-m-d');
-
-        return EmployeeEarnings::where('employee_id', $this->employee_id)
-            ->where('approval_status', ApprovalStatus::APPROVED)
-            ->where('status', GeneralStatus::ACTIVE)
-            ->where(function ($query) use ($periodStart, $periodEnd) {
-                $query->where(function ($q) use ($periodStart, $periodEnd) {
-                    // Records that are active during ANY part of the period
-                    $q->where(function ($innerQ) use ($periodStart, $periodEnd) {
-                        // Records that start before period end AND end after period start
-                        $innerQ->where('effective_from', '<=', $periodEnd)
-                            ->where(function ($subQ) use ($periodStart) {
-                                $subQ->whereNull('effective_to')
-                                    ->orWhere('effective_to', '>=', $periodStart);
-                            });
-                    });
-                });
-            })
-            ->get();
+        return $this->activeEarningsForPeriod(getCurrentPayrollPeriod());
     }
 
     public function getSalaryTypeEarning()
     {
-        return EmployeeEarnings::where('employee_id', $this->employee_id)
-            ->whereHas('payrollEarningType', function ($query) {
-                $query->where('name', 'LIKE', '%salary%');
-            })
-            ->with('payrollEarningType')
-            ->where('approval_status', ApprovalStatus::APPROVED)
-            ->where('status', GeneralStatus::ACTIVE)
-            ->where('effective_from', '>=', getCurrentPayrollPeriod()->input_period_start->format('Y-m-d'))
-            ->where(function ($query) {
-                $query->whereNull('effective_to')
-                    ->orWhere('effective_to', '>=', getCurrentPayrollPeriod()->input_period_end->format('Y-m-d'));
+        $payrollPeriod = getCurrentPayrollPeriod();
+
+        return $this->activeEarningsForPeriod($payrollPeriod)
+            ->filter(function ($earning) {
+                return stripos($earning->payrollEarningType?->name ?? '', 'salary') !== false;
             })
             ->first();
+    }
+
+    protected function activeEarningsForPeriod($payrollPeriod)
+    {
+        return EmployeeEarnings::where('employee_id', $this->employee_id)
+            ->where('approval_status', ApprovalStatus::APPROVED)
+            ->where('status', GeneralStatus::ACTIVE)
+            ->with(['payrollPeriod', 'endPayrollPeriod', 'payrollEarningType'])
+            ->get()
+            ->filter(fn ($earning) => $earning->appliesToPayrollPeriod($payrollPeriod))
+            ->values();
+    }
+
+    protected function activeDeductionsForPeriod($payrollPeriod)
+    {
+        return EmployeeDeductions::where('employee_id', $this->employee_id)
+            ->where('approval_status', ApprovalStatus::APPROVED)
+            ->where('status', GeneralStatus::ACTIVE)
+            ->with(['payrollPeriod', 'endPayrollPeriod', 'payrollDeductionType'])
+            ->get()
+            ->filter(fn ($deduction) => $deduction->appliesToPayrollPeriod($payrollPeriod))
+            ->values();
     }
 
     /**
@@ -392,23 +350,7 @@ class EmployeePayroll extends Model
             $payrollPeriod = getCurrentPayrollPeriod();
         }
 
-        $periodStart = $payrollPeriod->input_period_start->format('Y-m-d');
-        $periodEnd = $payrollPeriod->input_period_end->format('Y-m-d');
-
-        return $this->employeeDeductions()
-            ->active()
-            ->approved()
-            ->where(function ($query) use ($periodStart, $periodEnd) {
-                $query->where(function ($q) use ($periodStart, $periodEnd) {
-                    // Records that are active during ANY part of the payroll period
-                    $q->where('effective_from', '<=', $periodEnd)
-                        ->where(function ($subQ) use ($periodStart) {
-                            $subQ->whereNull('effective_to')
-                                ->orWhere('effective_to', '>=', $periodStart);
-                        });
-                });
-            })
-            ->get();
+        return $this->activeDeductionsForPeriod($payrollPeriod);
     }
 
     /**
@@ -437,25 +379,11 @@ class EmployeePayroll extends Model
             $payrollPeriod = getCurrentPayrollPeriod();
         }
 
-        $periodStart = $payrollPeriod->input_period_start->format('Y-m-d');
-        $periodEnd = $payrollPeriod->input_period_end->format('Y-m-d');
-
-        return $this->employeeDeductions()
-            ->active()
-            ->approved()
-            ->where(function ($query) use ($periodStart, $periodEnd) {
-                $query->where(function ($q) use ($periodStart, $periodEnd) {
-                    $q->where('effective_from', '<=', $periodEnd)
-                        ->where(function ($subQ) use ($periodStart) {
-                            $subQ->whereNull('effective_to')
-                                ->orWhere('effective_to', '>=', $periodStart);
-                        });
-                });
+        return $this->activeDeductionsForPeriod($payrollPeriod)
+            ->filter(function ($deduction) {
+                return (bool) $deduction->payrollDeductionType?->is_statutory;
             })
-            ->whereHas('payrollDeductionType', function ($query) {
-                $query->where('is_statutory', true);
-            })
-            ->get();
+            ->values();
     }
 
     /**
