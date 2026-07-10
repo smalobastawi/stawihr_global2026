@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Rats\Zkteco\Lib\ZKTeco;
 use Illuminate\Support\Str;
+use App\Support\SecureUpload;
 
 
 class EmployeeRepository
@@ -269,10 +270,7 @@ class EmployeeRepository
 
                 $fileName = $data['document_name'][$i] . '_' . $uuid . '.' . $data['document_file'][$i]->getClientOriginalExtension();
 
-                $data['document_file'][$i]->move(public_path('uploads/employeeDocs'), $fileName);
-                if (file_exists(public_path('uploads/employeeDocs') . $fileName) and !empty($fileName)) {
-                    unlink(public_path('uploads/employeeDocs') . $fileName);
-                }
+                SecureUpload::store($data['document_file'][$i], SecureUpload::EMPLOYEE_DOCS, $fileName);
 
                 $documentData[$i] = [
                     'employee_id' => $employee->employee_id,

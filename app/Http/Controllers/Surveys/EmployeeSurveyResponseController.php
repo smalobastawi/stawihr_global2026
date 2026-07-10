@@ -86,7 +86,7 @@ class EmployeeSurveyResponseController extends Controller
 
             // Handle file uploads
             if ($request->hasFile("response.$questionId")) {
-                $filePath = $request->file("response.$questionId")->store('responses/files', 'public');
+                $filePath = $request->file("response.$questionId")->store('responses/files', 'local');
                 $response = $filePath;
             }
 

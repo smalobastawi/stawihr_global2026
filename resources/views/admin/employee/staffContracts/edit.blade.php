@@ -182,7 +182,7 @@
                                                         <td>{{ ucfirst($doc->document_type) }}</td>
                                                         <td>{{ $doc->date_uploaded ? \Carbon\Carbon::parse($doc->date_uploaded)->format('Y-m-d') : 'N/A' }}</td>
                                                         <td>
-                                                            <a style="color: #fff;" href="{{ url('uploads/employeeDocs') . '/' . $doc->document_link }}" target="_blank" class="btn btn-info btn-xs">
+                                                            <a style="color: #fff;" href="{{ employee_doc_url($doc->document_link ) }}" target="_blank" class="btn btn-info btn-xs">
                                                                 <i class="fa fa-eye" ></i> View
                                                             </a>
                                                             <button type="button" class="btn btn-danger btn-xs delete-existing-doc" data-doc-id="{{ $doc->id }}">

@@ -44,7 +44,7 @@
 
                             @if ($notice->attach_file)
                                 <hr>
-                                <a href="{{ asset('uploads/notice/' . $notice->attach_file) }}"
+                                <a href="{{ notice_attachment_url($notice->attach_file) }}"
                                     class="btn btn-primary" target="_blank" rel="noopener">
                                     <i class="fa fa-paperclip"></i> View Attachment
                                 </a>

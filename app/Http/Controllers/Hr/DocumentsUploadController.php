@@ -12,6 +12,7 @@ use App\Models\DocumentConsent;
 use App\Models\Employee;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use App\Support\SecureUpload;
 
 use Illuminate\Http\Request;
 
@@ -145,8 +146,17 @@ class DocumentsUploadController extends Controller
     public function renderDocument($id)
     {
         $document = HrDocument::findOrFail($id);
-        $path = public_path('uploads/documents/' . $document->file);
-        return response()->file($path);
+        $storedPath = $document->file_path ?: ($document->file ? 'uploads/documents/' . $document->file : null);
+
+        if ($storedPath && SecureUpload::storedPathExists($storedPath)) {
+            return SecureUpload::responseFromStored($storedPath);
+        }
+
+        if ($document->file && SecureUpload::exists(SecureUpload::HR_DOCUMENTS, $document->file)) {
+            return SecureUpload::response(SecureUpload::HR_DOCUMENTS, $document->file);
+        }
+
+        abort(404);
     }
     public function review($id)
     {

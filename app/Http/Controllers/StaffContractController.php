@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateStaffContractRequest;
 use App\Models\Employee;
 use App\Models\EmployeeDocuments;
 use App\Repositories\EmployeeRepository;
+use App\Support\SecureUpload;
 use Illuminate\Http\Request;
 
 class StaffContractController extends Controller
@@ -100,11 +101,7 @@ class StaffContractController extends Controller
                 if (!empty($docId)) {
                     $document = EmployeeDocuments::find($docId);
                     if ($document) {
-                        // Delete the file from storage
-                        $filePath = public_path('uploads/employeeDocs/' . $document->document_link);
-                        if ($document->document_link && file_exists($filePath)) {
-                            unlink($filePath);
-                        }
+                        SecureUpload::delete(SecureUpload::EMPLOYEE_DOCS, $document->document_link);
                         $document->delete();
                     }
                 }

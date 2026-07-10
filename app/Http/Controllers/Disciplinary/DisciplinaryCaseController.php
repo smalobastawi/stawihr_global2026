@@ -14,6 +14,7 @@ use App\Models\DisciplinaryCategory;
 use App\Models\Employee;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use App\Support\SecureUpload;
 
 class DisciplinaryCaseController extends Controller
 {
@@ -88,7 +89,7 @@ class DisciplinaryCaseController extends Controller
 
         // Handle file upload
         if ($request->hasFile('attachment')) {
-            $filePath = $request->file('attachment')->store('disciplinacy/uploads', 'public');
+            $filePath = $request->file('attachment')->store('disciplinacy/uploads', 'local');
             $disciplinaryCase->attachment = $filePath;
         }
 
@@ -160,7 +161,7 @@ class DisciplinaryCaseController extends Controller
 
         // Handle file upload
         if ($request->hasFile('attachment')) {
-            $filePath = $request->file('attachment')->store('disciplinacy/uploads', 'public');
+            $filePath = $request->file('attachment')->store('disciplinacy/uploads', 'local');
             $disciplinaryCase->attachment = $filePath;
         }
 
@@ -257,7 +258,7 @@ class DisciplinaryCaseController extends Controller
         $caseAction->status = $request->status;
 
         if ($request->hasFile('attachment')) {
-            $filePath = $request->file('attachment')->store('disciplinacy/uploads', 'public');
+            $filePath = $request->file('attachment')->store('disciplinacy/uploads', 'local');
             $caseAction->attachment = $filePath;
         }
         $caseAction->save();
@@ -286,7 +287,7 @@ class DisciplinaryCaseController extends Controller
         $caseAction->status = $request->case_status;
 
         if ($request->hasFile('attachment')) {
-            $filePath = $request->file('attachment')->store('disciplinacy/uploads', 'public');
+            $filePath = $request->file('attachment')->store('disciplinacy/uploads', 'local');
             $caseAction->attachment = $filePath;
         }
         $caseAction->save();
@@ -315,7 +316,7 @@ class DisciplinaryCaseController extends Controller
         $caseAction->status = $request->case_status;
 
         if ($request->hasFile('attachment')) {
-            $filePath = $request->file('attachment')->store('disciplinacy/uploads', 'public');
+            $filePath = $request->file('attachment')->store('disciplinacy/uploads', 'local');
             $caseAction->attachment = $filePath;
         }
         $caseAction->save();

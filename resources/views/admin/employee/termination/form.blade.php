@@ -136,7 +136,7 @@
                             <td>{{ $doc->document_name }}</td>
                             <td>{{ $doc->created_at->format('Y-m-d') }}</td>
                             <td>
-                                <a href="{{ url('uploads/employeeDocs/'.$doc->file_url) }}" target="_blank">View</a>
+                                <a href="{{ employee_doc_url($doc->file_url) }}" target="_blank">View</a>
                                 |
                                 <a href="#" class="remove-file" data-id="{{ $doc->id }}">Delete</a>
                             </td>

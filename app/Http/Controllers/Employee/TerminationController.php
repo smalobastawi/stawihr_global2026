@@ -28,6 +28,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Support\SecureUpload;
 
 
 class TerminationController extends Controller
@@ -235,6 +236,7 @@ class TerminationController extends Controller
             foreach ($terminatioDocs as $doc) {
                 // Delete file from storage
                 Storage::delete('uploads/employeeDocs/' . $doc->file_url);
+                SecureUpload::delete(SecureUpload::EMPLOYEE_DOCS, $doc->file_url);
                 $doc->delete();
             }
             $bug = 0;
@@ -271,10 +273,7 @@ class TerminationController extends Controller
 
                 $fileName = $data['document_name'][$i].'_'.$uuid.'.' . $data['document_file'][$i]->getClientOriginalExtension();
 
-                $data['document_file'][$i]->move(public_path('uploads/employeeDocs'), $fileName);
-                    if (file_exists(public_path('uploads/employeeDocs') . $fileName) and !empty($fileName)) {
-                        unlink(public_path('uploads/employeeDocs') . $fileName);
-                    }
+                SecureUpload::store($data['document_file'][$i], SecureUpload::EMPLOYEE_DOCS, $fileName);
 
                 $documentData[$i] = [
                     'employee_id' => $employee->employee_id,
@@ -298,6 +297,7 @@ class TerminationController extends Controller
         $document = TerminationDocs::findOrFail($request->id);
         // Delete file from storage
         Storage::delete('uploads/employeeDocs/' . $document->file_url);
+        SecureUpload::delete(SecureUpload::EMPLOYEE_DOCS, $document->file_url);
         $document->delete();
 
         return response()->json(['success' => true]);

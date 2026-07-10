@@ -18,6 +18,7 @@ use App\Http\Controllers\Payroll\ProgramAllocationController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\EthnicityController;
 use App\Http\Controllers\SubscriptionSuspensionController;
+use App\Http\Controllers\SecureFileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -72,6 +73,21 @@ Route::group(['middleware' => ['guest']], function () {
 Route::get('subscription/suspended', [SubscriptionSuspensionController::class, 'show'])
     ->middleware(['auth'])
     ->name('subscription.suspended');
+
+Route::middleware(['web'])->group(function () {
+    Route::get('secure-files/stored/{path}', [SecureFileController::class, 'stored'])
+        ->where('path', '[A-Za-z0-9\-_]+')
+        ->name('secure-file.stored');
+    Route::get('secure-files/stored/{path}/download', [SecureFileController::class, 'downloadStored'])
+        ->where('path', '[A-Za-z0-9\-_]+')
+        ->name('secure-file.stored-download');
+    Route::get('secure-files/{type}/{filename}', [SecureFileController::class, 'show'])
+        ->where('filename', '[^/]+')
+        ->name('secure-file.show');
+    Route::get('secure-files/{type}/{filename}/download', [SecureFileController::class, 'download'])
+        ->where('filename', '[^/]+')
+        ->name('secure-file.download');
+});
 
 Route::group(['middleware' => ['web']], function () {
     Route::get('/job/{job_id}/view/description', [JobPostController::class, 'viewJdFile'])->name('jobPost.viewDescription');

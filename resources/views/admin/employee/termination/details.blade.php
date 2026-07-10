@@ -116,7 +116,7 @@
 										<td>{!! $value->created_at->format('Y-m-d') !!}</td>
 										<td>
 											<a
-												href="{{ url('uploads/employeeDocs') . '/' . $value->file_url }}">
+												href="{{ employee_doc_url($value->file_url ) }}">
 												View </a>
 										</td>
 									

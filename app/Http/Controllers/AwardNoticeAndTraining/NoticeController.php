@@ -6,6 +6,7 @@
 namespace App\Http\Controllers\AwardNoticeAndTraining;
 
 use App\Http\Controllers\Controller;
+use App\Support\SecureUpload;
 
 use App\Http\Requests\NoticeRequest;
 use Illuminate\Support\Facades\Auth;
@@ -68,7 +69,7 @@ class NoticeController extends Controller
 
         if ($file) {
             $fileName = md5(Str::random(30) . time() . '_' . $request->file('attach_file')) . '.' . $request->file('attach_file')->getClientOriginalExtension();
-            $request->file('attach_file')->move('uploads/notice/', $fileName);
+            SecureUpload::store($request->file('attach_file'), SecureUpload::NOTICE, $fileName);
             $input['attach_file'] = $fileName;
         }
         $bug = 0;
@@ -181,10 +182,8 @@ class NoticeController extends Controller
 
         if ($file) {
             $fileName = md5(Str::random(30) . time() . '_' . $request->file('attach_file')) . '.' . $request->file('attach_file')->getClientOriginalExtension();
-            $request->file('attach_file')->move('uploads/notice/', $fileName);
-            if (file_exists('uploads/notice/' . $data->attach_file) and !empty($data->attach_file)) {
-                unlink('uploads/notice/' . $data->attach_file);
-            }
+            SecureUpload::delete(SecureUpload::NOTICE, $data->attach_file);
+            SecureUpload::store($request->file('attach_file'), SecureUpload::NOTICE, $fileName);
             $input['attach_file'] = $fileName;
         }
 
@@ -231,9 +230,7 @@ class NoticeController extends Controller
         try {
             $data = Notice::FindOrFail($id);
             if (!is_null($data->attach_file)) {
-                if (file_exists('uploads/notice/' . $data->attach_file) and !empty($data->attach_file)) {
-                    unlink('uploads/notice/' . $data->attach_file);
-                }
+                SecureUpload::delete(SecureUpload::NOTICE, $data->attach_file);
             }
             $data->delete();
             $bug = 0;

@@ -245,7 +245,7 @@
                             <div class="attachment-title">
                                 <i class="fa fa-paperclip"></i>
                                 Attachment
-                                <a href="{{ asset('uploads/notice/' . $editModeData->attach_file) }}" 
+                                <a href="{{ notice_attachment_url($editModeData->attach_file) }}" 
                                    target="_blank" 
                                    class="btn btn-sm btn-outline-primary pull-right">
                                     <i class="fa fa-download"></i> Download
@@ -253,10 +253,10 @@
                             </div>
                             <div class="attachment-preview">
                                 @if($isImage)
-                                    <img src="{{ asset('uploads/notice/' . $editModeData->attach_file) }}" 
+                                    <img src="{{ notice_attachment_url($editModeData->attach_file) }}" 
                                          alt="Notice Attachment">
                                 @else
-                                    <embed src="{{ asset('uploads/notice/' . $editModeData->attach_file) }}" 
+                                    <embed src="{{ notice_attachment_url($editModeData->attach_file) }}" 
                                            type="application/pdf">
                                 @endif
                             </div>

@@ -67,7 +67,7 @@
 													</td>
 													<td>
 														@if($value->employee->photo != '')
-															<img style=" width: 70px; " src="{!! asset('uploads/employeePhoto/'.$value->employee->photo) !!}" alt="user-img" class="img-circle">
+															<img style=" width: 70px; " src="{!! employee_photo_path($value->employee->photo) !!}" alt="user-img" class="img-circle">
 														@else
 															<img style=" width: 70px; " src="{!! asset('admin_assets/img/default.png') !!}" alt="user-img" class="img-circle">
 														@endif

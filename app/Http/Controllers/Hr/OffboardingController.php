@@ -10,6 +10,7 @@ use App\Models\HrDocument;
 use App\Models\DocumentView;
 use App\Models\Offboarding;
 use Illuminate\Support\Facades\DB;
+use App\Support\SecureUpload;
 
 use Illuminate\Http\Request;
 
@@ -103,8 +104,17 @@ class OffboardingController extends Controller
     public function renderDocument($id)
     {
         $document = HrDocument::findOrFail($id);
-        $path = public_path('uploads/documents/' . $document->file);
-        return response()->file($path);
+        $storedPath = $document->file_path ?: ($document->file ? 'uploads/documents/' . $document->file : null);
+
+        if ($storedPath && SecureUpload::storedPathExists($storedPath)) {
+            return SecureUpload::responseFromStored($storedPath);
+        }
+
+        if ($document->file && SecureUpload::exists(SecureUpload::HR_DOCUMENTS, $document->file)) {
+            return SecureUpload::response(SecureUpload::HR_DOCUMENTS, $document->file);
+        }
+
+        abort(404);
     }
     public function review($id)
     {
@@ -207,10 +217,17 @@ class OffboardingController extends Controller
         $file = $request->file('file');
         if ($file) {
             $fileName = time() . $file->getClientOriginalName();
-            $file->move('uploads/documents', $fileName);
-            $input['file_path'] = $fileName;
+            if ($data->file_path) {
+                SecureUpload::deleteStoredPath($data->file_path);
+            } elseif ($data->file) {
+                SecureUpload::delete(SecureUpload::HR_DOCUMENTS, $data->file);
+            }
+
+            SecureUpload::store($file, SecureUpload::HR_DOCUMENTS, $fileName);
+            $input['file_path'] = SecureUpload::directory(SecureUpload::HR_DOCUMENTS) . '/' . $fileName;
+            $input['file'] = $fileName;
         } else {
-            $input['file_path'] = $data->file;
+            $input['file_path'] = $data->file_path ?: $data->file;
         }
         $input['updated_by'] = auth()->user()->id;
         try {

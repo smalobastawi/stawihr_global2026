@@ -159,7 +159,7 @@
                                             <?php
                                                 if($employeeInfo->photo != ''){
                                                 ?>
-                                            <img style="width: 124px;height:135px" src="{!! asset('uploads/employeePhoto/' . $employeeInfo->photo) !!}">
+                                            <img style="width: 124px;height:135px" src="{!! employee_photo_url($employeeInfo->photo) !!}">
                                             <?php  }else{ ?>
                                             <img style="width: 124px;height:135px" src="{!! asset('admin_assets/img/default.png') !!}">
                                             <?php } ?>
@@ -361,7 +361,7 @@
                                                                                 </td>
                                                                                 <td>
                                                                                     <a
-                                                                                        href="{{ url('uploads/employeeDocs') . '/' . $documents->document_link }}">
+                                                                                        href="{{ employee_doc_url($documents->document_link ) }}">
                                                                                         View </a>
                                                                                 </td>
                                                                             </tr>

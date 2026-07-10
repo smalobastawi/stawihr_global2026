@@ -155,7 +155,7 @@
                                                                 name="answers[{{ $question->id }}]">
                                                             @if ($existingResponse)
                                                                 <p>Uploaded File: <a
-                                                                        href="{{ asset('storage/' . $existingResponse) }}"
+                                                                        href="{{ stored_upload_url($existingResponse) }}"
                                                                         target="_blank">View File</a></p>
                                                             @endif
                                                         @break

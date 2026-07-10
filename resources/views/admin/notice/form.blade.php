@@ -191,7 +191,7 @@
                                         </div>
                                         @if (isset($editModeData) && $editModeData->attach_file)
                                             <small class="text-muted">
-                                                Current file: <a href="{{ asset('uploads/notice/' . $editModeData->attach_file) }}" target="_blank">{{ $editModeData->attach_file }}</a>
+                                                Current file: <a href="{{ notice_attachment_url($editModeData->attach_file) }}" target="_blank">{{ $editModeData->attach_file }}</a>
                                             </small>
                                         @endif
                                     </div>

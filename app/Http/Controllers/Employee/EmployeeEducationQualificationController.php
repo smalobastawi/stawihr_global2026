@@ -19,7 +19,7 @@ class EmployeeEducationQualificationController extends Controller
         // Process the certificate file if uploaded
         $certificatePath = null;
         if ($request->hasFile('certificate')) {
-            $certificatePath = $request->file('certificate')->store('certificates', 'public'); // Store in 'storage/app/public/certificates'
+            $certificatePath = $request->file('certificate')->store('certificates', 'local');
         }
 
         $employeeEducationQualificationData = [

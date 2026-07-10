@@ -25,7 +25,7 @@
                                     @if (isset($leaveApplicationData->employee->photo) && $leaveApplicationData->employee->photo != '')
                                         <img style="width: 20px;margin: 0 auto"
                                             class="profile-user-img img-responsive img-circle"
-                                            src="{!! asset('uploads/employeePhoto/' . $leaveApplicationData->employee->photo) !!}" alt="User profile picture">
+                                            src="{!! employee_photo_url($leaveApplicationData->employee->photo) !!}" alt="User profile picture">
                                     @else
                                         <img width="100px" style="margin: 0 auto"
                                             class="profile-user-img img-responsive img-circle"
@@ -104,7 +104,7 @@
 
                                     @foreach ($leaveApplicationData->justification as $justification1)
                                         <p>
-                                            <a href="{{ url('/uploads/leaveApplication') . '/' . $justification1->file_name }}"
+                                            <a href="{{ leave_application_url($justification1->file_name ) }}"
                                                 target="_blank">View</a>
                                         </p>
                                     @endforeach

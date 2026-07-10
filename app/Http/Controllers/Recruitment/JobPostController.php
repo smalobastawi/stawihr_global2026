@@ -13,8 +13,9 @@ use App\Models\JobRequisition;
 use App\Models\Location;
 use App\Models\Department;
 
-use Illuminate\Http\Request;
+use App\Support\SecureUpload;
 
+use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\JobPostRequest;
@@ -113,7 +114,7 @@ class JobPostController extends Controller
             $fileName = str_replace(' ', '_', $request->name) . '_' . time() . '.' . $file->getClientOriginalExtension();
 
             // Store using Storage facade
-            $path = $file->storeAs('uploads/jobDescriptions', $fileName, 'public');
+            $path = $file->storeAs('uploads/jobDescriptions', $fileName, 'local');
             $input['jd_file'] = $fileName;
         }
 
@@ -220,18 +221,12 @@ class JobPostController extends Controller
     {
         try {
             $job = Job::findOrFail($job_id);
-            $filePath = public_path('uploads/jobDescriptions/' . $job->jd_file);
 
-            if (!file_exists($filePath)) {
-                abort(404, "Job description file not found at: " . $filePath);
+            if (! $job->jd_file || ! SecureUpload::exists(SecureUpload::JOB_DESCRIPTIONS, $job->jd_file)) {
+                abort(404, 'Job description file not found.');
             }
 
-            $mimeType = mime_content_type($filePath);
-
-            return response()->file($filePath, [
-                'Content-Type' => $mimeType,
-                'Content-Disposition' => 'inline; filename="' . $job->jd_file . '"'
-            ]);
+            return SecureUpload::response(SecureUpload::JOB_DESCRIPTIONS, $job->jd_file);
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Error viewing file: ' . $e->getMessage());
         }
@@ -241,12 +236,12 @@ class JobPostController extends Controller
     {
         try {
             $job = Job::findOrFail($job_id);
-            $filePath = public_path('uploads/jobDescriptions/' . $job->jd_file);
 
-            if (!file_exists($filePath)) {
-                abort(404, "Job description file not found.");
+            if (! $job->jd_file || ! SecureUpload::exists(SecureUpload::JOB_DESCRIPTIONS, $job->jd_file)) {
+                abort(404, 'Job description file not found.');
             }
-            return response()->download($filePath, $job->jd_file);
+
+            return SecureUpload::response(SecureUpload::JOB_DESCRIPTIONS, $job->jd_file, download: true);
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Error downloading file: ' . $e->getMessage());
         }

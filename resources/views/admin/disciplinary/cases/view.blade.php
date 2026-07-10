@@ -149,7 +149,7 @@
                             <div class="col-md-12">
                                 <h4>Attachment</h4>
                                 @if ($case->attachment)
-                                    <a href="{{ asset('storage/' . $case->attachment) }}" target="_blank">Download
+                                    <a href="{{ stored_upload_url($case->attachment) }}" target="_blank">Download
                                         Attachment</a>
                                 @else
                                     <p>No attachment available.</p>
@@ -190,7 +190,7 @@
                                                 <td>{{ DisciplinaryCaseStatus::getName($action->status) }}</td>
                                                 <td>
                                                     @if ($action->attachment)
-                                                        <a href="{{ asset('storage/' . $action->attachment) }}"
+                                                        <a href="{{ stored_upload_url($action->attachment) }}"
                                                             target="_blank">Download Attachment</a>
                                                     @else
                                                         <p>No attachment available.</p>

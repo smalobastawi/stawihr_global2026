@@ -235,7 +235,7 @@
                                                 <ul>
                                                     @foreach ($leaveApplication->justification as $document)
                                                         <li>
-                                                            <a href="{{ asset('uploads/leaveApplication/' . $document->file_name) }}"
+                                                            <a href="{{ leave_application_url($document->file_name) }}"
                                                                 target="_blank">
                                                                 {{ $document->file_name }}
                                                             </a>

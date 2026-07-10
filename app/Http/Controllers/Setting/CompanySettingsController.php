@@ -8,6 +8,7 @@ namespace App\Http\Controllers\Setting;
 use App\Http\Controllers\Controller;
 use App\Models\CompanySettings;
 use App\Models\FrontSetting;
+use App\Support\FrontUpload;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -77,12 +78,14 @@ class CompanySettingsController extends Controller
 
             if ($logo) {
                 $name = 'logo' . '.' . $logo->getClientOriginalExtension();
-                $logo->move('uploads/front/', $name);
+                FrontUpload::delete($front->logo ?? null);
+                FrontUpload::store($logo, $name);
                 $front->logo = $name;
             }
             if ($about_us_image) {
                 $about_name = 'about_us' . '.' . $about_us_image->getClientOriginalExtension();
-                $about_us_image->move('uploads/front/', $about_name);
+                FrontUpload::delete($front->about_us_image ?? null);
+                FrontUpload::store($about_us_image, $about_name);
                 $front->about_us_image = $about_name;
             }
 

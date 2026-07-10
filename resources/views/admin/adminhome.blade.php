@@ -470,7 +470,7 @@
                                         <div class="comment-body">
                                             @if (isset($employee_birthdate->photo))
                                                 )
-                                                <div class="user-img"><img src="{!! asset('uploads/employeePhoto/' . $employee_birthdate->photo) !!}" alt="user"
+                                                <div class="user-img"><img src="{!! employee_photo_url($employee_birthdate->photo) !!}" alt="user"
                                                         class="img-circle"></div>
                                             @else
                                                 <div class="user-img"><img src="{!! asset('admin_assets/img/default.png') !!}" alt="user"

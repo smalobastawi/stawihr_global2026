@@ -175,7 +175,7 @@
                     <div class="row">
                         <div class="col-md-2 text-center">
                             @if ($employee->photo)
-                                <img src="{{ asset('uploads/employee_photos/' . $employee->photo) }}" alt="{{ $employee->fullName() }}" class="employee-photo">
+                                <img src="{{ employee_photo_url($employee->photo) }}" alt="{{ $employee->fullName() }}" class="employee-photo">
                             @else
                                 <div class="employee-photo" style="background: #fff; display: flex; align-items: center; justify-content: center;">
                                     <i class="fa fa-user fa-3x" style="color: #00b3ee;"></i>

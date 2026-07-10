@@ -12,6 +12,7 @@ use App\Models\Training;
 use App\Models\LeaveType;
 use App\Models\HrDocument;
 use Illuminate\Support\Str;
+use App\Support\SecureUpload;
 use Termwind\Components\Hr;
 use App\Models\DocumentView;
 use App\Models\DocumentConsent;
@@ -838,7 +839,7 @@ class EssIndexController extends Controller
                     $fileName = Str::random(20) . '.' . $leaveFile->getClientOriginalExtension();
 
                     // Move the file to the desired directory
-                    $leaveFile->move('uploads/leaveApplication/', $fileName);
+                    SecureUpload::store($leaveFile, SecureUpload::LEAVE_APPLICATION, $fileName);
 
                     // Prepare the input data
                     $input = [

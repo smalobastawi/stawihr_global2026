@@ -364,7 +364,7 @@
                     <div class="row">
                         @if($employeeInfo->photo !='')
                         <div class="col-xs-4 col-sm-4">
-                            <img src="{!! asset('uploads/employeePhoto/'.$employeeInfo->photo) !!}" alt="varun"
+                            <img src="{!! employee_photo_url($employeeInfo->photo) !!}" alt="varun"
                                 class="img-circle img-responsive">
                         </div>
                         @else
@@ -508,7 +508,7 @@
                         <div class="comment-body">
                             @if($employee_birthdate->photo !='')
                             <div class="user-img"> <img
-                                    src="{!! asset('uploads/employeePhoto/'.$employee_birthdate->photo) !!}" alt="user"
+                                    src="{!! employee_photo_url($employee_birthdate->photo) !!}" alt="user"
                                     class="img-circle"></div>
                             @else
                             <div class="user-img"> <img src="{!! asset('admin_assets/img/default.png') !!}" alt="user"

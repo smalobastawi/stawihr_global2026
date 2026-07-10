@@ -407,18 +407,87 @@ if (!function_exists('getFirstCompany')) {
     }
 }
 
+if (!function_exists('employee_photo_url')) {
+    function employee_photo_url(?string $filename): ?string
+    {
+        return \App\Support\SecureUpload::url(\App\Support\SecureUpload::EMPLOYEE_PHOTO, $filename);
+    }
+}
+
+if (!function_exists('employee_photo_path')) {
+    function employee_photo_path(?string $filename): ?string
+    {
+        return \App\Support\SecureUpload::path(\App\Support\SecureUpload::EMPLOYEE_PHOTO, $filename);
+    }
+}
+
+if (!function_exists('employee_photo_exists')) {
+    function employee_photo_exists(?string $filename): bool
+    {
+        return \App\Support\SecureUpload::exists(\App\Support\SecureUpload::EMPLOYEE_PHOTO, $filename);
+    }
+}
+
+if (!function_exists('employee_doc_url')) {
+    function employee_doc_url(?string $filename): ?string
+    {
+        return \App\Support\SecureUpload::url(\App\Support\SecureUpload::EMPLOYEE_DOCS, $filename);
+    }
+}
+
+if (!function_exists('leave_application_url')) {
+    function leave_application_url(?string $filename): ?string
+    {
+        return \App\Support\SecureUpload::url(\App\Support\SecureUpload::LEAVE_APPLICATION, $filename);
+    }
+}
+
+if (!function_exists('notice_attachment_url')) {
+    function notice_attachment_url(?string $filename): ?string
+    {
+        return \App\Support\SecureUpload::url(\App\Support\SecureUpload::NOTICE, $filename);
+    }
+}
+
+if (!function_exists('training_certificate_url')) {
+    function training_certificate_url(?string $filename): ?string
+    {
+        return \App\Support\SecureUpload::url(\App\Support\SecureUpload::TRAINING_CERTIFICATE, $filename);
+    }
+}
+
+if (!function_exists('stored_upload_url')) {
+    function stored_upload_url(?string $storedPath): ?string
+    {
+        return \App\Support\SecureUpload::urlFromStored($storedPath);
+    }
+}
+
+if (!function_exists('front_logo_url')) {
+    function front_logo_url(?string $filename): ?string
+    {
+        return \App\Support\FrontUpload::url($filename);
+    }
+}
+
 if (!function_exists('systemLogoUrl')) {
     function systemLogoUrl()
     {
         $company = getFirstCompany();
 
-        if ($company?->logo && file_exists(public_path('uploads/company_logos/' . $company->logo))) {
-            return asset('uploads/company_logos/' . $company->logo);
+        if ($company?->logo) {
+            $companyLogoUrl = \App\Support\SecureUpload::url(\App\Support\SecureUpload::COMPANY_LOGOS, $company->logo);
+            if ($companyLogoUrl) {
+                return $companyLogoUrl;
+            }
         }
 
         $front = getFrontData();
         if ($front?->logo) {
-            return asset('storage/uploads/front/' . $front->logo);
+            $frontLogoUrl = \App\Support\FrontUpload::url($front->logo);
+            if ($frontLogoUrl) {
+                return $frontLogoUrl;
+            }
         }
 
         return asset('admin_assets/img/logo.png');
@@ -430,13 +499,16 @@ if (!function_exists('companyLogoUrl')) {
     {
         $company = $company ?? getActiveCompany();
 
-        if ($company?->logo && file_exists(public_path('uploads/company_logos/' . $company->logo))) {
-            return asset('uploads/company_logos/' . $company->logo);
+        if ($company?->logo) {
+            $companyLogoUrl = \App\Support\SecureUpload::url(\App\Support\SecureUpload::COMPANY_LOGOS, $company->logo);
+            if ($companyLogoUrl) {
+                return $companyLogoUrl;
+            }
         }
 
         $front = getFrontData();
         if ($front?->logo) {
-            return asset('storage/uploads/front/' . $front->logo);
+            return \App\Support\FrontUpload::url($front->logo);
         }
 
         return null;
@@ -448,13 +520,16 @@ if (!function_exists('companyLogoPath')) {
     {
         $company = $company ?? getActiveCompany();
 
-        if ($company?->logo && file_exists(public_path('uploads/company_logos/' . $company->logo))) {
-            return public_path('uploads/company_logos/' . $company->logo);
+        if ($company?->logo) {
+            $companyLogoPath = \App\Support\SecureUpload::path(\App\Support\SecureUpload::COMPANY_LOGOS, $company->logo);
+            if ($companyLogoPath) {
+                return $companyLogoPath;
+            }
         }
 
         $front = getFrontData();
-        if ($front?->logo && file_exists(storage_path('app/public/uploads/front/' . $front->logo))) {
-            return storage_path('app/public/uploads/front/' . $front->logo);
+        if ($front?->logo) {
+            return \App\Support\FrontUpload::path($front->logo);
         }
 
         return null;

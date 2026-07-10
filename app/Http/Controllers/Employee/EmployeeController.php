@@ -46,6 +46,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use App\Support\SecureUpload;
 use App\Models\Program;
 use App\Models\Project;
 use Illuminate\Support\Facades\Auth;
@@ -298,7 +299,7 @@ class EmployeeController extends Controller
         $photo = $request->file('photo');
         if ($photo) {
             $imgName = md5(Str::random(30) . time() . '_' . $request->file('photo')) . '.' . $request->file('photo')->getClientOriginalExtension();
-            $request->file('photo')->move('uploads/employeePhoto/', $imgName);
+            SecureUpload::store($request->file('photo'), SecureUpload::EMPLOYEE_PHOTO, $imgName);
             $employeePhoto['photo'] = $imgName;
         }
 
@@ -487,14 +488,8 @@ class EmployeeController extends Controller
             // Generate unique file name
             $imgName = md5(Str::random(30) . time() . '_' . $request->file('photo')) . '.' . $request->file('photo')->getClientOriginalExtension();
 
-            // Move uploaded photo to the designated folder
-            $photo->move('uploads/employeePhoto/', $imgName);
-            // $request->file('photo')->move('uploads/employeePhoto/', $imgName);
-
-            // Remove old photo if it exists
-            if (!empty($employee->photo) && file_exists('uploads/employeePhoto/' . $employee->photo)) {
-                unlink('uploads/employeePhoto/' . $employee->photo);
-            }
+            SecureUpload::delete(SecureUpload::EMPLOYEE_PHOTO, $employee->photo);
+            SecureUpload::store($photo, SecureUpload::EMPLOYEE_PHOTO, $imgName);
 
             // Assign new photo to the employee data array
             $employeePhoto['photo'] = $imgName;
@@ -1211,14 +1206,8 @@ class EmployeeController extends Controller
             // Generate unique file name
             $imgName = md5(Str::random(30) . time() . '_' . $request->file('photo')) . '.' . $request->file('photo')->getClientOriginalExtension();
 
-            // Move uploaded photo to the designated folder
-            $photo->move('uploads/employeePhoto/', $imgName);
-            // $request->file('photo')->move('uploads/employeePhoto/', $imgName);
-
-            // Remove old photo if it exists
-            if (!empty($employee->photo) && file_exists('uploads/employeePhoto/' . $employee->photo)) {
-                unlink('uploads/employeePhoto/' . $employee->photo);
-            }
+            SecureUpload::delete(SecureUpload::EMPLOYEE_PHOTO, $employee->photo);
+            SecureUpload::store($photo, SecureUpload::EMPLOYEE_PHOTO, $imgName);
 
             // Assign new photo to the employee data array
             $employeePhoto['photo'] = $imgName;

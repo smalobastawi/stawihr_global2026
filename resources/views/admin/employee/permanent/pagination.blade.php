@@ -19,8 +19,8 @@
                 <tr class="{!! $value->employee_id !!}">
                     <td style="width: 100px;">{!! ++$sl !!}</td>
                     <td>
-                        @if ($value->photo != '' && file_exists('uploads/employeePhoto/' . $value->photo))
-                            <img style=" width: 70px; " src="{!! asset('uploads/employeePhoto/' . $value->photo) !!}" alt="user-img" class="img-circle">
+                        @if ($value->photo != '' && employee_photo_exists($value->photo))
+                            <img style=" width: 70px; " src="{!! employee_photo_url($value->photo) !!}" alt="user-img" class="img-circle">
                         @else
                             <img style=" width: 70px; " src="{!! asset('admin_assets/img/default.png') !!}" alt="user-img" class="img-circle">
                         @endif

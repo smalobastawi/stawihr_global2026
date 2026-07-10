@@ -64,9 +64,9 @@
 														$extension = $info->getExtension();
 
 														if($extension === 'png' || $extension === 'jpg' || $extension === 'jpeg' || $extension === 'PNG' || $extension === 'JPG' || $extension === 'JPEG'){
-															echo '<img src="'.asset('uploads/employeeTrainingCertificate/'.$result->certificate).'" width="100%" >';
+															echo '<img src="'.training_certificate_url($result->certificate).'" width="100%" >';
 														}else{
-															echo '<embed src="'.asset('uploads/employeeTrainingCertificate/'.$result->certificate).'" width="100%" height="550px" />';
+															echo '<embed src="'.training_certificate_url($result->certificate).'" width="100%" height="550px" />';
 														}
 													}
 												@endphp

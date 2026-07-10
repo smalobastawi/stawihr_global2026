@@ -734,7 +734,7 @@
                                                     <td>{{ date('Y-m-d', strtotime($documents->date_uploaded)) }}</td>
                                                     <td>
                                                         <a
-                                                            href="{{ url('uploads/employeeDocs') . '/' . $documents->document_link }}">
+                                                            href="{{ employee_doc_url($documents->document_link ) }}">
                                                             View </a>
                                                     </td>
                                                 </tr>
@@ -789,7 +789,7 @@
                                                     <td>{{ date('Y-m-d', strtotime($case->date_of_report)) }}</td>
                                                     <td>
                                                         <a
-                                                            href="{{ url('uploads/cases') . '/' . $case->attachment }}">
+                                                            href="{{ stored_upload_url($case->attachment ) }}">
                                                             View </a>
                                                     </td>
                                                     <td>{{ $case->status }}</td>
@@ -902,7 +902,7 @@
                                             <?php
                                                  if($employeeInfo->photo != ''){
                                                  ?>
-                                            <img style="width: 124px;height:135px" src="{!! asset('uploads/employeePhoto/' . $employeeInfo->photo) !!}">
+                                            <img style="width: 124px;height:135px" src="{!! employee_photo_url($employeeInfo->photo) !!}">
                                             <?php  }else{ ?>
                                             <img style="width: 124px;height:135px" src="{!! asset('admin_assets/img/default.png') !!}">
                                             <?php } ?>
@@ -1169,7 +1169,7 @@
                                                                                 </td>
                                                                                 <td>
                                                                                     <a
-                                                                                        href="{{ url('uploads/employeeDocs') . '/' . $documents->document_link }}">
+                                                                                        href="{{ employee_doc_url($documents->document_link ) }}">
                                                                                         View </a>
                                                                                 </td>
                                                                             </tr>
@@ -1299,7 +1299,7 @@
                                                                                 </td>
                                                                                 <td>
                                                                                     @if ($education->certificate)
-                                                                                        <a href="{{ asset('storage/' . $education->certificate) }}"
+                                                                                        <a href="{{ stored_upload_url($education->certificate) }}"
                                                                                             target="_blank">
                                                                                             View Certificate
                                                                                         </a>
