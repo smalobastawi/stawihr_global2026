@@ -37,11 +37,17 @@
                                         <tr>
                                             <th>Logo</th>
                                             <td>
-                                                @if ($company->logo)
+                                                @if ($company->logo && companyLogoUrl($company))
                                                     <img src="{{ companyLogoUrl($company) }}" alt="{{ $company->name }} logo"
                                                         style="max-height: 80px; max-width: 200px; object-fit: contain;">
                                                 @else
-                                                    N/A
+                                                    <img src="{{ defaultLogoUrl() }}" alt="Default logo"
+                                                        style="max-height: 80px; max-width: 200px; object-fit: contain;">
+                                                    @if ($company->logo)
+                                                        <p class="text-muted small m-t-5">Uploaded logo file is missing from storage. Re-upload the logo.</p>
+                                                    @else
+                                                        <span class="text-muted">No logo uploaded</span>
+                                                    @endif
                                                 @endif
                                             </td>
                                         </tr>

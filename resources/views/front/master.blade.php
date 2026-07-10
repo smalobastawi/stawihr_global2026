@@ -1,8 +1,6 @@
 @php
     $front_setting = getFrontData();
-    $logoUrl = $front_setting?->logo
-        ? asset('storage/uploads/front/' . $front_setting->logo)
-        : asset('admin_assets/img/logo.png');
+    $logoUrl = defaultLogoUrl();
     $companyName = $front_setting?->company_title ?: env('APP_NAME', 'StawiHR');
     $footerText = $front_setting?->footer_text ?: $companyName;
     $isAuthenticated = Auth::check();
@@ -50,11 +48,7 @@
     <header class="front-header">
         <div class="front-header-inner">
             <a href="{{ url('/') }}" class="front-brand">
-                @if($front_setting?->logo)
-                    <img src="{{ $logoUrl }}" alt="{{ $companyName }}">
-                @else
-                    <span class="front-brand-text">{{ $companyName }}</span>
-                @endif
+                <img src="{{ $logoUrl }}" alt="{{ $companyName }}">
             </a>
 
             <div class="front-header-actions">

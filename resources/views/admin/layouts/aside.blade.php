@@ -14,7 +14,7 @@
              <div class="dropdown user-pro-body">
 
                  <div>
-                    <img src="{{ systemLogoUrl() }}" alt="{{ companyDisplayName(getFirstCompany()) }}"
+                    <img src="{{ navigationLogoUrl() }}" alt="{{ companyDisplayName(\App\Support\CompanyContext::activeCompany()) }}"
                         class="logo-light" style="height: 50px; width: auto; max-width: 200px; object-fit: contain;" />
                  </div>
 

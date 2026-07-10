@@ -7,7 +7,7 @@ use App\Http\Requests\StoreCompanyRequest;
 use App\Http\Requests\UpdateCompanyRequest;
 use App\Lib\Enumerations\PayrollCountry;
 use App\Support\CompanyContext;
-use App\Support\SecureUpload;
+use App\Support\CompanyLogoUpload;
 use Illuminate\Http\Request;
 
 class CompanyController extends Controller
@@ -213,10 +213,10 @@ class CompanyController extends Controller
         $logoName = md5(time() . '_' . $logo->getClientOriginalName()) . '.' . $logo->getClientOriginalExtension();
 
         if ($company?->logo) {
-            SecureUpload::delete(SecureUpload::COMPANY_LOGOS, $company->logo);
+            CompanyLogoUpload::delete($company->logo);
         }
 
-        SecureUpload::store($logo, SecureUpload::COMPANY_LOGOS, $logoName);
+        CompanyLogoUpload::store($logo, $logoName);
 
         return $logoName;
     }

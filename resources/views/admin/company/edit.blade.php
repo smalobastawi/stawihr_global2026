@@ -136,8 +136,14 @@
                                         <label class="control-label">Company Logo</label>
                                         @if($company->logo)
                                             <div style="margin-bottom: 10px;">
-                                                <img src="{{ companyLogoUrl($company) }}" alt="{{ $company->name }} logo"
-                                                    style="max-height: 80px; max-width: 200px; object-fit: contain; border: 1px solid #eee; padding: 5px;">
+                                                @if (companyLogoUrl($company))
+                                                    <img src="{{ companyLogoUrl($company) }}" alt="{{ $company->name }} logo"
+                                                        style="max-height: 80px; max-width: 200px; object-fit: contain; border: 1px solid #eee; padding: 5px;">
+                                                @else
+                                                    <img src="{{ defaultLogoUrl() }}" alt="Default logo"
+                                                        style="max-height: 80px; max-width: 200px; object-fit: contain; border: 1px solid #eee; padding: 5px;">
+                                                    <p class="text-muted small">Current logo file is missing from storage. Upload again to replace it.</p>
+                                                @endif
                                             </div>
                                         @endif
                                         <input type="file" class="form-control" name="logo" accept="image/*">

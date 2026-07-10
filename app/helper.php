@@ -470,18 +470,9 @@ if (!function_exists('front_logo_url')) {
     }
 }
 
-if (!function_exists('systemLogoUrl')) {
-    function systemLogoUrl()
+if (!function_exists('defaultLogoUrl')) {
+    function defaultLogoUrl(): string
     {
-        $company = getFirstCompany();
-
-        if ($company?->logo) {
-            $companyLogoUrl = \App\Support\SecureUpload::url(\App\Support\SecureUpload::COMPANY_LOGOS, $company->logo);
-            if ($companyLogoUrl) {
-                return $companyLogoUrl;
-            }
-        }
-
         $front = getFrontData();
         if ($front?->logo) {
             $frontLogoUrl = \App\Support\FrontUpload::url($front->logo);
@@ -494,21 +485,38 @@ if (!function_exists('systemLogoUrl')) {
     }
 }
 
-if (!function_exists('companyLogoUrl')) {
-    function companyLogoUrl($company = null)
+if (!function_exists('navigationLogoUrl')) {
+    function navigationLogoUrl(): string
     {
-        $company = $company ?? getActiveCompany();
-
+        $company = \App\Support\CompanyContext::activeCompany();
         if ($company?->logo) {
-            $companyLogoUrl = \App\Support\SecureUpload::url(\App\Support\SecureUpload::COMPANY_LOGOS, $company->logo);
+            $companyLogoUrl = \App\Support\CompanyLogoUpload::url($company->logo);
             if ($companyLogoUrl) {
                 return $companyLogoUrl;
             }
         }
 
-        $front = getFrontData();
-        if ($front?->logo) {
-            return \App\Support\FrontUpload::url($front->logo);
+        return defaultLogoUrl();
+    }
+}
+
+if (!function_exists('systemLogoUrl')) {
+    function systemLogoUrl(): string
+    {
+        return defaultLogoUrl();
+    }
+}
+
+if (!function_exists('companyLogoUrl')) {
+    function companyLogoUrl($company = null): ?string
+    {
+        $company = $company ?? getActiveCompany();
+
+        if ($company?->logo) {
+            $companyLogoUrl = \App\Support\CompanyLogoUpload::url($company->logo);
+            if ($companyLogoUrl) {
+                return $companyLogoUrl;
+            }
         }
 
         return null;
@@ -516,12 +524,12 @@ if (!function_exists('companyLogoUrl')) {
 }
 
 if (!function_exists('companyLogoPath')) {
-    function companyLogoPath($company = null)
+    function companyLogoPath($company = null): ?string
     {
         $company = $company ?? getActiveCompany();
 
         if ($company?->logo) {
-            $companyLogoPath = \App\Support\SecureUpload::path(\App\Support\SecureUpload::COMPANY_LOGOS, $company->logo);
+            $companyLogoPath = \App\Support\CompanyLogoUpload::path($company->logo);
             if ($companyLogoPath) {
                 return $companyLogoPath;
             }
@@ -532,7 +540,7 @@ if (!function_exists('companyLogoPath')) {
             return \App\Support\FrontUpload::path($front->logo);
         }
 
-        return null;
+        return public_path('admin_assets/img/logo.png');
     }
 }
 
