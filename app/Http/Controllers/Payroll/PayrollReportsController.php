@@ -290,7 +290,7 @@ class PayrollReportsController
     public function nssfReportIndex(Request $request)
     {
         $payrollPeriods = PayrollPeriod::orderBy('start_date', 'desc')->take(24)->get();
-        $companyId = $this->resolveReportCompanyId($request);
+        $companyId = resolveReportCompanyId($request);
 
         if ($request->filled('payroll_period_id')) {
             $period = PayrollPeriod::find($request->payroll_period_id);
