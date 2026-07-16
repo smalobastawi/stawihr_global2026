@@ -78,11 +78,30 @@
                                             'payroll_periods_used' => 'Payroll periods covered',
                                             'disciplinary_cases' => 'Disciplinary cases',
                                             'employee_feedback' => 'Employee feedback',
+                                            'anonymous_feedback' => 'Anonymous feedback',
                                             'trainings' => 'Training sessions',
+                                            'training_invitees' => 'Training invitees',
                                             'training_attendants' => 'Training attendances',
                                             'leave_applications' => 'Leave applications',
                                             'attendance_records' => 'Attendance records',
                                             'employee_leavegroups' => 'Leave group assignments',
+                                            'job_requisitions' => 'Job requisitions',
+                                            'job_posts' => 'Job posts',
+                                            'job_applications' => 'Job applications',
+                                            'vehicles' => 'Vehicles',
+                                            'vehicle_assignments' => 'Vehicle assignments',
+                                            'notices' => 'Notices',
+                                            'review_periods' => 'Review periods (policy)',
+                                            'performance_rating_scales' => 'Rating scales (policy)',
+                                            'performance_behavioral_items' => 'Behavioral items (policy)',
+                                            'pdp_settings' => 'PDP policy settings',
+                                            'performance_appraisals' => 'Performance appraisals',
+                                            'performance_appraisal_scores' => 'Performance rating scores',
+                                            'pip_plans' => 'Performance improvement plans',
+                                            'pip_goals' => 'PIP goals',
+                                            'pdp_plans' => 'Personal development plans',
+                                            'pdp_goals' => 'PDP goals',
+                                            'pdp_progress_entries' => 'PDP progress entries',
                                         ];
                                         $displaySummary = !empty($summary) ? $summary : $counts;
                                     @endphp
@@ -140,7 +159,15 @@
                             <ul>
                                 <li>15 employees with user accounts, contracts, and payroll profiles</li>
                                 <li>Payroll calculation records for the latest 3 payroll periods</li>
-                                <li>Disciplinary cases, employee feedback, and training sessions with attendances</li>
+                                <li>Disciplinary cases, named employee feedback, and anonymous feedback</li>
+                                <li>10 training sessions with invitees and attendances</li>
+                                <li>10 job requisitions, 10 job posts, and 10 job applications</li>
+                                <li>10 vehicles with vehicle assignments</li>
+                                <li>10 notices (with department/location targeting)</li>
+                                <li>Performance policy settings (review periods, rating scales, behavioral items, PDP settings as needed)</li>
+                                <li>10 performance appraisals with rating scores</li>
+                                <li>5 performance improvement plans with goals, support, and reviews</li>
+                                <li>8 personal development plans (active with progress and completed)</li>
                                 <li>Leave applications and attendance entries</li>
                             </ul>
                         @endif

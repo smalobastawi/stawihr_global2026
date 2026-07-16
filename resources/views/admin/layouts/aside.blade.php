@@ -293,6 +293,14 @@
                                  </a>
                              </li>
                          @endcan
+                         @can('reports.approval_logs')
+                             <li>
+                                 <a href="{{ route('reports.approval_logs') }}">
+                                     <i data-icon="/" class="linea-icon linea-basic fa-fw"></i>
+                                     <span class="hideMenu">Approval Logs</span>
+                                 </a>
+                             </li>
+                         @endcan
                      </ul>
                  </li>
              @endcan

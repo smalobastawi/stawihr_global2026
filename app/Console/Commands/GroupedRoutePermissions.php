@@ -2223,6 +2223,14 @@ class GroupedRoutePermissions
                         'description' => 'View Detailed Activity Logs',
                     ],
                     [
+                        'name' => 'reports.download_logs',
+                        'description' => 'View Download Logs',
+                    ],
+                    [
+                        'name' => 'reports.approval_logs',
+                        'description' => 'View Approval Logs',
+                    ],
+                    [
                         'name' => 'reports.errorLog',
                         'description' => 'View Error Logs',
                     ],
