@@ -360,9 +360,20 @@ if (!function_exists('getPageTitle')) {
 if (!function_exists('helper_companyInfo')) {
     function helper_companyInfo($company = null)
     {
-        $company = $company ?? getActiveCompany();
+        $company = $company ?? getActiveCompany() ?? getFirstCompany();
         if (!$company) {
-            return null;
+            return (object) [
+                'legal_Name' => config('app.name', 'STAWIHR'),
+                'legal_Address' => null,
+                'official_contact_number' => null,
+                'official_email' => null,
+                'company_contact_name' => null,
+                'representative_phone' => null,
+                'representative_email' => null,
+                'KRA_PIN' => null,
+                'NSSF_employer_number' => null,
+                'NHIF_employer_code' => null,
+            ];
         }
 
         return (object) [

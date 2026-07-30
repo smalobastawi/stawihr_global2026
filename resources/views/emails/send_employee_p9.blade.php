@@ -14,7 +14,7 @@
 
         <p>Kind Regards</p>
         
-        <p>{{ helper_companyInfo()->legal_Name }}</p>
+        <p>{{ helper_companyInfo($company ?? null)?->legal_Name ?? companyDisplayName($company ?? null) }}</p>
     </div>
 </body>
 

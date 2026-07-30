@@ -488,7 +488,11 @@ class Payroll9Controller extends Controller implements ShouldQueue
         $endDate = Carbon::parse($financialYear->end_date);
 
         $p9Data = $this->buildP9Data($request, $startDate, $endDate);
-        $company = $this->resolveCompanyForFinancialYear($financialYear);
+        $company = $this->resolveCompanyForFinancialYear($financialYear)
+            ?? ($p9Data['employeeDetails']->company_id
+                ? Company::find($p9Data['employeeDetails']->company_id)
+                : null)
+            ?? getFirstCompany();
 
         $pdf = Pdf::loadView('admin.payroll.p9.export', [
             'financial_year_end' => $p9Data['financialYearEnd'],
@@ -501,15 +505,16 @@ class Payroll9Controller extends Controller implements ShouldQueue
         ]);
         $pdf->setPaper('A3', 'landscape');
 
-        $mailContent = ([
+        $mailContent = [
             'employee_name' => $p9Data['employeeDetails']->first_name,
             'p9form' => $pdf,
-            'employeeEmail' => $p9Data['employeeDetails']->email
-        ]);
+            'employeeEmail' => $p9Data['employeeDetails']->email,
+            'company' => $company,
+        ];
 
         try {
-            Mail::send('emails.send_employee_p9', $mailContent, function($message)use($mailContent,$pdf) {
-                $message->to('smaloba3@gmail.com', $mailContent["employee_name"])
+            Mail::send('emails.send_employee_p9', $mailContent, function($message) use ($mailContent, $pdf) {
+                $message->to($mailContent['employeeEmail'], $mailContent['employee_name'])
                     ->subject('P9 form')
                     ->attachData($pdf->output(), "P9 Form.pdf");
             });

@@ -153,7 +153,14 @@
                                     <label class="control-label col-md-4" for="amount">@lang('employee_deductions.amount')<span
                                             class="validateRq amount_required">*</span></label>
                                     <div class="col-md-8">
-                                        <input type="number" name="amount" value="{{ Request::old('amount') }}">
+                                        <input type="number"
+                                               name="amount"
+                                               id="amount"
+                                               class="form-control amount"
+                                               value="{{ old('amount', $editModeData->amount ?? '') }}"
+                                               min="0"
+                                               step="0.01"
+                                               placeholder="Enter amount">
                                     </div>
                                 </div>
                             </div>
@@ -363,10 +370,10 @@
             }
         });
 
-        // Initialize form based on edit mode
-        @if (isset($editModeData))
+        // Show amount/percentage/rate fields for the selected deduction type (create + edit)
+        if ($('#deduction_type_id').val()) {
             $('.deduction_type_id').trigger('change');
-        @endif
+        }
 
         function calculateDailyRate() {
             var employeeId = $('#employee_id').val();
