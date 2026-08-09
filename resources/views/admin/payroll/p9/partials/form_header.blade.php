@@ -1,8 +1,9 @@
+{{-- Layout matches KRA P9-FORM-Template-2025.pdf (Appendix 2A / P9A) --}}
 <div class="header-section">
     <div class="row">
         <div class="col-md-4">APPENDIX 2A</div>
         <div class="col-md-4"></div>
-        <div class="col-md-4 text-right">(P.9A)</div>
+        <div class="col-md-4 text-right">P9A</div>
     </div>
     <div class="row">
         <div class="col-md-4"></div>
@@ -23,11 +24,12 @@
 <div class="row header-section">
     <div class="col-md-6">
         <strong>Employer's Name:</strong> {{ $company?->name ?? '' }}<br>
+        <strong>Employer's PIN:</strong> {{ $company?->kra_pin ?? '...........................' }}<br>
         <strong>Employee's Main Name:</strong> {{ $employeeDetails->first_name ?? '' }}<br>
-        <strong>Employee's Other Names:</strong> {{ $employeeDetails->last_name ?? '' }}
+        <strong>Employee's Other Names:</strong>
+        {{ trim(($employeeDetails->other_names ?? '').' '.($employeeDetails->last_name ?? '')) }}
     </div>
     <div class="col-md-6 text-right">
-        <strong>Employer's PIN:</strong> {{ $company?->kra_pin ?? '...........................' }}<br>
         <strong>Employee's PIN:</strong> {{ $employeeDetails->KRA_Pin ?? '...........................' }}<br>
         <strong>Employee's Payroll No:</strong> {{ $employeeDetails->payroll_number ?? '...........................' }}
     </div>

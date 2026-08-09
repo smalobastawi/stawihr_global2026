@@ -182,7 +182,7 @@
                                                             <option value="" disabled selected>Select your years of
                                                                 experience
                                                             </option>
-                                                            @for ($i = 1; $i <= 10; $i++)
+                                                            @for ($i = 0; $i <= 20; $i++)
                                                                 <option value="{{ $i }}"
                                                                     {{ old('years_of_experience', $application->years_of_experience ?? '') == $i ? 'selected' : '' }}>
                                                                     {{ $i }} year(s)</option>
@@ -190,6 +190,19 @@
                                                         </select>
 
                                                         @error('years_of_experience')
+                                                            <div class="alert alert-danger">{{ $message }}</div>
+                                                        @enderror
+                                                    </div>
+                                                </div>
+                                                <div class="col-lg-12">
+                                                    <div class="form-group app-label">
+                                                        <label class="text-muted" for="skills">Skills <span class="text-danger">*</span></label>
+                                                        <textarea name="skills" id="skills" rows="3" class="form-control resume"
+                                                            placeholder="e.g. Excel, Communication, Project Management" required>{{ old('skills') }}</textarea>
+                                                        <small class="text-muted">
+                                                            List skills separated by commas.
+                                                        </small>
+                                                        @error('skills')
                                                             <div class="alert alert-danger">{{ $message }}</div>
                                                         @enderror
                                                     </div>

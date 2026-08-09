@@ -24,6 +24,8 @@ use App\Mail\HireNotificationMail;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use App\Lib\Enumerations\JobStatus;
+use App\Lib\Enumerations\QualificationLevel;
+use App\Support\AtsMatcher;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Mail;
@@ -54,12 +56,14 @@ class JobCandidateController extends Controller
         }
 
         $sort = $request->get('sort', 'application_date');
-        $allowedSorts = ['applicant_name', 'application_date', 'years_of_experience', 'highest_qualification', 'status'];
+        $allowedSorts = ['applicant_name', 'application_date', 'years_of_experience', 'highest_qualification', 'status', 'match_score'];
         if (!in_array($sort, $allowedSorts, true)) {
             $sort = 'application_date';
         }
 
         $direction = strtolower($request->get('direction', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $filters = $this->extractAtsFilters($request);
 
         $jobId = $request->filled('job_id') ? (int) $request->job_id : null;
         if ($view === 'pipeline' && !$jobId && $jobs->isNotEmpty()) {
@@ -70,12 +74,43 @@ class JobCandidateController extends Controller
         $applicants = null;
         $stageCounts = [];
 
-        if ($view === 'pipeline' && $jobId) {
+        if ($view === 'pipeline' && $jobId && $selectedJob) {
             $stageCounts = $this->applicantStageCounts($jobId);
-            $applicants = $this->applicantsForStage($jobId, $stage)
-                ->orderBy($sort, $direction)
-                ->paginate($this->perPage)
-                ->withQueryString();
+            $query = $this->applicantsForStage($jobId, $stage);
+            $this->applyAtsFilters($query, $filters, $selectedJob);
+
+            if ($sort === 'match_score') {
+                $allApplicants = $query->get()->map(function (JobApplicant $applicant) use ($selectedJob) {
+                    $applicant->match_score = AtsMatcher::score($selectedJob, $applicant);
+                    $applicant->meets_criteria = AtsMatcher::meetsCriteria($selectedJob, $applicant);
+
+                    return $applicant;
+                });
+
+                $sorted = $direction === 'asc'
+                    ? $allApplicants->sortBy('match_score')->values()
+                    : $allApplicants->sortByDesc('match_score')->values();
+
+                $page = max(1, (int) $request->get('page', 1));
+                $applicants = new \Illuminate\Pagination\LengthAwarePaginator(
+                    $sorted->forPage($page, $this->perPage)->values(),
+                    $sorted->count(),
+                    $this->perPage,
+                    $page,
+                    ['path' => $request->url(), 'query' => $request->query()]
+                );
+            } else {
+                $applicants = $query->orderBy($sort, $direction)
+                    ->paginate($this->perPage)
+                    ->withQueryString();
+
+                $applicants->getCollection()->transform(function (JobApplicant $applicant) use ($selectedJob) {
+                    $applicant->match_score = AtsMatcher::score($selectedJob, $applicant);
+                    $applicant->meets_criteria = AtsMatcher::meetsCriteria($selectedJob, $applicant);
+
+                    return $applicant;
+                });
+            }
         }
 
         $jobSummaries = null;
@@ -96,7 +131,81 @@ class JobCandidateController extends Controller
             'applicants' => $applicants,
             'stageCounts' => $stageCounts,
             'jobSummaries' => $jobSummaries,
+            'filters' => $filters,
+            'qualificationOptions' => QualificationLevel::options(),
         ]);
+    }
+
+    private function extractAtsFilters(Request $request): array
+    {
+        return [
+            'min_experience' => $request->filled('min_experience') ? (int) $request->min_experience : null,
+            'qualification' => $request->filled('qualification') ? $request->qualification : null,
+            'skill' => $request->filled('skill') ? trim($request->skill) : null,
+            'application_source' => $request->filled('application_source') ? $request->application_source : null,
+            'notice_period' => $request->filled('notice_period') ? $request->notice_period : null,
+            'max_expected_salary' => $request->filled('max_expected_salary') ? (float) $request->max_expected_salary : null,
+            'meets_criteria' => $request->boolean('meets_criteria'),
+            'keyword' => $request->filled('keyword') ? trim($request->keyword) : null,
+        ];
+    }
+
+    private function applyAtsFilters($query, array $filters, Job $job): void
+    {
+        if ($filters['min_experience'] !== null) {
+            $query->where('years_of_experience', '>=', $filters['min_experience']);
+        }
+
+        if (!empty($filters['qualification']) && $filters['qualification'] !== QualificationLevel::NONE) {
+            $query->whereIn('highest_qualification', QualificationLevel::atOrAbove($filters['qualification']));
+        }
+
+        if (!empty($filters['skill'])) {
+            $skill = $filters['skill'];
+            $query->where(function ($q) use ($skill) {
+                $q->where('skills', 'like', '%' . $skill . '%');
+            });
+        }
+
+        if (!empty($filters['application_source']) && in_array($filters['application_source'], ['internal', 'external'], true)) {
+            $query->where('application_source', $filters['application_source']);
+        }
+
+        if (!empty($filters['notice_period'])) {
+            $query->where('notice_period', $filters['notice_period']);
+        }
+
+        if ($filters['max_expected_salary'] !== null) {
+            $query->where(function ($q) use ($filters) {
+                $q->whereNull('expected_salary')
+                    ->orWhere('expected_salary', '<=', $filters['max_expected_salary']);
+            });
+        }
+
+        if (!empty($filters['keyword'])) {
+            $keyword = $filters['keyword'];
+            $query->where(function ($q) use ($keyword) {
+                $q->where('applicant_name', 'like', '%' . $keyword . '%')
+                    ->orWhere('applicant_email', 'like', '%' . $keyword . '%')
+                    ->orWhere('skills', 'like', '%' . $keyword . '%')
+                    ->orWhere('current_position', 'like', '%' . $keyword . '%')
+                    ->orWhere('current_employer', 'like', '%' . $keyword . '%');
+            });
+        }
+
+        if (!empty($filters['meets_criteria'])) {
+            if ($job->min_years_experience !== null) {
+                $query->where('years_of_experience', '>=', (int) $job->min_years_experience);
+            }
+
+            if (!empty($job->required_qualification) && $job->required_qualification !== QualificationLevel::NONE) {
+                $query->whereIn('highest_qualification', QualificationLevel::atOrAbove($job->required_qualification));
+            }
+
+            foreach (AtsMatcher::parseSkills($job->required_skills) as $requiredSkill) {
+                $query->where('skills', 'like', '%' . $requiredSkill . '%');
+            }
+        }
     }
 
     private function jobSummariesQuery()
@@ -137,47 +246,62 @@ class JobCandidateController extends Controller
 
     public function applyCandidateList($id)
     {
-        $job     = Job::where('job_id', $id)->first();
-        $results = JobApplicant::with('job')->where('job_id', $id)->orderBy('status', 'ASC')->orderBy('job_applicant_id', 'DESC')->paginate($this->perPage);
+        $job = Job::where('job_id', $id)->firstOrFail();
+        $results = JobApplicant::with('job')
+            ->where('job_id', $id)
+            ->orderBy('status', 'ASC')
+            ->orderBy('job_applicant_id', 'DESC')
+            ->paginate($this->perPage);
+
+        $results->getCollection()->transform(function (JobApplicant $applicant) use ($job) {
+            $applicant->match_score = AtsMatcher::score($job, $applicant);
+            $applicant->meets_criteria = AtsMatcher::meetsCriteria($job, $applicant);
+
+            return $applicant;
+        });
+
         return view('admin.recruitment.jobCandidate.applyCandidateList', [
             'results' => $results,
             'job' => $job,
-            'job_id' => $id
+            'job_id' => $id,
+            'filters' => $this->extractAtsFilters(request()),
         ]);
     }
 
     public function searchCandidateList(Request $request, $job_id)
     {
-
         $id = $job_id;
-        $job     = Job::where('job_id', $id)->first();
-        // Retrieve filter inputs
-        $experience_id = $request->input('experience_id');  // Years of experience
-        $highest_qualification = $request->input('highest_qualification');  // Highest qualification
+        $job = Job::where('job_id', $id)->firstOrFail();
+        $filters = $this->extractAtsFilters($request);
 
-        // Start building the query
-        $query = JobApplicant::query();
-
-        // Filter by experience if provided
-        if (!empty($experience_id)) {
-            $query->where('years_of_experience', $experience_id);
+        // Backward-compatible aliases from the legacy filter form
+        if (!$filters['min_experience'] && $request->filled('experience_id')) {
+            $filters['min_experience'] = (int) $request->experience_id;
+        }
+        if (empty($filters['qualification']) && $request->filled('highest_qualification')) {
+            $filters['qualification'] = $request->highest_qualification;
         }
 
-        // Filter by highest qualification if provided
-        if ($highest_qualification && $highest_qualification !== 'None') {
-            $query->where('highest_qualification', $highest_qualification);
-        }
-        // Filter by job ID
-        $query->where('job_id', $id);
+        $query = JobApplicant::where('job_id', $id);
+        $this->applyAtsFilters($query, $filters, $job);
 
-        // Execute the query and get the results
-        $results = $query->paginate(10); // 10 items per page (adjust as needed)
+        $results = $query->orderBy('status', 'ASC')
+            ->orderBy('job_applicant_id', 'DESC')
+            ->paginate(10)
+            ->withQueryString();
 
+        $results->getCollection()->transform(function (JobApplicant $applicant) use ($job) {
+            $applicant->match_score = AtsMatcher::score($job, $applicant);
+            $applicant->meets_criteria = AtsMatcher::meetsCriteria($job, $applicant);
+
+            return $applicant;
+        });
 
         return view('admin.recruitment.jobCandidate.applyCandidateList', [
             'results' => $results,
             'job' => $job,
-            'job_id' => $id
+            'job_id' => $id,
+            'filters' => $filters,
         ]);
     }
 

@@ -80,16 +80,16 @@
                             {{-- filter form --}}
                             <div class="row">
                                 <form action="{{ route('applicants.search', ['job_id' => $job_id]) }}" method="get">
-                                    <!-- Hidden job_id field -->
                                     <div class="row">
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
                                             <div class="form-group">
-                                                <label for="experience_id">@lang('recruitement.years_of_experience')</label>
-                                                <select name="experience_id" class="form-control experience_id select2"
-                                                    onchange="getData(1)" id="experience_id" required>
-                                                    <option value="0">--- @lang('recruitement.years_of_experience') ---</option>
-                                                    @for ($i = 1; $i <= 10; $i++)
-                                                        <option value="{{ $i }}">{{ $i }} year(s)
+                                                <label for="min_experience">Min experience</label>
+                                                <select name="min_experience" class="form-control select2" id="min_experience">
+                                                    <option value="">Any</option>
+                                                    @for ($i = 0; $i <= 20; $i++)
+                                                        <option value="{{ $i }}"
+                                                            {{ ($filters['min_experience'] ?? '') !== '' && (int) ($filters['min_experience'] ?? -1) === $i ? 'selected' : '' }}>
+                                                            ≥ {{ $i }} year(s)
                                                         </option>
                                                     @endfor
                                                 </select>
@@ -98,49 +98,53 @@
 
                                         <div class="col-md-3">
                                             <div class="form-group">
-                                                <label for="highest_qualification">@lang('recruitement.highest_qualification')</label>
-                                                <select name="highest_qualification"
-                                                    class="form-control highest_qualification select2" onchange="getData(1)"
-                                                    id="highest_qualification" required>
-                                                    <option value="None"
-                                                        {{ old('highest_qualification', $application->highest_qualification ?? 'None') == 'None' ? 'selected' : '' }}>
-                                                        None</option>
-                                                    <option value="High School"
-                                                        {{ old('highest_qualification', $application->highest_qualification ?? '') == 'High School' ? 'selected' : '' }}>
-                                                        High School</option>
-                                                    <option value="Associate Degree"
-                                                        {{ old('highest_qualification', $application->highest_qualification ?? '') == 'Associate Degree' ? 'selected' : '' }}>
-                                                        Associate Degree</option>
-                                                    <option value="Bachelor's Degree"
-                                                        {{ old('highest_qualification', $application->highest_qualification ?? '') == "Bachelor's Degree" ? 'selected' : '' }}>
-                                                        Bachelor's Degree</option>
-                                                    <option value="Master's Degree"
-                                                        {{ old('highest_qualification', $application->highest_qualification ?? '') == "Master's Degree" ? 'selected' : '' }}>
-                                                        Master's Degree</option>
-                                                    <option value="PhD"
-                                                        {{ old('highest_qualification', $application->highest_qualification ?? '') == 'PhD' ? 'selected' : '' }}>
-                                                        PhD</option>
+                                                <label for="qualification">Min qualification</label>
+                                                <select name="qualification" class="form-control select2" id="qualification">
+                                                    <option value="">Any</option>
+                                                    @foreach (\App\Lib\Enumerations\QualificationLevel::options() as $level)
+                                                        <option value="{{ $level }}"
+                                                            {{ ($filters['qualification'] ?? '') == $level ? 'selected' : '' }}>
+                                                            {{ $level }}
+                                                        </option>
+                                                    @endforeach
                                                 </select>
                                             </div>
                                         </div>
 
                                         <div class="col-md-3">
                                             <div class="form-group">
-                                                <label for="">Search</label>
-                                                <!-- Apply the form-control class to make the button match the dropdown width/height -->
+                                                <label for="skill">Skill contains</label>
+                                                <input type="text" name="skill" id="skill" class="form-control"
+                                                    value="{{ $filters['skill'] ?? '' }}" placeholder="e.g. Laravel">
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label>&nbsp;</label>
+                                                <div>
+                                                    <label class="checkbox-inline" style="margin-top: 7px;">
+                                                        <input type="checkbox" name="meets_criteria" value="1"
+                                                            {{ !empty($filters['meets_criteria']) ? 'checked' : '' }}>
+                                                        Meets job criteria
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-1">
+                                            <div class="form-group">
+                                                <label for="">&nbsp;</label>
                                                 <button type="submit" class="btn btn-success form-control"
                                                     style="color: white;">Search</button>
                                             </div>
                                         </div>
 
-                                         <div class="col-md-3">
+                                        <div class="col-md-1">
                                             <div class="form-group">
-                                                <label for="">
-                                                    &nbsp;
-                                                </label>
-                                                <!-- Apply the form-control class to make the button match the dropdown width/height -->
-                                                <a href="{{ route('jobCandidate.applyCandidateList', $job->job_id) }}" class="btn btn-danger form-control"
-                                                    style="color: white;">Refresh</a>
+                                                <label for="">&nbsp;</label>
+                                                <a href="{{ route('jobCandidate.applyCandidateList', $job->job_id) }}"
+                                                    class="btn btn-danger form-control" style="color: white;">Reset</a>
                                             </div>
                                         </div>
                                     </div>
@@ -158,6 +162,8 @@
                                             <th>Phone No</th>
                                             <th>Highest Qualification</th>
                                             <th>Yrs. Of Experience</th>
+                                            <th>Skills</th>
+                                            <th>Match</th>
                                             <th>Application Date</th>
                                             <th>Resume</th>
                                             <th>Status</th>
@@ -168,16 +174,24 @@
                                         {!! $sl = null !!}
                                         @if (count($results) > 0)
                                             @foreach ($results as $value)
+                                                @php
+                                                    $score = (int) ($value->match_score ?? 0);
+                                                    $scoreClass = $score >= 80 ? 'success' : ($score >= 50 ? 'warning' : 'danger');
+                                                @endphp
                                                 <tr class="{!! $value->job_id !!}">
                                                     <td style="width: 70px;">{!! ++$sl !!}</td>
                                                     <td>
                                                         <a href="#">{!! $value->applicant_name !!}</a>
-
+                                                        @if(!empty($value->meets_criteria))
+                                                            <br><span class="label label-success">Qualified</span>
+                                                        @endif
                                                     </td>
                                                     <td>{!! $value->applicant_email !!}</td>
                                                     <td>{!! $value->phone !!}</td>
                                                     <td>{!! $value->highest_qualification !!}</td>
                                                     <td>{!! $value->years_of_experience !!}</td>
+                                                    <td><small>{{ \Illuminate\Support\Str::limit($value->skills ?? '-', 40) }}</small></td>
+                                                    <td><span class="label label-{{ $scoreClass }}">{{ $score }}%</span></td>
                                                     <td>{{ date('d M Y', strtotime($value->application_date)) }}</td>
                                                     <td>
                                                         {{-- {{ $value->cover_letter }} --}}

@@ -1649,14 +1649,21 @@
 
                               </li>
                           @endcan
-                          @can('systemSettings.index')
-                              <li class="">
-                                  <a class="hideMenu" href="{{ route('moduleSettings.index') }}"> <i data-icon="/"
-                                          class="linea-icon linea-basic fa-fw"></i>
-                                      Module Settings</a>
-                              </li>
-                          @endcan
-                          @can('dummyData.index')
+                         @can('systemSettings.index')
+                             <li class="">
+                                 <a class="hideMenu" href="{{ route('moduleSettings.index') }}"> <i data-icon="/"
+                                         class="linea-icon linea-basic fa-fw"></i>
+                                     Module Settings</a>
+                             </li>
+                         @endcan
+                         @can('systemSettings.index')
+                             <li class="">
+                                 <a class="hideMenu" href="{{ route('schoolMisSettings.index') }}"> <i data-icon="/"
+                                         class="linea-icon linea-basic fa-fw"></i>
+                                     School MIS Integration</a>
+                             </li>
+                         @endcan
+                         @can('dummyData.index')
                               <li class="">
                                   <a class="hideMenu" href="{{ route('dummyData.index') }}"> <i data-icon="/"
                                           class="linea-icon linea-basic fa-fw"></i>

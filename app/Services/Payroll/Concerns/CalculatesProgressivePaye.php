@@ -30,21 +30,32 @@ trait CalculatesProgressivePaye
         $remainingIncome = $taxableIncome;
 
         foreach ($bands as $band) {
-            $bandMin = (float) $band['min'];
-            $bandMax = isset($band['max']) && $band['max'] !== null ? (float) $band['max'] : PHP_INT_MAX;
-            $rate = (float) $band['rate'];
-
             if ($remainingIncome <= 0) {
                 break;
             }
 
-            $bandWidth = $bandMax - $bandMin + 1;
-            $taxableInBand = min($remainingIncome, $bandWidth);
+            $rate = (float) $band['rate'];
 
-            if ($taxableIncome > $bandMin) {
-                $totalTax += $taxableInBand * $rate;
-                $remainingIncome -= $taxableInBand;
+            // Prefer explicit KRA slice widths ("on the first / on the next").
+            if (array_key_exists('width', $band)) {
+                $bandWidth = $band['width'] === null ? null : (float) $band['width'];
+            } else {
+                $bandMin = (float) ($band['min'] ?? 0);
+                $bandMax = array_key_exists('max', $band) && $band['max'] !== null
+                    ? (float) $band['max']
+                    : null;
+                // First band starts at 0: width = max (not max-min+1 which overstates by 1).
+                $bandWidth = $bandMax === null
+                    ? null
+                    : ($bandMin <= 0 ? $bandMax : ($bandMax - $bandMin + 1));
             }
+
+            $taxableInBand = $bandWidth === null
+                ? $remainingIncome
+                : min($remainingIncome, $bandWidth);
+
+            $totalTax += $taxableInBand * $rate;
+            $remainingIncome -= $taxableInBand;
         }
 
         $totalRelief = $relief + $extraRelief;

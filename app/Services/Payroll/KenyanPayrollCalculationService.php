@@ -727,8 +727,9 @@ class KenyanPayrollCalculationService
         $insuranceRelief = 0.15 * $totalAmount;
 
 
-        if ($insuranceRelief > 5000) {
-            $insuranceRelief = 5000;
+        $limit = (float) PayrollConfiguration::getInsuranceReliefLimit();
+        if ($insuranceRelief > $limit) {
+            $insuranceRelief = $limit;
         }
 
         return $insuranceRelief;
@@ -1055,8 +1056,11 @@ class KenyanPayrollCalculationService
             }
         }
 
-        // Cap pension contribution at 30,000
-        $cappedPensionContribution = min($totalPensionContribution, 30000);
+        // KRA: deductible pension/NSSF capped (KES 30,000/month from Dec 2024)
+        $cappedPensionContribution = min(
+            $totalPensionContribution,
+            (float) PayrollConfiguration::getPensionContributionCap()
+        );
 
         $taxablePay = $grossSalary - ($housingLevy + $shifContribution + $nonTaxableAmount + $cappedPensionContribution);
         return $taxablePay;
@@ -1079,50 +1083,47 @@ class KenyanPayrollCalculationService
     }
 
     /**
-     * Calculate PAYE tax according to KRA rates
+     * Calculate PAYE tax according to KRA progressive formula
+     * ("on the first / on the next" slices) less personal + insurance relief.
      */
     protected function calculatePayeTax($taxableIncome, EmployeePayroll $employeePayroll, $insuranceRelief_all)
     {
-
-
         if ($employeePayroll->tax_status === 'exempt') {
             return 0;
         }
+
+        if ($taxableIncome <= 0) {
+            return 0;
+        }
+
         $total_tax = 0;
-        $personalRelief = PayrollConfiguration::getPersonalRelief();
-        $totalRelief = $personalRelief  + $insuranceRelief_all;
-        $payeBands = PayrollConfiguration::getPayeBands();
+        $personalRelief = (float) PayrollConfiguration::getPersonalRelief();
+        $totalRelief = $personalRelief + (float) $insuranceRelief_all;
+        $payeSlices = PayrollConfiguration::getPayeSlices();
+        $remainingIncome = (float) $taxableIncome;
 
-        $remainingIncome = $taxableIncome;
-
-        foreach ($payeBands as $band) {
-            $bandMin = $band['min'];
-            $bandMax = $band['max'] ?? PHP_INT_MAX;
-            $rate = $band['rate'];
-
+        foreach ($payeSlices as $slice) {
             if ($remainingIncome <= 0) {
                 break;
             }
 
-            $bandWidth = $bandMax - $bandMin + 1;
-            $taxableInBand = min($remainingIncome, $bandWidth);
+            $rate = (float) $slice['rate'];
+            $width = array_key_exists('width', $slice) && $slice['width'] !== null
+                ? (float) $slice['width']
+                : null;
+            $taxableInBand = $width === null ? $remainingIncome : min($remainingIncome, $width);
+            $total_tax += $taxableInBand * $rate;
+            $remainingIncome -= $taxableInBand;
+        }
 
-            if ($taxableIncome > $bandMin) {
-                $total_tax += $taxableInBand * $rate;
-                $remainingIncome -= $taxableInBand;
-            }
-        }
-        // Apply personal relief
-        if ($total_tax < ($totalRelief)) {
-            $total_tax = 0;
-        } else {
-            $total_tax = $total_tax - ($totalRelief);
-        }
+        // Apply personal + insurance relief
+        $total_tax = $total_tax <= $totalRelief ? 0 : ($total_tax - $totalRelief);
 
         // Apply disability exemption if applicable
         if ($employeePayroll->disability_exemption) {
-            $total_tax = max(0, $total_tax - 2400);
+            $total_tax = max(0, $total_tax - (float) PayrollConfiguration::getPersonalRelief());
         }
+
         return round($total_tax, 2);
     }
 
@@ -1159,40 +1160,39 @@ class KenyanPayrollCalculationService
         $nssf_tier2 = 0;
         $total_nssf = 0;
 
+        $limits = PayrollConfiguration::getNssfLimitsForDate($payrollPeriodStart);
+        $lel = (float) $limits['lel'];
+        $uel = (float) $limits['uel'];
+        $rate = (float) ($limits['employee_rate'] ?? 0.06);
+        $gross = (float) $grossSalary;
+
         if ($employeeDetails->nssf_rate_type == '2') {
-            if ($grossSalary >= 72000) {
-                $nssf_tier1 = 480;
-                $nssf_tier2 = 3840.00;
-                $total_nssf = $nssf_tier1 + $nssf_tier2;
-            } elseif (8000 < $grossSalary && $grossSalary < 72000) {
-                $nssf_tier1 = 480;
-                $nssf_tier2 = (0.06 * $grossSalary) - 480;
-                $total_nssf = $nssf_tier1 + $nssf_tier2;
-            } else {
-                $total_nssf = (0.06 * $grossSalary);
-                // For lower incomes, all goes to tier 1
-                $nssf_tier1 = $total_nssf;
-                $nssf_tier2 = 0;
-            }
+            // Full Tier I + Tier II (NSSF Act Cap 258 phased limits)
+            $pensionable = min($gross, $uel);
+            $nssf_tier1 = round($rate * min($pensionable, $lel), 2);
+            $nssf_tier2 = round($rate * max(0, $pensionable - $lel), 2);
+            $total_nssf = $nssf_tier1 + $nssf_tier2;
         } elseif ($employeeDetails->nssf_rate_type == '1') {
+            // Legacy voluntary flat contribution
             $total_nssf = 200;
             $nssf_tier1 = 200;
             $nssf_tier2 = 0;
         } elseif ($employeeDetails->nssf_rate_type == '3') {
-            $total_nssf = 480;
-            $nssf_tier1 = 480;
+            // Tier I only (6% of LEL)
+            $nssf_tier1 = round($rate * $lel, 2);
             $nssf_tier2 = 0;
+            $total_nssf = $nssf_tier1;
         } else {
-            //no deduction
+            // no deduction
             $total_nssf = 0;
             $nssf_tier1 = 0;
             $nssf_tier2 = 0;
         }
 
         return [
-            'total' => number_format((float)$total_nssf, 2, '.', ''),
-            'tier1' => number_format((float)$nssf_tier1, 2, '.', ''),
-            'tier2' => number_format((float)$nssf_tier2, 2, '.', '')
+            'total' => number_format((float) $total_nssf, 2, '.', ''),
+            'tier1' => number_format((float) $nssf_tier1, 2, '.', ''),
+            'tier2' => number_format((float) $nssf_tier2, 2, '.', ''),
         ];
     }
 
@@ -1209,12 +1209,9 @@ class KenyanPayrollCalculationService
      */
     protected function calculateHousingLevy($grossSalary)
     {
-        $housingLevyRate = PayrollConfiguration::getHousingLevyRate();
-        $HousingLevy = ($housingLevyRate * $grossSalary);
-        if ($HousingLevy < 300) {
-            $HousingLevy = 300;
-        }
-        return round($grossSalary * $housingLevyRate, 2);
+        $housingLevyRate = (float) PayrollConfiguration::getHousingLevyRate();
+
+        return round((float) $grossSalary * $housingLevyRate, 2);
     }
 
     /**
@@ -1303,109 +1300,23 @@ class KenyanPayrollCalculationService
     }
 
     /**
-     * Calculate NSSF Tier 1 Company Contribution
+     * Calculate NSSF Tier 1 Company Contribution (matches employee Tier I).
      */
     protected function calculateNssfTier1Company($employeeDetails, $pensionablePay, $payrollPeriod = null)
     {
-        $payrollPeriodStart = $payrollPeriod ? $payrollPeriod->start_date->format('Y-m-d') : null;
-        // Check if employee is over 60 years old at the start of payroll period
-        if (isset($employeeDetails->date_of_birth) && !empty($employeeDetails->date_of_birth)) {
-            $dateOfBirth = new DateTime($employeeDetails->date_of_birth);
+        $breakdown = $this->calculateNssfContribution($employeeDetails, $pensionablePay, $payrollPeriod);
 
-            // Use payroll period start date if provided, otherwise use current date
-            if ($payrollPeriodStart) {
-                $referenceDate = new DateTime($payrollPeriodStart);
-            } else {
-                $referenceDate = new DateTime();
-            }
-
-            $age = $referenceDate->diff($dateOfBirth)->y;
-
-            if ($age > 60) {
-                return '0.00';
-            }
-        }
-        $tier1Rate = 0.06;
-        $nssf_tier1 = 0;
-        $nssf_tier2 = 0;
-        $total_nssf = 0;
-
-        if ($employeeDetails->nssf_rate_type == '2') {
-            if ($pensionablePay >= 72000) {
-                $nssf_tier1 = 480;
-                $nssf_tier2 = 3840.00;
-                $total_nssf = $nssf_tier1 + $nssf_tier2;
-            } elseif (8000 < $pensionablePay && $pensionablePay < 72000) {
-                $nssf_tier1 = 480;
-                $nssf_tier2 = (0.06 * $pensionablePay) - 480;
-                $total_nssf = $nssf_tier1 + $nssf_tier2;
-            } else {
-                $nssf_tier1 = 480;
-                $total_nssf = (0.06 * $pensionablePay);
-            }
-        } elseif ($employeeDetails->nssf_rate_type == '1') {
-            $total_nssf = 200;
-        } elseif ($employeeDetails->nssf_rate_type == '3') {
-            $total_nssf = 480;
-        } else {
-            //no deduction
-            $total_nssf = 0;
-        }
-
-        return round($nssf_tier1, 2);
+        return round((float) $breakdown['tier1'], 2);
     }
 
     /**
-     * Calculate NSSF Tier 2 Company Contribution
+     * Calculate NSSF Tier 2 Company Contribution (matches employee Tier II).
      */
     protected function calculateNssfTier2Company($employeeDetails, $grossSalary, $payrollPeriod = null)
     {
-        $pensionablePay = $grossSalary;
-        $payrollPeriodStart = $payrollPeriod ? $payrollPeriod->start_date->format('Y-m-d') : null;
-        // Check if employee is over 60 years old at the start of payroll period
-        if (isset($employeeDetails->date_of_birth) && !empty($employeeDetails->date_of_birth)) {
-            $dateOfBirth = new DateTime($employeeDetails->date_of_birth);
+        $breakdown = $this->calculateNssfContribution($employeeDetails, $grossSalary, $payrollPeriod);
 
-            // Use payroll period start date if provided, otherwise use current date
-            if ($payrollPeriodStart) {
-                $referenceDate = new DateTime($payrollPeriodStart);
-            } else {
-                $referenceDate = new DateTime();
-            }
-
-            $age = $referenceDate->diff($dateOfBirth)->y;
-
-            if ($age > 60) {
-                return '0.00';
-            }
-        }
-        $tier1Rate = 0.06;
-        $nssf_tier1 = 0;
-        $nssf_tier2 = 0;
-        $total_nssf = 0;
-
-        if ($employeeDetails->nssf_rate_type == '2') {
-            if ($pensionablePay >= 72000) {
-                $nssf_tier1 = 480;
-                $nssf_tier2 = 3840.00;
-                $total_nssf = $nssf_tier1 + $nssf_tier2;
-            } elseif (8000 < $pensionablePay && $pensionablePay < 72000) {
-                $nssf_tier1 = 480;
-                $nssf_tier2 = (0.06 * $pensionablePay) - 480;
-                $total_nssf = $nssf_tier1 + $nssf_tier2;
-            } else {
-                $total_nssf = (0.06 * $pensionablePay);
-            }
-        } elseif ($employeeDetails->nssf_rate_type == '1') {
-            $total_nssf = 200;
-        } elseif ($employeeDetails->nssf_rate_type == '3') {
-            $total_nssf = 480;
-        } else {
-            //no deduction
-            $total_nssf = 0;
-        }
-
-        return round($nssf_tier2, 2);
+        return round((float) $breakdown['tier2'], 2);
     }
 
     /**
@@ -1413,8 +1324,9 @@ class KenyanPayrollCalculationService
      */
     protected function calculateHousingLevyCompany($grossSalary)
     {
-        $housingLevyRate = 0.015;
-        return round($grossSalary * ($housingLevyRate), 2);
+        $housingLevyRate = (float) PayrollConfiguration::getHousingLevyRate();
+
+        return round($grossSalary * $housingLevyRate, 2);
     }
 
     /**
@@ -1922,11 +1834,15 @@ class KenyanPayrollCalculationService
 
     public function calculateSHIF($gross_amount)
     {
-        $SHIFAmount = (2.75 / 100) * $gross_amount;
-        if ($SHIFAmount < 300) {
-            $SHIFAmount = 300;
+        $config = PayrollConfiguration::getShifRates();
+        $rate = (float) ($config['rate'] ?? PayrollConfiguration::SHIF_RATE);
+        $minimum = (float) ($config['minimum'] ?? PayrollConfiguration::SHIF_MINIMUM);
+        $SHIFAmount = $rate * (float) $gross_amount;
+        if ($SHIFAmount < $minimum) {
+            $SHIFAmount = $minimum;
         }
-        return $SHIFAmount;
+
+        return round($SHIFAmount, 2);
     }
 
     /**
@@ -2184,37 +2100,33 @@ class KenyanPayrollCalculationService
      */
     private function getTaxBreakdown($taxableIncome, $insuranceRelief)
     {
-
         $taxBreakdown = [];
-        $remainingIncome = $taxableIncome;
+        $remainingIncome = (float) $taxableIncome;
         $personalRelief = PayrollConfiguration::getPersonalRelief();
         $totalRelief = $personalRelief + $insuranceRelief;
-        $payeBands = PayrollConfiguration::getPayeBands();
+        $cumulative = 0;
 
-        foreach ($payeBands as $band) {
-            $bandMin = $band['min'];
-            $bandMax = $band['max'] ?? PHP_INT_MAX;
-            $rate = $band['rate'];
-
+        foreach (PayrollConfiguration::getPayeSlices() as $slice) {
             if ($remainingIncome <= 0) {
                 break;
             }
 
-            $bandWidth = $bandMax - $bandMin + 1;
-            $taxableInBand = min($remainingIncome, $bandWidth);
+            $rate = (float) $slice['rate'];
+            $width = $slice['width'] === null ? null : (float) $slice['width'];
+            $taxableInBand = $width === null ? $remainingIncome : min($remainingIncome, $width);
+            $bandMin = $cumulative + ($cumulative > 0 ? 1 : 0);
+            $cumulative += $taxableInBand;
+            $taxAmount = $taxableInBand * $rate;
 
-            if ($taxableIncome > $bandMin) {
-                $taxAmount = $taxableInBand * $rate;
-                $taxBreakdown[] = [
-                    'band_min' => $bandMin,
-                    'band_max' => $bandMax,
-                    'rate_percent' => $rate * 100,
-                    'rate_decimal' => $rate,
-                    'taxable_in_band' => $taxableInBand,
-                    'tax_amount' => $taxAmount
-                ];
-                $remainingIncome -= $taxableInBand;
-            }
+            $taxBreakdown[] = [
+                'band_min' => $bandMin,
+                'band_max' => $width === null ? null : $cumulative,
+                'rate_percent' => $rate * 100,
+                'rate_decimal' => $rate,
+                'taxable_in_band' => $taxableInBand,
+                'tax_amount' => $taxAmount,
+            ];
+            $remainingIncome -= $taxableInBand;
         }
 
         return [
@@ -2222,7 +2134,7 @@ class KenyanPayrollCalculationService
             'personal_relief' => $personalRelief,
             'insurance_relief' => $insuranceRelief,
             'total_relief' => $totalRelief,
-            'bands' => $taxBreakdown
+            'bands' => $taxBreakdown,
         ];
     }
 

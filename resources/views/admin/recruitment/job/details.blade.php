@@ -67,6 +67,24 @@
 
                                                         <span class="time">@lang('recruitement.job_location') :
                                                             {{ $result->location?->location_name ?? '—' }}</span><br>
+
+                                                        @if($result->required_qualification || $result->min_years_experience !== null || $result->required_skills)
+                                                            <div class="m-t-15 m-b-15" style="background:#f5f8fa;border:1px solid #e4e7ea;padding:12px;border-radius:4px;">
+                                                                <p style="font-weight:700;margin-bottom:8px;">
+                                                                    <i class="fa fa-filter"></i> @lang('recruitement.ats_screening_criteria')
+                                                                </p>
+                                                                @if($result->required_qualification)
+                                                                    <span class="time">@lang('recruitement.required_qualification'): {{ $result->required_qualification }}</span><br>
+                                                                @endif
+                                                                @if($result->min_years_experience !== null)
+                                                                    <span class="time">@lang('recruitement.min_years_experience'): {{ $result->min_years_experience }}</span><br>
+                                                                @endif
+                                                                @if($result->required_skills)
+                                                                    <span class="time">@lang('recruitement.required_skills'): {{ $result->required_skills }}</span><br>
+                                                                @endif
+                                                            </div>
+                                                        @endif
+
                                                         <p> Description:</p>
                                                         <hr>
                                                         <span class="mail-desc">

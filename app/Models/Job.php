@@ -38,9 +38,19 @@ class Job extends Model
         'application_date',
         'minimum_qualifications',
         'experience_required',
+        'required_qualification',
+        'min_years_experience',
+        'required_skills',
         'skills_competencies',
         'key_responsibilities',
         'other_benefits',
+    ];
+
+    protected $casts = [
+        'min_years_experience' => 'integer',
+        'minimum_salary' => 'float',
+        'maximum_salary' => 'float',
+        'number_of_positions' => 'integer',
     ];
 
     public function createdBy()

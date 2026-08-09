@@ -136,12 +136,15 @@ class Payroll9Controller extends Controller implements ShouldQueue
     {
         $isPostNov2024 = $month >= '2024-12';
 
+        // Caps per KRA P9-FORM-Template-2025 (Appendix 2A / P9A notes).
         return [
             'pension_cap' => $isPostNov2024 ? 30000 : 20000,
             'interest_cap' => $isPostNov2024 ? 30000 : 25000,
             'prmf_cap' => $isPostNov2024 ? 15000 : 0,
             'e3_fixed' => $isPostNov2024 ? 30000 : 20000,
             'apply_shif_ahl' => $isPostNov2024,
+            'personal_relief' => 2400,
+            'insurance_relief_limit' => 5000,
         ];
     }
 
@@ -218,8 +221,12 @@ class Payroll9Controller extends Controller implements ShouldQueue
                 $C = 0;
                 $D = (float) ($record->gross_salary ?? 0);
 
+                // E = Defined Contribution Retirement Scheme (KRA P9A):
+                // E1 = 30% of basic (A), E2 = actual (NSSF + other pension), E3 = fixed monthly cap
                 $E1 = 0.3 * $A;
-                $E2 = min((float) ($record->pension_contribution ?? 0), $caps['pension_cap']);
+                $actualRetirement = (float) ($record->nssf_contribution ?? 0)
+                    + (float) ($record->pension_contribution ?? 0);
+                $E2 = min($actualRetirement, $caps['pension_cap']);
                 $E3 = $caps['e3_fixed'];
                 $E_total = min($E1, $E2, $E3);
 
@@ -354,7 +361,8 @@ class Payroll9Controller extends Controller implements ShouldQueue
             return 0;
         }
 
-        return min(0.15 * $insurancePremium, 5000);
+        // KRA: 15% of premium, max KES 5,000/month (P9-FORM-Template-2025 note 2(f))
+        return min(0.15 * $insurancePremium, 5000.0);
     }
 
     public function generate(Request $request)

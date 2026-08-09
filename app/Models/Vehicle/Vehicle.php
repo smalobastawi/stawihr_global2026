@@ -15,6 +15,7 @@ class Vehicle extends Model
     protected $table = 'vehicles';
 
     protected $fillable = [
+        'school_vehicle_id',
         'registration_number',
         'make',
         'model',
@@ -25,6 +26,8 @@ class Vehicle extends Model
         'location_id',
         'status',
         'remarks',
+        'sync_origin',
+        'last_synced_at',
         'company_id',
         'created_by',
         'updated_by',
@@ -34,6 +37,7 @@ class Vehicle extends Model
         'purchase_price' => 'decimal:2',
         'purchase_date' => 'date',
         'status' => 'integer',
+        'last_synced_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',

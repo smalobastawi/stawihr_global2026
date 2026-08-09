@@ -24,7 +24,7 @@ class InternalJobApplicationRequest extends FormRequest
     public function rules()
     {
         return [
-            //
+            'job_id' => 'required|exists:job,job_id',
             'name' => 'required|string|max:255',
             'email' => [
                 'required',
@@ -36,7 +36,10 @@ class InternalJobApplicationRequest extends FormRequest
             'cover_letter' => 'nullable|string|min:50|max:2000',
             'years_of_experience' => 'required|integer|min:0|max:50',
             'highest_qualification' => 'required|in:None,High School,Associate Degree,Bachelor\'s Degree,Master\'s Degree,PhD',
-            'location_id' => 'sometimes|required|exists:locations,location_id' // For internal applicants
+            'skills' => 'required|string|max:2000',
+            'location_id' => 'sometimes|required|exists:locations,location_id', // For internal applicants
+            'notice_period' => 'nullable|in:Immediate,1 week,2 weeks,1 month,2 months,3 months,More than 3 months',
+            'expected_salary' => 'nullable|numeric|min:0',
         ];
     }
 }

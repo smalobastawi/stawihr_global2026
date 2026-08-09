@@ -47,7 +47,17 @@ class PermissionMiddleware
                 return $next($request);
             }
 
-            if (in_array($permission, ['moduleSettings.index', 'moduleSettings.update'], true)
+            if (in_array($permission, [
+                    'moduleSettings.index',
+                    'moduleSettings.update',
+                    'schoolMisSettings.index',
+                    'schoolMisSettings.update',
+                    'schoolMisSettings.toggle',
+                    'schoolMisSettings.generateKey',
+                    'schoolMisSettings.revokeKey',
+                    'schoolMisSettings.testConnection',
+                    'schoolMisSettings.pushNow',
+                ], true)
                 && $authGuard->user()->can('systemSettings.index')) {
                 return $next($request);
             }

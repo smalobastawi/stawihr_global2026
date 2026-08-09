@@ -90,8 +90,26 @@ class ModuleActivationService
             return $permissions;
         }
 
-        return array_values(array_filter($permissions, function (string $permission) use ($disabledModuleIds) {
+        $keepVehicleMenu = false;
+        try {
+            $keepVehicleMenu = app(\App\Services\Integrations\VehicleSyncAccess::class)->canView()
+                && ! $this->isEnabled('Vehicle Management');
+        } catch (\Throwable) {
+            $keepVehicleMenu = false;
+        }
+
+        return array_values(array_filter($permissions, function (string $permission) use ($disabledModuleIds, $keepVehicleMenu) {
             foreach ($disabledModuleIds as $moduleName => $moduleId) {
+                $isVehicleMenu = in_array($moduleName, ['Vehicle Management'], true)
+                    && (
+                        $permission === 'pmMenu__Vehicle Management'
+                        || $permission === 'pmMenu__'.$this->menuPermissionName($moduleName)
+                    );
+
+                if ($isVehicleMenu && $keepVehicleMenu) {
+                    continue;
+                }
+
                 if ($permission === 'pmMenu__' . $moduleName) {
                     return false;
                 }

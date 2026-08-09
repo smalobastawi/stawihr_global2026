@@ -102,8 +102,144 @@
                                             Managing candidates for: <strong>{{ $selectedJob->job_title }}</strong>
                                         </p>
 
+                                        @if($selectedJob->required_qualification || $selectedJob->min_years_experience !== null || $selectedJob->required_skills)
+                                            <div class="alert alert-info">
+                                                <strong><i class="fa fa-filter"></i> Job ATS criteria:</strong>
+                                                @if($selectedJob->required_qualification)
+                                                    Qualification ≥ {{ $selectedJob->required_qualification }}
+                                                @endif
+                                                @if($selectedJob->min_years_experience !== null)
+                                                    · Experience ≥ {{ $selectedJob->min_years_experience }} yr(s)
+                                                @endif
+                                                @if($selectedJob->required_skills)
+                                                    · Skills: {{ $selectedJob->required_skills }}
+                                                @endif
+                                            </div>
+                                        @endif
+
+                                        <div class="job-filter-bar">
+                                            <form method="GET" action="{{ route('jobCandidate.index') }}">
+                                                <input type="hidden" name="view" value="pipeline">
+                                                <input type="hidden" name="job_id" value="{{ $jobId }}">
+                                                <input type="hidden" name="stage" value="{{ $stage }}">
+                                                <input type="hidden" name="sort" value="{{ $sort }}">
+                                                <input type="hidden" name="direction" value="{{ $direction }}">
+
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="form-group">
+                                                            <label>Search</label>
+                                                            <input type="text" name="keyword" class="form-control"
+                                                                value="{{ $filters['keyword'] ?? '' }}"
+                                                                placeholder="Name, email, skills...">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <div class="form-group">
+                                                            <label>Min experience</label>
+                                                            <input type="number" name="min_experience" class="form-control"
+                                                                min="0" max="50"
+                                                                value="{{ $filters['min_experience'] ?? '' }}"
+                                                                placeholder="Years">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <div class="form-group">
+                                                            <label>Min qualification</label>
+                                                            <select name="qualification" class="form-control">
+                                                                <option value="">Any</option>
+                                                                @foreach(($qualificationOptions ?? []) as $level)
+                                                                    <option value="{{ $level }}"
+                                                                        {{ ($filters['qualification'] ?? '') == $level ? 'selected' : '' }}>
+                                                                        {{ $level }}
+                                                                    </option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <div class="form-group">
+                                                            <label>Skill contains</label>
+                                                            <input type="text" name="skill" class="form-control"
+                                                                value="{{ $filters['skill'] ?? '' }}"
+                                                                placeholder="e.g. Laravel">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-group">
+                                                            <label>Source</label>
+                                                            <select name="application_source" class="form-control">
+                                                                <option value="">Any</option>
+                                                                <option value="internal" {{ ($filters['application_source'] ?? '') == 'internal' ? 'selected' : '' }}>Internal</option>
+                                                                <option value="external" {{ ($filters['application_source'] ?? '') == 'external' ? 'selected' : '' }}>External</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="form-group">
+                                                            <label>@lang('recruitement.notice_period')</label>
+                                                            <select name="notice_period" class="form-control">
+                                                                <option value="">Any</option>
+                                                                @foreach(['Immediate','1 week','2 weeks','1 month','2 months','3 months','More than 3 months'] as $period)
+                                                                    <option value="{{ $period }}"
+                                                                        {{ ($filters['notice_period'] ?? '') == $period ? 'selected' : '' }}>
+                                                                        {{ $period }}
+                                                                    </option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-group">
+                                                            <label>@lang('recruitement.max_expected_salary')</label>
+                                                            <input type="number" name="max_expected_salary" class="form-control"
+                                                                min="0" step="0.01"
+                                                                value="{{ $filters['max_expected_salary'] ?? '' }}">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <div class="form-group" style="padding-top: 25px;">
+                                                            <label class="checkbox-inline">
+                                                                <input type="checkbox" name="meets_criteria" value="1"
+                                                                    {{ !empty($filters['meets_criteria']) ? 'checked' : '' }}>
+                                                                @lang('recruitement.meets_criteria')
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-3 text-right" style="padding-top: 20px;">
+                                                        <button type="submit" class="btn btn-info">
+                                                            <i class="fa fa-filter"></i> @lang('recruitement.filter_candidates')
+                                                        </button>
+                                                        <a href="{{ route('jobCandidate.index', ['view' => 'pipeline', 'job_id' => $jobId, 'stage' => $stage]) }}"
+                                                            class="btn btn-default">
+                                                            @lang('recruitement.clear_filters')
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+
                                         <ul class="nav nav-tabs pipeline-tabs">
                                             @php
+                                                $stageQuery = array_filter([
+                                                    'view' => 'pipeline',
+                                                    'job_id' => $jobId,
+                                                    'sort' => $sort,
+                                                    'direction' => $direction,
+                                                    'keyword' => $filters['keyword'] ?? null,
+                                                    'min_experience' => $filters['min_experience'] ?? null,
+                                                    'qualification' => $filters['qualification'] ?? null,
+                                                    'skill' => $filters['skill'] ?? null,
+                                                    'application_source' => $filters['application_source'] ?? null,
+                                                    'notice_period' => $filters['notice_period'] ?? null,
+                                                    'max_expected_salary' => $filters['max_expected_salary'] ?? null,
+                                                    'meets_criteria' => !empty($filters['meets_criteria']) ? 1 : null,
+                                                ], function ($value) {
+                                                    return $value !== null && $value !== '';
+                                                });
+
                                                 $stages = [
                                                     'applications' => ['label' => 'All applications', 'count' => $stageCounts['applications'] ?? 0],
                                                     'shortlisted' => ['label' => 'Shortlisted', 'count' => $stageCounts['shortlisted'] ?? 0],
@@ -114,13 +250,7 @@
                                             @endphp
                                             @foreach ($stages as $stageKey => $stageMeta)
                                                 <li class="{{ $stage === $stageKey ? 'active' : '' }}">
-                                                    <a href="{{ route('jobCandidate.index', [
-                                                        'view' => 'pipeline',
-                                                        'job_id' => $jobId,
-                                                        'stage' => $stageKey,
-                                                        'sort' => $sort,
-                                                        'direction' => $direction,
-                                                    ]) }}">
+                                                    <a href="{{ route('jobCandidate.index', array_merge($stageQuery, ['stage' => $stageKey])) }}">
                                                         {{ $stageMeta['label'] }}
                                                         <span class="badge">{{ $stageMeta['count'] }}</span>
                                                     </a>
@@ -136,6 +266,7 @@
                                                 'view' => $view,
                                                 'stage' => $stage,
                                                 'jobId' => $jobId,
+                                                'filters' => $filters ?? [],
                                             ])
                                         </div>
                                     @endif

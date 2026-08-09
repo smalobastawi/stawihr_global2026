@@ -116,6 +116,7 @@ class WebController extends Controller
                 'attached_resume' => $resumePath,
                 'years_of_experience' => $request->years_of_experience,
                 'highest_qualification' => $request->highest_qualification,
+                'skills' => $request->skills,
                 'location_id' => $job->location_id, // Auto-set for internal
                 'application_source' => $request->application_source,
                 'application_date' => now(),

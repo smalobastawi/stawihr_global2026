@@ -82,31 +82,8 @@
 
     @if(!request()->is('/'))
     <footer class="front-footer">
-        <div class="front-footer-inner">
-            <div>
-                <div class="front-footer-brand">{{ $footerText }}</div>
-                @if($front_setting?->contact_email || $front_setting?->contact_phone)
-                    <div class="front-footer-meta mt-1">
-                        @if($front_setting?->contact_email)
-                            {{ $front_setting->contact_email }}
-                        @endif
-                        @if($front_setting?->contact_email && $front_setting?->contact_phone)
-                            &middot;
-                        @endif
-                        @if($front_setting?->contact_phone)
-                            {{ $front_setting->contact_phone }}
-                        @endif
-                    </div>
-                @endif
-            </div>
-            <div class="front-footer-links">
-                <a href="{{ url('/') }}">Home</a>
-                @if($isAuthenticated)
-                    <a href="{{ $dashboardUrl }}">Dashboard</a>
-                @else
-                    <a href="{{ $loginUrl }}">Sign in</a>
-                @endif
-            </div>
+        <div class="front-footer-inner" style="justify-content: center;">
+            <div class="front-footer-meta">&copy; {{ date('Y') }} {{ config('app.name') }}</div>
         </div>
     </footer>
 
@@ -115,7 +92,7 @@
     </a>
     @else
     <footer class="landing-home-footer">
-        <span>&copy; {{ date('Y') }} Stawitech</span>
+        <span>&copy; {{ date('Y') }} {{ config('app.name') }}</span>
     </footer>
     @endif
 

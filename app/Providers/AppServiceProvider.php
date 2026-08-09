@@ -5,9 +5,17 @@
 
 namespace App\Providers;
 
+use App\Models\Employee;
 use App\Models\FinancialYear;
+use App\Models\LeaveApplication;
 use App\Models\Payroll\PayrollRecord;
 use App\Observers\PayrollRecordObserver;
+use App\Models\Vehicle\Vehicle;
+use App\Models\Vehicle\VehicleAssignment;
+use App\Observers\SchoolMisEmployeeObserver;
+use App\Observers\SchoolMisLeaveObserver;
+use App\Observers\SchoolMisVehicleAssignmentObserver;
+use App\Observers\SchoolMisVehicleObserver;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Schema;
@@ -49,6 +57,11 @@ class AppServiceProvider extends ServiceProvider
         foreach ($models as $model) {
             $model::observe(\App\Observers\ApprovableModelObserver::class);
         }
+
+        Employee::observe(SchoolMisEmployeeObserver::class);
+        LeaveApplication::observe(SchoolMisLeaveObserver::class);
+        Vehicle::observe(SchoolMisVehicleObserver::class);
+        VehicleAssignment::observe(SchoolMisVehicleAssignmentObserver::class);
     }
     public function register()
     {

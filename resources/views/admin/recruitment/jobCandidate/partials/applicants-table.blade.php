@@ -1,16 +1,31 @@
 @php
     use App\Lib\Enumerations\JobStatus;
 
-    $sortLink = function (string $column) use ($sort, $direction, $view, $stage, $jobId) {
+    $filters = $filters ?? [];
+
+    $filterQuery = array_filter([
+        'view' => $view,
+        'job_id' => $jobId,
+        'stage' => $stage,
+        'keyword' => $filters['keyword'] ?? null,
+        'min_experience' => $filters['min_experience'] ?? null,
+        'qualification' => $filters['qualification'] ?? null,
+        'skill' => $filters['skill'] ?? null,
+        'application_source' => $filters['application_source'] ?? null,
+        'notice_period' => $filters['notice_period'] ?? null,
+        'max_expected_salary' => $filters['max_expected_salary'] ?? null,
+        'meets_criteria' => !empty($filters['meets_criteria']) ? 1 : null,
+    ], function ($value) {
+        return $value !== null && $value !== '';
+    });
+
+    $sortLink = function (string $column) use ($sort, $direction, $filterQuery) {
         $nextDirection = ($sort === $column && $direction === 'asc') ? 'desc' : 'asc';
 
-        return route('jobCandidate.index', [
-            'view' => $view,
-            'job_id' => $jobId,
-            'stage' => $stage,
+        return route('jobCandidate.index', array_merge($filterQuery, [
             'sort' => $column,
             'direction' => $nextDirection,
-        ]);
+        ]));
     };
 
     $sortIcon = function (string $column) use ($sort, $direction) {
@@ -33,12 +48,15 @@
                     <a href="{{ $sortLink('applicant_name') }}">Name {!! $sortIcon('applicant_name') !!}</a>
                 </th>
                 <th>Email</th>
-                <th>Phone</th>
                 <th>
                     <a href="{{ $sortLink('highest_qualification') }}">Qualification {!! $sortIcon('highest_qualification') !!}</a>
                 </th>
                 <th>
                     <a href="{{ $sortLink('years_of_experience') }}">Experience {!! $sortIcon('years_of_experience') !!}</a>
+                </th>
+                <th>@lang('recruitement.applicant_skills')</th>
+                <th>
+                    <a href="{{ $sortLink('match_score') }}">@lang('recruitement.ats_match_score') {!! $sortIcon('match_score') !!}</a>
                 </th>
                 <th>
                     <a href="{{ $sortLink('application_date') }}">Applied {!! $sortIcon('application_date') !!}</a>
@@ -52,13 +70,30 @@
         </thead>
         <tbody>
             @forelse($applicants as $applicant)
+                @php
+                    $score = (int) ($applicant->match_score ?? 0);
+                    $scoreClass = $score >= 80 ? 'success' : ($score >= 50 ? 'warning' : 'danger');
+                @endphp
                 <tr>
                     <td>{{ ($applicants->currentPage() - 1) * $applicants->perPage() + $loop->iteration }}</td>
-                    <td><strong>{{ $applicant->applicant_name }}</strong></td>
+                    <td>
+                        <strong>{{ $applicant->applicant_name }}</strong>
+                        @if(!empty($applicant->meets_criteria))
+                            <br><span class="label label-success">Qualified</span>
+                        @endif
+                        @if($applicant->application_source)
+                            <br><small class="text-muted">{{ ucfirst($applicant->application_source) }}</small>
+                        @endif
+                    </td>
                     <td>{{ $applicant->applicant_email }}</td>
-                    <td>{{ $applicant->phone }}</td>
                     <td>{{ $applicant->highest_qualification ?? '-' }}</td>
                     <td>{{ $applicant->years_of_experience ?? '-' }}</td>
+                    <td>
+                        <small>{{ \Illuminate\Support\Str::limit($applicant->skills ?? '-', 60) }}</small>
+                    </td>
+                    <td>
+                        <span class="label label-{{ $scoreClass }}">{{ $score }}%</span>
+                    </td>
                     <td>{{ $applicant->application_date ? date('d M Y', strtotime($applicant->application_date)) : '-' }}</td>
                     <td>
                         <a href="{{ route('view.CV', $applicant->job_applicant_id) }}" target="_blank">
@@ -120,7 +155,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="10" class="text-center">@lang('common.no_data_available')</td>
+                    <td colspan="11" class="text-center">@lang('common.no_data_available')</td>
                 </tr>
             @endforelse
         </tbody>

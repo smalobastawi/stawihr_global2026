@@ -43,6 +43,10 @@ class JobPostRequest extends FormRequest
             'job_requirements' => 'nullable|string',
             'minimum_qualifications' => 'nullable|string',
             'experience_required' => 'nullable|string|max:255',
+            'skills_competencies' => 'nullable|string',
+            'required_qualification' => 'nullable|in:None,High School,Associate Degree,Bachelor\'s Degree,Master\'s Degree,PhD',
+            'min_years_experience' => 'nullable|integer|min:0|max:50',
+            'required_skills' => 'nullable|string|max:2000',
             'job_requisition_id' => 'nullable|integer|exists:job_requisitions,job_requisition_id',
         ];
     }

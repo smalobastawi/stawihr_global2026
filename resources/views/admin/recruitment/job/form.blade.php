@@ -328,7 +328,7 @@
                             </div>
                         </div>
 
-                        {{-- QUALIFICATIONS --}}
+                        {{-- QUALIFICATIONS (narrative) --}}
                         <div class="form-group">
                             <label class="control-label col-md-3">
                                 @lang('recruitement.minimum_qualifications')
@@ -342,7 +342,7 @@
                             </div>
                         </div>
 
-                        {{-- EXPERIENCE --}}
+                        {{-- EXPERIENCE (narrative) --}}
                         <div class="form-group">
                             <label class="control-label col-md-3">
                                 @lang('recruitement.experience_required')
@@ -353,9 +353,102 @@
                                        name="experience_required"
                                        id="experience_required"
                                        class="form-control"
+                                       placeholder="{{ __('recruitement.experience_required_placeholder') }}"
                                        value="{{ isset($editModeData) ? $editModeData->experience_required : old('experience_required') }}">
                             </div>
                         </div>
+
+                        {{-- SKILLS NARRATIVE --}}
+                        <div class="form-group">
+                            <label class="control-label col-md-3">
+                                @lang('recruitement.skills_competencies')
+                            </label>
+
+                            <div class="col-md-7">
+                                <textarea name="skills_competencies"
+                                          id="skills_competencies"
+                                          rows="4"
+                                          class="form-control textarea_editor">{{ isset($editModeData) ? $editModeData->skills_competencies : old('skills_competencies') }}</textarea>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <div class="form-group">
+                            <div class="col-md-offset-3 col-md-7">
+                                <h4 class="m-t-10 m-b-5">
+                                    <i class="fa fa-filter"></i> @lang('recruitement.ats_screening_criteria')
+                                </h4>
+                                <p class="text-muted">
+                                    @lang('recruitement.ats_screening_criteria_help')
+                                </p>
+                            </div>
+                        </div>
+
+                        {{-- REQUIRED QUALIFICATION (ATS) --}}
+                        <div class="form-group">
+                            <label class="control-label col-md-3">
+                                @lang('recruitement.required_qualification')
+                            </label>
+
+                            <div class="col-md-4">
+                                @php
+                                    $selectedRequiredQualification = old(
+                                        'required_qualification',
+                                        isset($editModeData) ? $editModeData->required_qualification : ''
+                                    );
+                                @endphp
+                                <select name="required_qualification"
+                                        id="required_qualification"
+                                        class="form-control">
+                                    <option value="">
+                                        -- @lang('recruitement.choose_required_qualification') --
+                                    </option>
+                                    @foreach (\App\Lib\Enumerations\QualificationLevel::options() as $level)
+                                        <option value="{{ $level }}"
+                                            {{ $selectedRequiredQualification == $level ? 'selected' : '' }}>
+                                            {{ $level }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">@lang('recruitement.required_qualification_help')</small>
+                            </div>
+                        </div>
+
+                        {{-- MIN YEARS EXPERIENCE (ATS) --}}
+                        <div class="form-group">
+                            <label class="control-label col-md-3">
+                                @lang('recruitement.min_years_experience')
+                            </label>
+
+                            <div class="col-md-3">
+                                <input type="number"
+                                       name="min_years_experience"
+                                       id="min_years_experience"
+                                       class="form-control"
+                                       min="0"
+                                       max="50"
+                                       value="{{ isset($editModeData) ? $editModeData->min_years_experience : old('min_years_experience') }}">
+                                <small class="text-muted">@lang('recruitement.min_years_experience_help')</small>
+                            </div>
+                        </div>
+
+                        {{-- REQUIRED SKILLS (ATS) --}}
+                        <div class="form-group">
+                            <label class="control-label col-md-3">
+                                @lang('recruitement.required_skills')
+                            </label>
+
+                            <div class="col-md-7">
+                                <textarea name="required_skills"
+                                          id="required_skills"
+                                          rows="3"
+                                          class="form-control"
+                                          placeholder="{{ __('recruitement.required_skills_placeholder') }}">{{ isset($editModeData) ? $editModeData->required_skills : old('required_skills') }}</textarea>
+                                <small class="text-muted">@lang('recruitement.required_skills_help')</small>
+                            </div>
+                        </div>
+
+                        <hr>
 
                         {{-- SALARY --}}
                         <div class="form-group">
@@ -419,13 +512,17 @@
                             </label>
 
                             <div class="col-md-7">
+                                @php
+                                    $selectedAudience = old(
+                                        'audience_type',
+                                        isset($editModeData) ? $editModeData->audience_type : 'both'
+                                    );
+                                @endphp
                                 <select name="audience_type"
                                         class="form-control">
-
-                                    <option value="internal">Internal</option>
-                                    <option value="external">External</option>
-                                    <option value="both" selected>Both</option>
-
+                                    <option value="internal" {{ $selectedAudience == 'internal' ? 'selected' : '' }}>Internal</option>
+                                    <option value="external" {{ $selectedAudience == 'external' ? 'selected' : '' }}>External</option>
+                                    <option value="both" {{ $selectedAudience == 'both' ? 'selected' : '' }}>Both</option>
                                 </select>
                             </div>
                         </div>
@@ -620,6 +717,13 @@ $(document).ready(function () {
                 $('#minimum_salary').val(data.minimum_salary || '');
                 $('#maximum_salary').val(data.maximum_salary || '');
                 $('#experience_required').val(data.experience_required || '');
+                $('#required_skills').val(data.required_skills || data.skills_competencies || '');
+                if (data.min_years_experience !== undefined && data.min_years_experience !== null) {
+                    $('#min_years_experience').val(data.min_years_experience);
+                }
+                if (data.required_qualification) {
+                    $('#required_qualification').val(data.required_qualification);
+                }
 
                 // Safely update wysihtml5 editors
                 try {
@@ -645,6 +749,14 @@ $(document).ready(function () {
                         $('#minimum_qualifications').val(data.minimum_qualifications);
                     }
                 } catch(e) { console.error('Error setting qualifications:', e); }
+
+                try {
+                    if (data.skills_competencies && $('#skills_competencies').data('wysihtml5')) {
+                        $('#skills_competencies').data('wysihtml5').editor.setValue(data.skills_competencies);
+                    } else if (data.skills_competencies) {
+                        $('#skills_competencies').val(data.skills_competencies);
+                    }
+                } catch(e) { console.error('Error setting skills:', e); }
 
                 let alertBox = $('#requisition_status_alert');
                 

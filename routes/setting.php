@@ -6,6 +6,7 @@ use App\Http\Controllers\Setting\FinancialYearController;
 use App\Http\Controllers\Setting\SystemSettingController;
 use App\Http\Controllers\Setting\ModuleSettingsController;
 use App\Http\Controllers\Setting\DummyDataController;
+use App\Http\Controllers\Setting\SchoolMisSettingController;
 
 Route::group(['module' => 'Settings', 'section' => 'settings', 'prefix' => 'settings', 'middleware' => ['prevent-back-history', 'auth', 'permission']], function () {
 
@@ -43,6 +44,17 @@ Route::group(['module' => 'Settings', 'section' => 'settings', 'prefix' => 'sett
     Route::group(['sub_section' => 'Module Settings', 'prefix' => 'module-settings'], function () {
         Route::get('/', [ModuleSettingsController::class, 'index'])->name('moduleSettings.index');
         Route::put('/', [ModuleSettingsController::class, 'update'])->name('moduleSettings.update');
+    });
+
+    // School MIS (StawiSMS) integration
+    Route::group(['sub_section' => 'School MIS Integration', 'prefix' => 'school-mis'], function () {
+        Route::get('/', [SchoolMisSettingController::class, 'index'])->name('schoolMisSettings.index');
+        Route::put('/', [SchoolMisSettingController::class, 'update'])->name('schoolMisSettings.update');
+        Route::post('/toggle', [SchoolMisSettingController::class, 'toggle'])->name('schoolMisSettings.toggle');
+        Route::post('/generate-key', [SchoolMisSettingController::class, 'generateKey'])->name('schoolMisSettings.generateKey');
+        Route::post('/revoke-key', [SchoolMisSettingController::class, 'revokeKey'])->name('schoolMisSettings.revokeKey');
+        Route::post('/test-connection', [SchoolMisSettingController::class, 'testConnection'])->name('schoolMisSettings.testConnection');
+        Route::post('/push-now', [SchoolMisSettingController::class, 'pushNow'])->name('schoolMisSettings.pushNow');
     });
 
     // Dummy / test data generator

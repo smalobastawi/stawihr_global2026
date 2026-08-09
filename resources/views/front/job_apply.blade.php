@@ -283,6 +283,22 @@
                                     </div>
 
                                     <div class="row">
+                                        <div class="col-lg-12">
+                                            <div class="form-group app-label">
+                                                <label class="text-muted" for="skills">Skills <span class="text-danger">*</span></label>
+                                                <textarea name="skills" id="skills" rows="3" class="form-control resume"
+                                                    placeholder="e.g. PHP, Laravel, MySQL, Communication, Project Management" required>{{ old('skills') }}</textarea>
+                                                <small class="form-text text-muted">
+                                                    List your skills separated by commas.
+                                                </small>
+                                                @error('skills')
+                                                    <small class="text-danger">{{ $message }}</small>
+                                                @enderror
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
                                         <div class="col-md-6">
                                             <div class="form-group app-label">
                                                 <label class="text-muted">Current/Last Employer</label>

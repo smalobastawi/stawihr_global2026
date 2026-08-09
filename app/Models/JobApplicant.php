@@ -27,6 +27,7 @@ class JobApplicant extends Model
         'location_id',
         'years_of_experience',
         'highest_qualification',
+        'skills',
         'application_source', // 'internal' or 'external'
 
         // Enhanced fields
@@ -50,6 +51,8 @@ class JobApplicant extends Model
     protected $casts = [
         'application_date' => 'datetime',
         'hire_date' => 'datetime',
+        'years_of_experience' => 'integer',
+        'expected_salary' => 'float',
     ];
 
     // Relationships

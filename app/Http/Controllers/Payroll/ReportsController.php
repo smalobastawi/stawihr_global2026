@@ -177,26 +177,70 @@ class ReportsController extends Controller
 
     /**
      * Build a KRA P10 row from a payroll record.
+     * Updated to match KRA official P10 format
      */
     private function buildP10Row(PayrollRecord $record): array
     {
         $employee = $record->employee;
         $employeePayroll = $record->employeePayroll;
+        $company = $employee->company ?? null;
+
+        // Get allowance breakdowns
+        $housingAllowance = $record->house_allowance ?? $this->sumDetailAmount($record, ['Housing Allowance', 'House Allowance']);
+        $transportAllowance = $record->transport_allowance ?? $this->sumDetailAmount($record, ['Transport Allowance', 'Travelling Allowance']);
+        $overtimeAllowance = $record->total_overtime_amount ?? $this->sumDetailAmount($record, ['Overtime', 'Over Time Allowance', 'Overtime Totals']);
+        $leavePay = $this->sumDetailAmount($record, ['Leave Pay', 'Leave Allowance', 'Annual Leave']);
+        $otherAllowance = $record->total_allowances ?? $this->sumOtherAllowances($record);
+
+        // Calculate totals
+        $totalCashPay = $record->basic_salary + $housingAllowance + $transportAllowance + $leavePay + $overtimeAllowance + $otherAllowance;
+        $totalGrossPay = $record->gross_salary ?? $totalCashPay;
+
+        // Get insurance relief (calculate if not stored)
+        $insuranceRelief = $record->insurance_relief ?? 0;
+        if ($insuranceRelief == 0 && $record->relationLoaded('details')) {
+            $insurancePremiums = $this->sumDetailAmount($record, ['Health Insurance', 'Life Insurance', 'Education Insurance']);
+            $insuranceRelief = min($insurancePremiums * 0.15, 5000);
+        }
 
         return [
+            // Employer Information
+            'Employer PIN' => $company->kra_pin ?? $company->PIN ?? '',
+
+            // Employee Information
             'PIN of Employee' => $employeePayroll->kra_pin ?? $employee->KRA_Pin ?? '',
             'Name of Employee' => trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')),
             'Resident Status' => ResidencyStatus::getName($employee->residential_status ?? ''),
-            'Type of Employee' => $employee->employeeType->name ?? '',
+            'Type of Employee' => $employee->employeeType->name ?? 'Permanent',
+
+            // Cash Pay - Allowances
             'Basic Salary' => $record->basic_salary ?? 0,
-            'Housing Allowance' => $record->house_allowance ?? $this->sumDetailAmount($record, ['Housing Allowance', 'House Allowance']),
-            'Transport Allowance' => $record->transport_allowance ?? $this->sumDetailAmount($record, ['Transport Allowance', 'Travelling Allowance']),
-            'Over Time Allowance' => $record->total_overtime_amount ?? $this->sumDetailAmount($record, ['Overtime', 'Over Time Allowance', 'Overtime Totals']),
-            'Other Allowance' => $record->total_allowances ?? $this->sumOtherAllowances($record),
+            'Housing Allowance' => $housingAllowance,
+            'Transport Allowance' => $transportAllowance,
+            'Leave Pay' => $leavePay,
+            'Over Time Allowance' => $overtimeAllowance,
+            'Other Allowance' => $otherAllowance,
+
+            // Total Cash Pay
+            'Total Cash Pay' => $totalCashPay,
+
+            // Non-Cash Benefits
+            'Value of Car Benefit' => $this->sumDetailAmount($record, ['Car Benefit', 'Motor Vehicle Benefit']),
+            'Other Non-Cash Benefits' => $this->sumDetailAmount($record, ['Non-Cash Benefit', 'Benefit in Kind']),
+
+            // Total Gross Pay
+            'Total Gross Pay' => $totalGrossPay,
+
+            // Statutory Deductions
             'Social Health Insurance Fund (J)' => $record->shif_contribution ?? 0,
             'Affordable Housing Levy (N)' => $record->housing_levy ?? 0,
             'Actual Pension Contribution (K)' => $record->pension_contribution ?? 0,
-            'Amount of Insurance Relief (Ksh) (S)' => $record->insurance_relief ?? 0,
+            'Post Retirement Medical' => $this->sumDetailAmount($record, ['Post Retirement Medical', 'Retirement Medical Fund']),
+
+            // Tax Relief
+            'Amount of Insurance Relief (Ksh) (S)' => $insuranceRelief,
+
+            // PAYE Tax
             'PAYE Tax' => $record->paye_tax ?? 0,
         ];
     }

@@ -9,7 +9,10 @@ namespace App\Services\Payroll\TaxRules;
  */
 class CountryPayrollTaxRules
 {
-    /** Kenya – KRA monthly bands (config may override via PayrollConfiguration). */
+    /**
+     * Kenya – KRA monthly bands (Finance Act 2023 / current PAYE guide).
+     * Config may override via PayrollConfiguration.
+     */
     public static function kenyaPayeBands(): array
     {
         return [
@@ -18,6 +21,18 @@ class CountryPayrollTaxRules
             ['min' => 32334, 'max' => 500000, 'rate' => 0.30],
             ['min' => 500001, 'max' => 800000, 'rate' => 0.325],
             ['min' => 800001, 'max' => null, 'rate' => 0.35],
+        ];
+    }
+
+    /** Kenya – KRA progressive slice widths (preferred for calculation). */
+    public static function kenyaPayeSlices(): array
+    {
+        return [
+            ['width' => 24000, 'rate' => 0.10],
+            ['width' => 8333, 'rate' => 0.25],
+            ['width' => 467667, 'rate' => 0.30],
+            ['width' => 300000, 'rate' => 0.325],
+            ['width' => null, 'rate' => 0.35],
         ];
     }
 

@@ -13,14 +13,23 @@
             </ol>
         </div>
         <div class="col-lg-4 col-sm-4 col-md-4 col-xs-12">
-            <a href="{{ route('vehicle.create') }}" class="btn btn-success pull-right m-l-20 waves-effect waves-light">
-                <i class="fa fa-plus-circle" aria-hidden="true"></i> @lang('vehicle.add_vehicle')
-            </a>
-            <button type="button" class="btn btn-info pull-right m-l-20 waves-effect waves-light" data-toggle="modal" data-target="#importModal">
-                <i class="fa fa-upload" aria-hidden="true"></i> @lang('vehicle.import')
-            </button>
+            @if($canWriteVehicles ?? true)
+                <a href="{{ route('vehicle.create') }}" class="btn btn-success pull-right m-l-20 waves-effect waves-light">
+                    <i class="fa fa-plus-circle" aria-hidden="true"></i> @lang('vehicle.add_vehicle')
+                </a>
+                <button type="button" class="btn btn-info pull-right m-l-20 waves-effect waves-light" data-toggle="modal" data-target="#importModal">
+                    <i class="fa fa-upload" aria-hidden="true"></i> @lang('vehicle.import')
+                </button>
+            @endif
         </div>
     </div>
+
+    @if($vehicleSyncViewOnly ?? false)
+        <div class="alert alert-warning">
+            Vehicle Management is off on this HR instance, so the fleet is <strong>view only</strong>.
+            Enable the Vehicle Management module to add/edit, or manage vehicles from StawiSMS Transport.
+        </div>
+    @endif
 
     <!-- Flash Messages -->
     @if(session('success'))
@@ -173,16 +182,18 @@
                                                 <a href="{{ route('vehicle.show', $vehicle->id) }}" class="btn btn-xs btn-info" title="@lang('common.view')">
                                                     <i class="fa fa-eye"></i>
                                                 </a>
-                                                <a href="{{ route('vehicle.edit', $vehicle->id) }}" class="btn btn-xs btn-success" title="@lang('common.edit')">
-                                                    <i class="fa fa-pencil"></i>
-                                                </a>
-                                                <form action="{{ route('vehicle.delete', $vehicle->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('@lang('vehicle.confirm_delete')');">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-xs btn-danger" title="@lang('common.delete')">
-                                                        <i class="fa fa-trash"></i>
-                                                    </button>
-                                                </form>
+                                                @if($canWriteVehicles ?? true)
+                                                    <a href="{{ route('vehicle.edit', $vehicle->id) }}" class="btn btn-xs btn-success" title="@lang('common.edit')">
+                                                        <i class="fa fa-pencil"></i>
+                                                    </a>
+                                                    <form action="{{ route('vehicle.delete', $vehicle->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('@lang('vehicle.confirm_delete')');">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-xs btn-danger" title="@lang('common.delete')">
+                                                            <i class="fa fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                @endif
                                             </td>
                                         </tr>
                                     @empty

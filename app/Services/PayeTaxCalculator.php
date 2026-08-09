@@ -257,14 +257,26 @@ class PayeTaxCalculator
      * @param float|null $upperBound
      * @return float
      */
+    /**
+     * Progressive band width for remaining-income iteration.
+     * First band (lowerBound = 0): width = upperBound ("on the first X").
+     * Later bands stored as 24001–32333: width = upper - lower + 1 ("on the next").
+     */
     private function calculateTaxableAmount(float $remainingIncome, float $lowerBound, ?float $upperBound): float
     {
-        if (is_null($upperBound)) {
-            return max(0, $remainingIncome - $lowerBound + 1);
+        if ($remainingIncome <= 0) {
+            return 0;
         }
 
-        $bandWidth = $upperBound - $lowerBound + 1;
-        return min($bandWidth, max(0, $remainingIncome - $lowerBound + 1));
+        if (is_null($upperBound)) {
+            return $remainingIncome;
+        }
+
+        $bandWidth = $lowerBound <= 0
+            ? (float) $upperBound
+            : ((float) $upperBound - (float) $lowerBound + 1);
+
+        return min($bandWidth, $remainingIncome);
     }
 
     /**

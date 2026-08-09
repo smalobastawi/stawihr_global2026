@@ -8,6 +8,7 @@ use App\Models\Vehicle\VehicleAssignment;
 use App\Models\Employee;
 use App\Models\Location;
 use App\Imports\VehicleImport;
+use App\Services\Integrations\VehicleSyncAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -18,8 +19,16 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class VehicleController extends Controller
 {
+    public function __construct(private readonly VehicleSyncAccess $vehicleSync) {}
+
     public function index(Request $request)
     {
+        abort_unless($this->vehicleSync->canView(), 403);
+
+        if ($this->vehicleSync->syncConfigured()) {
+            $this->vehicleSync->refreshPeerCapability();
+        }
+
         $query = Vehicle::with(['location', 'currentAssignment.employee']);
 
         // Apply filters
@@ -47,15 +56,21 @@ class VehicleController extends Controller
 
         // Data for filters
         $locations = Location::where('status', 1)->get();
+        $vehicleSyncViewOnly = $this->vehicleSync->isViewOnly();
+        $canWriteVehicles = $this->vehicleSync->canWrite();
 
         return view('admin.vehicle.vehicles.index', compact(
             'vehicles',
-            'locations'
+            'locations',
+            'vehicleSyncViewOnly',
+            'canWriteVehicles'
         ));
     }
 
     public function create()
     {
+        abort_unless($this->vehicleSync->canWrite(), 403, 'Vehicles are view-only while Vehicle Management is disabled.');
+
         $locations = Location::where('status', 1)->get();
 
         return view('admin.vehicle.vehicles.form', compact(
@@ -65,6 +80,8 @@ class VehicleController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($this->vehicleSync->canWrite(), 403, 'Vehicles are view-only while Vehicle Management is disabled.');
+
         $validator = Validator::make($request->all(), [
             'registration_number' => 'required|string|max:50|unique:vehicles,registration_number',
             'make' => 'nullable|string|max:100',
@@ -123,6 +140,8 @@ class VehicleController extends Controller
 
     public function edit($id)
     {
+        abort_unless($this->vehicleSync->canWrite(), 403, 'Vehicles are view-only while Vehicle Management is disabled.');
+
         $vehicle = Vehicle::findOrFail($id);
         $locations = Location::where('status', 1)->get();
 
@@ -134,6 +153,8 @@ class VehicleController extends Controller
 
     public function update(Request $request, $id)
     {
+        abort_unless($this->vehicleSync->canWrite(), 403, 'Vehicles are view-only while Vehicle Management is disabled.');
+
         $vehicle = Vehicle::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
@@ -171,6 +192,8 @@ class VehicleController extends Controller
 
     public function destroy($id)
     {
+        abort_unless($this->vehicleSync->canWrite(), 403, 'Vehicles are view-only while Vehicle Management is disabled.');
+
         try {
             $vehicle = Vehicle::findOrFail($id);
             $vehicle->delete();
@@ -185,6 +208,8 @@ class VehicleController extends Controller
 
     public function assignDriver(Request $request, $id)
     {
+        abort_unless($this->vehicleSync->canWrite(), 403, 'Vehicles are view-only while Vehicle Management is disabled.');
+
         $vehicle = Vehicle::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
@@ -235,6 +260,8 @@ class VehicleController extends Controller
 
     public function unassignDriver(Request $request, $id)
     {
+        abort_unless($this->vehicleSync->canWrite(), 403, 'Vehicles are view-only while Vehicle Management is disabled.');
+
         $vehicle = Vehicle::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
@@ -281,6 +308,8 @@ class VehicleController extends Controller
 
     public function import(Request $request)
     {
+        abort_unless($this->vehicleSync->canWrite(), 403, 'Vehicles are view-only while Vehicle Management is disabled.');
+
         $validator = Validator::make($request->all(), [
             'select_file' => 'required|file|mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv|max:10240',
         ]);

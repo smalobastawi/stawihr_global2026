@@ -1,7 +1,8 @@
+{{-- KRA P9A columns aligned to P9-FORM-Template-2025.pdf (Appendix 2A) --}}
 <table class="p9-table table table-bordered table-sm" style="width: 100%; border-collapse: collapse;">
     <thead>
         <tr>
-            <th rowspan="3" style="text-align: center; vertical-align: middle; width: 7%;">MONTH</th>
+            <th rowspan="3" style="text-align: center; vertical-align: middle; width: 6%;">MONTH</th>
             <th colspan="17" style="text-align: center;">Kshs.</th>
         </tr>
         <tr>
@@ -13,13 +14,13 @@
             <th style="text-align: center;">Affordable<br>Housing Levy<br>(AHL)</th>
             <th style="text-align: center;">Social Health<br>Insurance Fund<br>(SHIF)</th>
             <th style="text-align: center;">Post Retirement<br>Medical Fund<br>(PRMF)</th>
-            <th style="text-align: center;">Owner-Occupied<br>Interest</th>
-            <th style="text-align: center;">Total Deductions<br>(Lower of E + F + G + H + I)</th>
-            <th style="text-align: center;">Chargeable Pay<br>(D - J)</th>
+            <th style="text-align: center;">Owner-<br>Occupied<br>Interest</th>
+            <th style="text-align: center;">Total Deductions<br>(Lower of E<br>+ F + G + H + I)</th>
+            <th style="text-align: center;">Chargeable<br>Pay<br>(D − J)</th>
             <th style="text-align: center;">Tax<br>Charged</th>
             <th style="text-align: center;">Personal<br>Relief</th>
             <th style="text-align: center;">Insurance<br>Relief</th>
-            <th style="text-align: center;">PAYE Tax<br>(L - M - N)</th>
+            <th style="text-align: center;">PAYE Tax<br>(L − M − N)</th>
         </tr>
         <tr>
             <th style="text-align: center;">A</th>

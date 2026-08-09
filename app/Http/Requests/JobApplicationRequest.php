@@ -50,6 +50,7 @@ class JobApplicationRequest extends FormRequest
             'cover_letter' => 'nullable|string|min:50|max:2000',
             'years_of_experience' => 'required|integer|min:0|max:50',
             'highest_qualification' => 'required|in:None,High School,Associate Degree,Bachelor\'s Degree,Master\'s Degree,PhD',
+            'skills' => 'required|string|max:2000',
             'location_id' => 'sometimes|required|exists:locations,location_id', // For internal applicants
 
             // New fields - all optional

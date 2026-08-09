@@ -1994,7 +1994,7 @@ class EssIndexController extends Controller
     /**
      * Handle internal job application from ESS.
      */
-    public function jobApply(Request $request)
+    public function jobApply(\App\Http\Requests\InternalJobApplicationRequest $request)
     {
         try {
             $job = Job::findOrFail($request->job_id);
@@ -2015,9 +2015,12 @@ class EssIndexController extends Controller
                 'attached_resume' => $resumePath,
                 'years_of_experience' => $request->years_of_experience,
                 'highest_qualification' => $request->highest_qualification,
+                'skills' => $request->skills,
                 'location_id' => $job->location_id,
                 'application_source' => 'internal',
                 'application_date' => now(),
+                'notice_period' => $request->notice_period,
+                'expected_salary' => $request->expected_salary,
             ]);
 
             // Send confirmation email to applicant
