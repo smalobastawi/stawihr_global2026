@@ -114,6 +114,7 @@ class EmployeePayrollController extends Controller
             'shif_number' => 'nullable|string|max:20',
             'tax_status' => 'required|in:resident,non_resident,exempt',
             'disability_exemption' => 'boolean',
+            'disability_exemption_certificate_number' => 'nullable|required_if:disability_exemption,1|string|max:100',
             'pension_scheme_ids' => 'nullable|array',
             'pension_scheme_ids.*' => 'exists:pension_schemes,id',
             'pension_rates' => 'nullable|array',
@@ -211,6 +212,9 @@ class EmployeePayrollController extends Controller
                 'shif_number' => $request->shif_number,
                 'tax_status' => $request->tax_status,
                 'disability_exemption' => $request->boolean('disability_exemption'),
+                'disability_exemption_certificate_number' => $request->boolean('disability_exemption')
+                    ? $request->disability_exemption_certificate_number
+                    : null,
                 'overtime_rate_normal' => $request->overtime_rate_normal ?? 1.5,
                 'overtime_rate_weekend' => $request->overtime_rate_weekend ?? 2.0,
                 'overtime_rate_holiday' => $request->overtime_rate_holiday ?? 2.0,
@@ -377,6 +381,7 @@ class EmployeePayrollController extends Controller
             'shif_number' => 'nullable|string|max:20',
             'tax_status' => 'required|in:resident,non_resident,exempt',
             'disability_exemption' => 'boolean',
+            'disability_exemption_certificate_number' => 'nullable|required_if:disability_exemption,1|string|max:100',
             'pension_scheme_ids' => 'nullable|array',
             'pension_scheme_ids.*' => 'exists:pension_schemes,id',
             'pension_rates' => 'nullable|array',
@@ -476,19 +481,10 @@ class EmployeePayrollController extends Controller
 
                 $employeePayroll->update([
                     'currency' => strtoupper($request->currency),
-                'payment_currency' => $request->filled('payment_currency') ? strtoupper($request->payment_currency) : null,
-                'bank_payment_currency' => $request->filled('bank_payment_currency') ? strtoupper($request->bank_payment_currency) : null,
-                'exchange_rate_type' => $request->input('exchange_rate_type', 'standard'),
-                ]);
-            } else {
-                // Regular update without salary change
-                $employeePayroll->update([
+                    'payment_currency' => $request->filled('payment_currency') ? strtoupper($request->payment_currency) : null,
+                    'bank_payment_currency' => $request->filled('bank_payment_currency') ? strtoupper($request->bank_payment_currency) : null,
+                    'exchange_rate_type' => $request->input('exchange_rate_type', 'standard'),
                     'phone_number' => $request->phone_number,
-                    'basic_salary' => $newSalary,
-                    'currency' => strtoupper($request->currency),
-                'payment_currency' => $request->filled('payment_currency') ? strtoupper($request->payment_currency) : null,
-                'bank_payment_currency' => $request->filled('bank_payment_currency') ? strtoupper($request->bank_payment_currency) : null,
-                'exchange_rate_type' => $request->input('exchange_rate_type', 'standard'),
                     'income_frequency' => $request->income_frequency ?? $employeePayroll->income_frequency,
                     'payment_method' => $request->payment_method,
                     'bank_name' => $request->bank_name,
@@ -500,10 +496,39 @@ class EmployeePayrollController extends Controller
                     'shif_number' => $request->shif_number,
                     'tax_status' => $request->tax_status,
                     'disability_exemption' => $request->boolean('disability_exemption'),
+                    'disability_exemption_certificate_number' => $request->boolean('disability_exemption')
+                        ? $request->disability_exemption_certificate_number
+                        : null,
                     'overtime_rate_normal' => $request->overtime_rate_normal ?? $employeePayroll->overtime_rate_normal,
                     'overtime_rate_weekend' => $request->overtime_rate_weekend ?? $employeePayroll->overtime_rate_weekend,
                     'overtime_rate_holiday' => $request->overtime_rate_holiday ?? $employeePayroll->overtime_rate_holiday,
-
+                ]);
+            } else {
+                // Regular update without salary change
+                $employeePayroll->update([
+                    'phone_number' => $request->phone_number,
+                    'basic_salary' => $newSalary,
+                    'currency' => strtoupper($request->currency),
+                    'payment_currency' => $request->filled('payment_currency') ? strtoupper($request->payment_currency) : null,
+                    'bank_payment_currency' => $request->filled('bank_payment_currency') ? strtoupper($request->bank_payment_currency) : null,
+                    'exchange_rate_type' => $request->input('exchange_rate_type', 'standard'),
+                    'income_frequency' => $request->income_frequency ?? $employeePayroll->income_frequency,
+                    'payment_method' => $request->payment_method,
+                    'bank_name' => $request->bank_name,
+                    'bank_branch' => $request->bank_branch,
+                    'account_number' => $request->account_number,
+                    'account_name' => $request->account_name,
+                    'kra_pin' => $request->kra_pin,
+                    'nssf_number' => $request->nssf_number,
+                    'shif_number' => $request->shif_number,
+                    'tax_status' => $request->tax_status,
+                    'disability_exemption' => $request->boolean('disability_exemption'),
+                    'disability_exemption_certificate_number' => $request->boolean('disability_exemption')
+                        ? $request->disability_exemption_certificate_number
+                        : null,
+                    'overtime_rate_normal' => $request->overtime_rate_normal ?? $employeePayroll->overtime_rate_normal,
+                    'overtime_rate_weekend' => $request->overtime_rate_weekend ?? $employeePayroll->overtime_rate_weekend,
+                    'overtime_rate_holiday' => $request->overtime_rate_holiday ?? $employeePayroll->overtime_rate_holiday,
                 ]);
             }
 
@@ -612,6 +637,7 @@ class EmployeePayrollController extends Controller
             'shif_number',
             'tax_status',
             'disability_exemption',
+            'disability_exemption_certificate_number',
             'overtime_rate_normal',
             'overtime_rate_weekend',
             'overtime_rate_holiday'

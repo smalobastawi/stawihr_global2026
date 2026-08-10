@@ -4,14 +4,17 @@ namespace App\Http\Controllers\Annalytics;
 
 use App\Http\Controllers\Controller;
 use App\Services\Annalytics\AnnalyticsDataService;
+use App\Services\Annalytics\OrganizationChartService;
 use App\Support\Annalytics\AnnalyticsReportRegistry;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AnnalyticsController extends Controller
 {
-    public function __construct(private AnnalyticsDataService $dataService)
-    {
+    public function __construct(
+        private AnnalyticsDataService $dataService,
+        private OrganizationChartService $organizationChartService
+    ) {
     }
 
     public function index()
@@ -24,6 +27,10 @@ class AnnalyticsController extends Controller
     public function show(Request $request, string $report)
     {
         AnnalyticsReportRegistry::authorizeReport($report);
+
+        if (AnnalyticsReportRegistry::isDocumentReport($report) && $report === 'org-chart') {
+            return $this->showOrganizationChart($request);
+        }
 
         $definition = AnnalyticsReportRegistry::get($report);
         $year = (int) $request->input('year', date('Y'));
@@ -87,9 +94,13 @@ class AnnalyticsController extends Controller
         return view('admin.annalytics.explore', $viewData);
     }
 
-    public function export(Request $request, string $report): StreamedResponse
+    public function export(Request $request, string $report)
     {
         AnnalyticsReportRegistry::authorizeReport($report);
+
+        if (AnnalyticsReportRegistry::isDocumentReport($report) && $report === 'org-chart') {
+            return $this->exportOrganizationChartPdf($request);
+        }
 
         $year = (int) $request->input('year', date('Y'));
         $leaveTypeId = $this->resolveLeaveTypeId($request, $report);
@@ -107,6 +118,48 @@ class AnnalyticsController extends Controller
         }, $filename, [
             'Content-Type' => 'text/csv',
         ]);
+    }
+
+    private function showOrganizationChart(Request $request)
+    {
+        $departmentId = $request->filled('department_id') ? (int) $request->input('department_id') : null;
+        $chartData = $this->organizationChartService->build($departmentId);
+        $definition = AnnalyticsReportRegistry::get('org-chart');
+
+        return view('admin.annalytics.org-chart', [
+            'report' => 'org-chart',
+            'definition' => $definition,
+            'trees' => $chartData['trees'],
+            'unassigned' => $chartData['unassigned'],
+            'summary' => $chartData['summary'],
+            'departments' => $chartData['departments'],
+            'filters' => $chartData['filters'],
+            'generated_at' => $chartData['generated_at'],
+        ]);
+    }
+
+    private function exportOrganizationChartPdf(Request $request)
+    {
+        $departmentId = $request->filled('department_id') ? (int) $request->input('department_id') : null;
+        $chartData = $this->organizationChartService->build($departmentId);
+        $definition = AnnalyticsReportRegistry::get('org-chart');
+        $companyName = function_exists('companyDisplayName') ? companyDisplayName() : 'Organization';
+        $filename = str_replace(' ', '_', strtolower($companyName ?: 'organization')) . '_org_chart.pdf';
+
+        $pdf = Pdf::loadView('admin.annalytics.pdf.org-chart', [
+            'definition' => $definition,
+            'trees' => $chartData['trees'],
+            'unassigned' => $chartData['unassigned'],
+            'summary' => $chartData['summary'],
+            'filters' => $chartData['filters'],
+            'departments' => $chartData['departments'],
+            'printHead' => $chartData['printHead'],
+            'generated_at' => $chartData['generated_at'],
+        ]);
+
+        $pdf->setPaper('A4', 'landscape');
+
+        return $pdf->download($filename);
     }
 
     private function resolveLeaveTypeId(Request $request, string $report): ?int

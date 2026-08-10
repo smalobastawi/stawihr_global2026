@@ -69,6 +69,7 @@ class EmployeePayrollTemplateExport implements FromArray, WithHeadings, ShouldAu
                 'account_name' => $payroll->account_name ?? $employee->bank_account_name ?? '',
                 'tax_status' => $payroll->tax_status ?? '',
                 'disability_exemption' => $payroll ? ($payroll->disability_exemption ? 'Yes' : 'No') : 'No',
+                'disability_exemption_certificate_number' => $payroll->disability_exemption_certificate_number ?? '',
                 'kra_pin' => $payroll->kra_pin ?? $employee->KRA_Pin ?? '',
                 'nssf_number' => $payroll->nssf_number ?? $employee->NSSF_no ?? '',
                 'nssf_rate_type' => $this->getNssfRateTypeLabel($employee->nssf_rate_type ?? 2),
@@ -108,6 +109,7 @@ class EmployeePayrollTemplateExport implements FromArray, WithHeadings, ShouldAu
             'ACCOUNT_NAME',
             'TAX_STATUS',
             'DISABILITY_EXEMPTION',
+            'EXEMPTION_CERTIFICATE_NUMBER',
             'KRA_PIN',
             'NSSF_NUMBER',
             'NSSF_RATE_TYPE',
@@ -154,13 +156,13 @@ class EmployeePayrollTemplateExport implements FromArray, WithHeadings, ShouldAu
                 $disabilityExemptionOptions = ['Yes', 'No'];
                 $this->applyDropdown($sheet, 'Q', $disabilityExemptionOptions);
 
-                // NSSF_RATE_TYPE Dropdown (Column T)
+                // NSSF_RATE_TYPE Dropdown (Column U)
                 $nssfRateTypeOptions = ['Tier 1 & 2', 'Tier 1 only', 'No Deduction'];
-                $this->applyDropdown($sheet, 'T', $nssfRateTypeOptions);
+                $this->applyDropdown($sheet, 'U', $nssfRateTypeOptions);
 
-                // STATUS Dropdown (Column AB)
+                // STATUS Dropdown (Column AC)
                 $statusOptions = ['Active', 'Inactive'];
-                $this->applyDropdown($sheet, 'AB', $statusOptions);
+                $this->applyDropdown($sheet, 'AC', $statusOptions);
 
                 // PAYMENT_METHOD Dropdown (Column K)
                 $paymentMethodOptions = ['bank_transfer', 'mobile_money', 'cash', 'cheque'];
@@ -174,18 +176,18 @@ class EmployeePayrollTemplateExport implements FromArray, WithHeadings, ShouldAu
                 $currencyOptions = ['KES', 'USD', 'EUR', 'GBP'];
                 $this->applyDropdown($sheet, 'H', $currencyOptions);
 
-                // PENSION_SCHEME_NAMES Dropdown (Column V) - Multiple selection hint
+                // PENSION_SCHEME_NAMES Dropdown (Column W) - Multiple selection hint
                 if (!empty($pensionSchemes)) {
-                    $this->applyDropdown($sheet, 'V', $pensionSchemes);
+                    $this->applyDropdown($sheet, 'W', $pensionSchemes);
                 }
 
                 // Add data validation for numeric fields
                 $this->applyNumericValidation($sheet, 'G'); // BASIC_SALARY
-                $this->applyNumericValidation($sheet, 'W'); // EMPLOYEE_PENSION_RATE
-                $this->applyNumericValidation($sheet, 'X'); // EMPLOYER_PENSION_RATE
-                $this->applyNumericValidation($sheet, 'Y'); // OVERTIME_RATE_NORMAL
-                $this->applyNumericValidation($sheet, 'Z'); // OVERTIME_RATE_WEEKEND
-                $this->applyNumericValidation($sheet, 'AA'); // OVERTIME_RATE_HOLIDAY
+                $this->applyNumericValidation($sheet, 'X'); // EMPLOYEE_PENSION_RATE
+                $this->applyNumericValidation($sheet, 'Y'); // EMPLOYER_PENSION_RATE
+                $this->applyNumericValidation($sheet, 'Z'); // OVERTIME_RATE_NORMAL
+                $this->applyNumericValidation($sheet, 'AA'); // OVERTIME_RATE_WEEKEND
+                $this->applyNumericValidation($sheet, 'AB'); // OVERTIME_RATE_HOLIDAY
 
                 // Freeze the first row
                 $sheet->freezePane('A2');

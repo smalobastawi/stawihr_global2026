@@ -59,6 +59,8 @@
                                         <th>Name of Employee</th>
                                         <th>Resident Status</th>
                                         <th>Type of Employee</th>
+                                        <th>Persons with Disability (PWD)</th>
+                                        <th>Exemption Certificate Number</th>
                                         <th>Basic Salary</th>
                                         <th>Housing Allowance</th>
                                         <th>Transport Allowance</th>
@@ -66,6 +68,7 @@
                                         <th>Other Allowance</th>
                                         <th>SHIF (J)</th>
                                         <th>AHL (N)</th>
+                                        <th>NSSF</th>
                                         <th>Pension (K)</th>
                                         <th>Insurance Relief (S)</th>
                                         <th>PAYE Tax</th>
@@ -79,6 +82,8 @@
                                             <td>{{ $row['Name of Employee'] }}</td>
                                             <td>{{ $row['Resident Status'] }}</td>
                                             <td>{{ $row['Type of Employee'] }}</td>
+                                            <td>{{ $row['Persons with Disability (PWD)'] }}</td>
+                                            <td>{{ $row['Exemption Certificate Number'] }}</td>
                                             <td class="text-right">{{ number_format($row['Basic Salary'], 2) }}</td>
                                             <td class="text-right">{{ number_format($row['Housing Allowance'], 2) }}</td>
                                             <td class="text-right">{{ number_format($row['Transport Allowance'], 2) }}</td>
@@ -86,20 +91,21 @@
                                             <td class="text-right">{{ number_format($row['Other Allowance'], 2) }}</td>
                                             <td class="text-right">{{ number_format($row['Social Health Insurance Fund (J)'], 2) }}</td>
                                             <td class="text-right">{{ number_format($row['Affordable Housing Levy (N)'], 2) }}</td>
+                                            <td class="text-right">{{ number_format($row['NSSF Contribution'], 2) }}</td>
                                             <td class="text-right">{{ number_format($row['Actual Pension Contribution (K)'], 2) }}</td>
                                             <td class="text-right">{{ number_format($row['Amount of Insurance Relief (Ksh) (S)'], 2) }}</td>
                                             <td class="text-right"><strong>{{ number_format($row['PAYE Tax'], 2) }}</strong></td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="15" class="text-center">No PAYE records found for this period.</td>
+                                            <td colspan="18" class="text-center">No PAYE records found for this period.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
                                 @if($p10Rows->isNotEmpty())
                                     <tfoot>
                                         <tr class="tr_header">
-                                            <th colspan="5" class="text-right">Totals:</th>
+                                            <th colspan="7" class="text-right">Totals:</th>
                                             <th class="text-right">{{ number_format($p10Rows->sum('Basic Salary'), 2) }}</th>
                                             <th class="text-right">{{ number_format($p10Rows->sum('Housing Allowance'), 2) }}</th>
                                             <th class="text-right">{{ number_format($p10Rows->sum('Transport Allowance'), 2) }}</th>
@@ -107,6 +113,7 @@
                                             <th class="text-right">{{ number_format($p10Rows->sum('Other Allowance'), 2) }}</th>
                                             <th class="text-right">{{ number_format($p10Rows->sum('Social Health Insurance Fund (J)'), 2) }}</th>
                                             <th class="text-right">{{ number_format($p10Rows->sum('Affordable Housing Levy (N)'), 2) }}</th>
+                                            <th class="text-right">{{ number_format($p10Rows->sum('NSSF Contribution'), 2) }}</th>
                                             <th class="text-right">{{ number_format($p10Rows->sum('Actual Pension Contribution (K)'), 2) }}</th>
                                             <th class="text-right">{{ number_format($p10Rows->sum('Amount of Insurance Relief (Ksh) (S)'), 2) }}</th>
                                             <th class="text-right">{{ number_format($summary['total_paye'], 2) }}</th>

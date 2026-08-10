@@ -51,6 +51,16 @@
                                     </p>
                                 </div>
                                 <div class="form-group">
+                                    <label for="inputEmail3" class="col-md-6 col-sm-6">Current Supervisor :</label>
+                                    <p class="col-md-6 col-sm-6">
+                                        @if ($supervisor_details)
+                                            {{ $supervisor_details->first_name }} {{ $supervisor_details->last_name }}
+                                        @else
+                                            <span class="label label-danger">No supervisor assigned</span>
+                                        @endif
+                                    </p>
+                                </div>
+                                <div class="form-group">
                                     <label for="inputEmail3" class="col-md-6 col-sm-6 ">Leave Type :</label>
                                     <p class="col-md-6 col-sm-6">
                                         @if (isset($leaveApplicationData->leaveType->leave_type_name))

@@ -87,7 +87,11 @@
                             <i class="fa fa-eye"></i> View
                         </a>
                         <a href="{{ route('reports.annalytics.export', $slug) }}" class="btn btn-outline-primary">
-                            <i class="fa fa-download"></i> Export
+                            @if(($report['type'] ?? 'charts') === 'document')
+                                <i class="fa fa-file-pdf-o"></i> PDF
+                            @else
+                                <i class="fa fa-download"></i> Export
+                            @endif
                         </a>
                     </div>
                 </div>

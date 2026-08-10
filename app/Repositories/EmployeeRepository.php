@@ -121,7 +121,7 @@ class EmployeeRepository
         $employeeData['date_of_birth'] = dateConvertFormtoDB($data['date_of_birth']);
         $employeeData['date_of_joining'] = dateConvertFormtoDB($data['date_of_joining']);
         $employeeData['date_of_leaving'] = dateConvertFormtoDB($data['date_of_leaving']);
-        $employeeData['marital_status'] = $data['marital_status'];
+        $employeeData['marital_status'] = $data['marital_status'] ?? null;
         $employeeData['address'] = $data['address'];
         if (isset($data['emergency_name']) && !empty($data['emergency_name'])) {
             $employeeData['emergency_name'] = $data['emergency_name'];
@@ -141,8 +141,9 @@ class EmployeeRepository
             $employeeData['emergency_relationship'] = null;
         }
         // $employeeData['emergency_contacts'] = $data['emergency_contacts'];
-        $employeeData['gender'] = $data['gender'];
-        $employeeData['religion'] = $data['religion'];
+        // Optional selects may be omitted when blank on edit forms.
+        $employeeData['gender'] = !empty($data['gender']) ? $data['gender'] : null;
+        $employeeData['religion'] = !empty($data['religion']) ? $data['religion'] : null;
         $employeeData['phone'] = $data['phone'];
         $employeeData['status'] = $data['status'];
         $employeeData['created_by'] = Auth::user()->id;
@@ -207,7 +208,7 @@ class EmployeeRepository
         $employeeData['middle_name'] = $data['middle_name'];
         $employeeData['last_name'] = $data['last_name'];
         $employeeData['identity_type'] = $data['identity_type'];
-        $employeeData['marital_status'] = $data['marital_status'];
+        $employeeData['marital_status'] = $data['marital_status'] ?? null;
         $employeeData['address'] = $data['address'];
         if (isset($data['emergency_name']) && !empty($data['emergency_name'])) {
             $employeeData['emergency_name'] = $data['emergency_name'];
@@ -227,9 +228,10 @@ class EmployeeRepository
             $employeeData['emergency_relationship'] = null;
         }
         // $employeeData['emergency_contacts'] = $data['emergency_contacts'];
-        $employeeData['religion'] = $data['religion'];
+        $employeeData['gender'] = !empty($data['gender']) ? $data['gender'] : null;
+        $employeeData['religion'] = !empty($data['religion']) ? $data['religion'] : null;
         $employeeData['phone'] = $data['phone'];
-        $employeeData['nationality'] = $data['nationality'];
+        $employeeData['nationality'] = $data['nationality'] ?? null;
         // Ethnicity removed per client request
         $employeeData['date_of_birth'] = dateConvertFormtoDB($data['date_of_birth']);
         $employeeData['updated_by'] = Auth::user()->id;
@@ -360,11 +362,11 @@ class EmployeeRepository
         $employeeData['date_of_birth'] = dateConvertFormtoDB($data['date_of_birth']);
         $employeeData['date_of_joining'] = dateConvertFormtoDB($data['date_of_joining']);
         $employeeData['date_of_leaving'] = dateConvertFormtoDB($data['date_of_leaving']);
-        $employeeData['marital_status'] = $data['marital_status'];
+        $employeeData['marital_status'] = $data['marital_status'] ?? null;
         $employeeData['address'] = $data['address'];
-        $employeeData['emergency_contacts'] = $data['emergency_contacts'];
-        $employeeData['gender'] = $data['gender'];
-        $employeeData['religion'] = $data['religion'];
+        $employeeData['emergency_contacts'] = $data['emergency_contacts'] ?? null;
+        $employeeData['gender'] = !empty($data['gender']) ? $data['gender'] : null;
+        $employeeData['religion'] = !empty($data['religion']) ? $data['religion'] : null;
         $employeeData['phone'] = $data['phone'];
         $employeeData['status'] = $data['status'];
         $employeeData['job_category'] = $job_category_id;

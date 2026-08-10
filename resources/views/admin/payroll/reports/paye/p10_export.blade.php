@@ -40,6 +40,8 @@
                 <th>Name of Employee</th>
                 <th>Resident Status</th>
                 <th>Type of Employee</th>
+                <th>Persons with Disability (PWD)</th>
+                <th>Exemption Certificate Number</th>
                 <th>Basic Salary</th>
                 <th>Housing Allowance</th>
                 <th>Transport Allowance</th>
@@ -52,6 +54,7 @@
                 <th>Total Gross Pay</th>
                 <th>Social Health Insurance Fund (J)</th>
                 <th>Affordable Housing Levy (N)</th>
+                <th>NSSF Contribution</th>
                 <th>Actual Pension Contribution (K)</th>
                 <th>Post Retirement Medical</th>
                 <th>Amount of Insurance Relief (Ksh) (S)</th>
@@ -66,6 +69,8 @@
                     <td>{{ $row['Name of Employee'] }}</td>
                     <td>{{ $row['Resident Status'] }}</td>
                     <td>{{ $row['Type of Employee'] }}</td>
+                    <td>{{ $row['Persons with Disability (PWD)'] ?? 'No' }}</td>
+                    <td>{{ $row['Exemption Certificate Number'] ?? '' }}</td>
                     <td>{{ $row['Basic Salary'] }}</td>
                     <td>{{ $row['Housing Allowance'] }}</td>
                     <td>{{ $row['Transport Allowance'] }}</td>
@@ -78,6 +83,7 @@
                     <td>{{ $row['Total Gross Pay'] ?? $row['Gross Salary'] }}</td>
                     <td>{{ $row['Social Health Insurance Fund (J)'] }}</td>
                     <td>{{ $row['Affordable Housing Levy (N)'] }}</td>
+                    <td>{{ $row['NSSF Contribution'] ?? 0 }}</td>
                     <td>{{ $row['Actual Pension Contribution (K)'] }}</td>
                     <td>{{ $row['Post Retirement Medical'] ?? 0 }}</td>
                     <td>{{ $row['Amount of Insurance Relief (Ksh) (S)'] }}</td>
@@ -87,7 +93,7 @@
         </tbody>
         <tfoot>
             <tr>
-                <th colspan="5" style="text-align:right">Totals:</th>
+                <th colspan="7" style="text-align:right">Totals:</th>
                 <th>{{ $dataExport['p10Rows']->sum('Basic Salary') }}</th>
                 <th>{{ $dataExport['p10Rows']->sum('Housing Allowance') }}</th>
                 <th>{{ $dataExport['p10Rows']->sum('Transport Allowance') }}</th>
@@ -100,6 +106,7 @@
                 <th>{{ $dataExport['p10Rows']->sum('Total Gross Pay') }}</th>
                 <th>{{ $dataExport['p10Rows']->sum('Social Health Insurance Fund (J)') }}</th>
                 <th>{{ $dataExport['p10Rows']->sum('Affordable Housing Levy (N)') }}</th>
+                <th>{{ $dataExport['p10Rows']->sum('NSSF Contribution') }}</th>
                 <th>{{ $dataExport['p10Rows']->sum('Actual Pension Contribution (K)') }}</th>
                 <th>{{ $dataExport['p10Rows']->sum('Post Retirement Medical') }}</th>
                 <th>{{ $dataExport['p10Rows']->sum('Amount of Insurance Relief (Ksh) (S)') }}</th>

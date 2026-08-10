@@ -94,7 +94,7 @@
                             </div>
                             <div class="col-md-6">
                                 <h3 class="box-title">Update Status</h3>
-                                <label > Supervisor Detasils: @if($supervisor_details){{ $supervisor_details->first_name . ' '. $supervisor_details->last_name }} @else <span style="background-color: red; color:white"> No Supervisor details found </span>@endif</label>
+                                <label > Current Supervisor: @if($supervisor_details){{ $supervisor_details->first_name . ' '. $supervisor_details->last_name }} @else <span style="background-color: red; color:white"> No supervisor assigned </span>@endif</label>
 
                                 <hr>
 

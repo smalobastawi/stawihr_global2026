@@ -405,6 +405,11 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
             'shif_number' => $data['shif_number'] ?? null,
             'tax_status' => $this->normalizeTaxStatus($data['tax_status'] ?? 'resident'),
             'disability_exemption' => $disability_exemption,
+            'disability_exemption_certificate_number' => $disability_exemption
+                ? ($data['exemption_certificate_number']
+                    ?? $data['disability_exemption_certificate_number']
+                    ?? null)
+                : null,
             'pension_scheme_id' => $pension_scheme_id,
             // 'employee_pension_rate' => $this->parseNumeric($data['employee_pension_rate'] ?? 0),
             // 'employer_pension_rate' => $this->parseNumeric($data['employer_pension_rate'] ?? 0),

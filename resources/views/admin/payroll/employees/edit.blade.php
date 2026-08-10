@@ -328,7 +328,7 @@
                                         <div class="form-group">
                                             <label class="control-label col-md-3">@lang('payroll.disability_exemption')</label>
                                             <div class="col-md-9">
-                                                <select name="disability_exemption" class="form-control">
+                                                <select name="disability_exemption" id="disability_exemption" class="form-control">
                                                     <option value="0"
                                                         {{ old('disability_exemption', $employeePayroll->disability_exemption) == 0 ? 'selected' : '' }}>
                                                         @lang('common.no')</option>
@@ -336,6 +336,26 @@
                                                         {{ old('disability_exemption', $employeePayroll->disability_exemption) == 1 ? 'selected' : '' }}>
                                                         @lang('common.yes')</option>
                                                 </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row" id="disability_exemption_certificate_row"
+                                    style="{{ old('disability_exemption', $employeePayroll->disability_exemption) == 1 ? '' : 'display:none;' }}">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="control-label col-md-3">
+                                                @lang('payroll.disability_exemption_certificate_number')
+                                                <span class="validateRq">*</span>
+                                            </label>
+                                            <div class="col-md-9">
+                                                <input type="text"
+                                                    name="disability_exemption_certificate_number"
+                                                    id="disability_exemption_certificate_number"
+                                                    class="form-control"
+                                                    value="{{ old('disability_exemption_certificate_number', $employeePayroll->disability_exemption_certificate_number) }}"
+                                                    placeholder="@lang('payroll.disability_exemption_certificate_number_placeholder')">
+                                                <small class="text-muted">@lang('payroll.disability_exemption_certificate_number_help')</small>
                                             </div>
                                         </div>
                                     </div>
@@ -864,6 +884,23 @@
 
         // Initial check
         checkSalaryChange();
+
+        function toggleDisabilityExemptionCertificate() {
+            const hasExemption = $('#disability_exemption').val() == '1';
+            const $certificateRow = $('#disability_exemption_certificate_row');
+            const $certificateInput = $('#disability_exemption_certificate_number');
+
+            if (hasExemption) {
+                $certificateRow.show();
+                $certificateInput.prop('required', true);
+            } else {
+                $certificateRow.hide();
+                $certificateInput.prop('required', false).val('');
+            }
+        }
+
+        $('#disability_exemption').on('change', toggleDisabilityExemptionCertificate);
+        toggleDisabilityExemptionCertificate();
     });
 </script>
 @endsection

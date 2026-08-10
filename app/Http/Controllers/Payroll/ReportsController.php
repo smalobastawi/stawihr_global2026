@@ -146,9 +146,15 @@ class ReportsController extends Controller
      */
     public function generateP10(Request $request, PayrollPeriod $period)
     {
+        // Include PAYE earners and PWD-exempt employees (PAYE may be zero after exemption)
         $records = PayrollRecord::with(['employeePayroll.employee', 'employee.employeeType', 'details'])
             ->where('payroll_period_id', $period->id)
-            ->where('paye_tax', '>', 0)
+            ->where(function ($query) {
+                $query->where('paye_tax', '>', 0)
+                    ->orWhereHas('employeePayroll', function ($payrollQuery) {
+                        $payrollQuery->where('disability_exemption', true);
+                    });
+            })
             ->orderBy('created_at')
             ->get();
 
@@ -177,13 +183,17 @@ class ReportsController extends Controller
 
     /**
      * Build a KRA P10 row from a payroll record.
-     * Updated to match KRA official P10 format
+     * Aligned with KRA P10 v30.0.1 / simplified PAYE return:
+     * - Column E: Persons with Disability (PWD)
+     * - Column F: Exemption Certificate Number
+     * - NSSF separated from other voluntary pension contributions
      */
     private function buildP10Row(PayrollRecord $record): array
     {
         $employee = $record->employee;
         $employeePayroll = $record->employeePayroll;
         $company = $employee->company ?? null;
+        $isPwd = (bool) ($employeePayroll?->disability_exemption ?? false);
 
         // Get allowance breakdowns
         $housingAllowance = $record->house_allowance ?? $this->sumDetailAmount($record, ['Housing Allowance', 'House Allowance']);
@@ -207,11 +217,17 @@ class ReportsController extends Controller
             // Employer Information
             'Employer PIN' => $company->kra_pin ?? $company->PIN ?? '',
 
-            // Employee Information
+            // Employee Information (KRA Sheet B order)
             'PIN of Employee' => $employeePayroll->kra_pin ?? $employee->KRA_Pin ?? '',
             'Name of Employee' => trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? '')),
             'Resident Status' => ResidencyStatus::getName($employee->residential_status ?? ''),
             'Type of Employee' => $employee->employeeType->name ?? 'Permanent',
+
+            // KRA P10 v30.0.1 Columns E & F
+            'Persons with Disability (PWD)' => $isPwd ? 'Yes' : 'No',
+            'Exemption Certificate Number' => $isPwd
+                ? ($employeePayroll?->disability_exemption_certificate_number ?? '')
+                : '',
 
             // Cash Pay - Allowances
             'Basic Salary' => $record->basic_salary ?? 0,
@@ -231,9 +247,10 @@ class ReportsController extends Controller
             // Total Gross Pay
             'Total Gross Pay' => $totalGrossPay,
 
-            // Statutory Deductions
+            // Statutory Deductions (NSSF separated from other pension per KRA P10 v30.0.1)
             'Social Health Insurance Fund (J)' => $record->shif_contribution ?? 0,
             'Affordable Housing Levy (N)' => $record->housing_levy ?? 0,
+            'NSSF Contribution' => $record->nssf_contribution ?? 0,
             'Actual Pension Contribution (K)' => $record->pension_contribution ?? 0,
             'Post Retirement Medical' => $this->sumDetailAmount($record, ['Post Retirement Medical', 'Retirement Medical Fund']),
 

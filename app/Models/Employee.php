@@ -182,7 +182,7 @@ class Employee extends Model
 
     public function supervisor()
     {
-        return $this->belongsTo(Employee::class, 'supervisor_id');
+        return $this->belongsTo(Employee::class, 'supervisor_id', 'employee_id');
     }
 
     public function hr()

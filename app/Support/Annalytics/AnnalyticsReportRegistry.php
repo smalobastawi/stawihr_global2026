@@ -153,6 +153,16 @@ class AnnalyticsReportRegistry
                     'feedback-by-department' => ['title' => 'Feedback by Department', 'type' => 'bar'],
                 ]
             ),
+            'org-chart' => self::report(
+                'Organization Chart',
+                'Reporting structure',
+                'Visual hierarchy of active employees by supervisor, printable and exportable to PDF.',
+                'mdi-sitemap',
+                '#0F766E',
+                'employee.active|employee.index|reports.annalytics.view',
+                [],
+                'document'
+            ),
         ];
     }
 
@@ -163,9 +173,17 @@ class AnnalyticsReportRegistry
         string $icon,
         string $color,
         string $permission,
-        array $charts
+        array $charts,
+        string $type = 'charts'
     ): array {
-        return compact('title', 'subtitle', 'description', 'icon', 'color', 'permission', 'charts');
+        return compact('title', 'subtitle', 'description', 'icon', 'color', 'permission', 'charts', 'type');
+    }
+
+    public static function isDocumentReport(string $slug): bool
+    {
+        $report = self::get($slug);
+
+        return ($report['type'] ?? 'charts') === 'document';
     }
 
     public static function get(string $slug): ?array

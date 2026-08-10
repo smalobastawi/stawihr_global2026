@@ -33,7 +33,59 @@
     @if (count($notice) >= 1)
         .noticeBord {
             overflow-x: hidden;
-            height: 210px;
+            height: 280px;
+        }
+
+        .noticeBord .notice-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 12px 25px;
+            margin: 0 -25px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .noticeBord .notice-item:last-child {
+            border-bottom: none;
+        }
+
+        .noticeBord .notice-item-main {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .noticeBord .notice-item-main .user-img {
+            flex-shrink: 0;
+            float: none;
+            margin: 0;
+        }
+
+        .noticeBord .notice-item-main .mail-contnet {
+            display: block;
+            width: auto;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .noticeBord .notice-item-main .mail-desc {
+            white-space: normal;
+            overflow: visible;
+            text-overflow: unset;
+        }
+
+        .noticeBord .notice-item-action {
+            flex-shrink: 0;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .noticeBord .notice-item-action .btn {
+            margin: 0;
+            white-space: nowrap;
         }
 
     @endif
@@ -346,7 +398,7 @@
 
 
             @if (count($notice) > 0)
-                <div class="col-md-6">
+                <div class="col-md-12 col-sm-12 col-xs-12">
                     <div class="white-box">
                         <h3 class="box-title" style="color: #0a0c0d">@lang('dashboard.notice_board')</h3>
                         <hr>
@@ -355,28 +407,29 @@
                                 @php
                                     $noticeDate = strtotime($row->publish_date);
                                 @endphp
-                                <div class="comment-center p-t-10">
-                                    <div class="comment-body">
-
-                                        <div class="user-img"><i style="font-size: 31px"
-                                                class="fa fa-flag-checkered text-info"></i></div>
-
-
+                                <div class="notice-item">
+                                    <div class="notice-item-main">
+                                        <div class="user-img">
+                                            <i style="font-size: 31px" class="fa fa-flag-checkered text-info"></i>
+                                        </div>
                                         <div class="mail-contnet">
-                                            <h5 class="text-danger">{{ substr($row->title, 0, 70) }}..</h5><span
-                                                class="time">Published Date: {{ date(' d M Y ', $noticeDate) }}</span>
-                                            <br /><span class="mail-desc">
+                                            <h5 class="text-danger">{{ substr($row->title, 0, 100) }}..</h5>
+                                            <span class="time">Published Date: {{ date(' d M Y ', $noticeDate) }}</span>
+                                            <br />
+                                            <span class="mail-desc">
                                                 @if ($row->createdBy?->first_name)
                                                     {{ $row->createdBy->first_name }}
                                                 @endif
                                                 @if ($row->createdBy?->last_name)
                                                     {{ $row->createdBy->last_name }}
                                                 @endif
-                                                @lang('notice.description'): {!! substr($row->description, 0, 80) !!}..
+                                                @lang('notice.description'): {!! substr($row->description, 0, 120) !!}..
                                             </span>
-                                            <a href="{{ url('notice/' . $row->notice_id) }}"
-                                                class="btn m-r-5 btn-rounded btn-outline btn-info">@lang('common.read_more')</a>
                                         </div>
+                                    </div>
+                                    <div class="notice-item-action">
+                                        <a href="{{ url('notice/' . $row->notice_id) }}"
+                                            class="btn btn-rounded btn-outline btn-info">@lang('common.read_more')</a>
                                     </div>
                                 </div>
                             @endforeach

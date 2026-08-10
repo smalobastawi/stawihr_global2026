@@ -21,11 +21,6 @@ trait WithSupervisorPermissions
                 return;
             }
 
-            // Load employeeDetails if not already loaded
-            if (!$user->relationLoaded('employeeDetails')) {
-                $user->load('employeeDetails.subordinates');
-            }
-
             // If no employee details, restrict all access
             if (!$user->employeeDetails) {
                 $builder->whereRaw('1=0');
@@ -33,19 +28,17 @@ trait WithSupervisorPermissions
             }
 
             $employeeId = $user->employeeDetails->employee_id;
-            $subordinateIds = $user->employeeDetails->subordinates->pluck('employee_id');
-            
-            // Include both the supervisor's ID and subordinate IDs
-            $allowedIds = $subordinateIds->push($employeeId)->unique();
 
-            // For models with employee_id column
-            if (isset($builder->getModel()->employee_id)) {
-                $builder->whereIn('employee_id', $allowedIds);
-            } 
-            // For Employee model itself
-            else {
-                $builder->whereIn('employee_id', $allowedIds);
-            }
+            // Always resolve current subordinates from DB so supervisor reassignment
+            // immediately grants visibility of prior leave applications.
+            $subordinateIds = \App\Models\Employee::query()
+                ->where('supervisor_id', $employeeId)
+                ->pluck('employee_id');
+
+            // Include both the supervisor's ID and subordinate IDs
+            $allowedIds = $subordinateIds->push($employeeId)->unique()->values();
+
+            $builder->whereIn($builder->getModel()->getTable() . '.employee_id', $allowedIds);
         });
     }
 }

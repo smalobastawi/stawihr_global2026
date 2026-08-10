@@ -108,6 +108,8 @@ class EmployeePayrollImport implements ToModel, WithHeadingRow
             'payment_method' => 'nullable|in:bank_transfer,mobile_money,cash,cheque',
             'tax_status' => 'nullable|in:resident,non_resident,exempt',
             'disability_exemption' => 'nullable|in:Yes,No,1,0',
+            'exemption_certificate_number' => 'nullable|string|max:100',
+            'disability_exemption_certificate_number' => 'nullable|string|max:100',
             'overtime_rate_normal' => 'nullable|numeric|min:0|max:5',
             'overtime_rate_weekend' => 'nullable|numeric|min:0|max:5',
             'overtime_rate_holiday' => 'nullable|numeric|min:0|max:5',
@@ -178,6 +180,18 @@ class EmployeePayrollImport implements ToModel, WithHeadingRow
 
             if (isset($row['disability_exemption'])) {
                 $employeePayroll->disability_exemption = $this->parseBooleanField($row['disability_exemption']);
+            }
+
+            $certificateNumber = $row['exemption_certificate_number']
+                ?? $row['disability_exemption_certificate_number']
+                ?? null;
+
+            if ($employeePayroll->disability_exemption) {
+                if (!empty($certificateNumber)) {
+                    $employeePayroll->disability_exemption_certificate_number = $certificateNumber;
+                }
+            } else {
+                $employeePayroll->disability_exemption_certificate_number = null;
             }
 
             if (!empty($row['kra_pin'])) {

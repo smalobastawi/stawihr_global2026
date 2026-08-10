@@ -203,6 +203,11 @@
                                                             {{ $employeePayroll->disability_exemption ? 'Yes' : 'No' }}
                                                         </span>
                                                     </p>
+                                                    @if ($employeePayroll->disability_exemption)
+                                                        <p><strong>Exemption Certificate Number:</strong>
+                                                            {{ $employeePayroll->disability_exemption_certificate_number ?? 'N/A' }}
+                                                        </p>
+                                                    @endif
                                                 </div>
                                             </div>
                                         </div>

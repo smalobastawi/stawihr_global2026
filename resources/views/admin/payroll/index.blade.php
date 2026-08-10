@@ -118,7 +118,7 @@
 
                         <!-- Payroll Records Table -->
                         <div class="table-responsive">
-                            <table id="myTable" class="table table-bordered table-striped">
+                            <table id="myTable" class="table table-bordered table-striped" style="width:100%; min-width: 1200px;">
                                 <thead>
                                     <tr class="tr_header">
                                         <th width="30">
@@ -128,15 +128,27 @@
                                         <th>Department</th>
                                         <th>Payroll No</th>
                                         <th>Period</th>
-                                        <th>Gross Pay</th>
-                                        <th>Deductions</th>
-                                        <th>Net Pay</th>
+                                            @foreach(($earningColumns ?? []) as $earningColumn)
+                                            <th class="text-right" title="Earning">{{ $earningColumn }}</th>
+                                        @endforeach
+                                        <th class="text-right">Gross Pay</th>
+                                        <th class="text-right">NSSF</th>
+                                        <th class="text-right">Taxable Pay</th>
+                                        @foreach(($deductionColumns ?? []) as $deductionColumn)
+                                            <th class="text-right" title="Deduction">{{ $deductionColumn }}</th>
+                                        @endforeach
+                                        <th class="text-right">Total Deductions</th>
+                                        <th class="text-right">Net Pay</th>
                                         <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($payrollRecords as $record)
+                                        @php
+                                            $recordEarnings = $lineAmounts[$record->id]['earnings'] ?? [];
+                                            $recordDeductions = $lineAmounts[$record->id]['deductions'] ?? [];
+                                        @endphp
                                         <tr>
                                             <td>
                                                 <input type="checkbox" class="record-checkbox" value="{{ $record->id }}" 
@@ -154,20 +166,31 @@
                                             </td>
                                             <td>{{ $record->employeePayroll->payroll_number ?? 'N/A' }}</td>
                                             <td>{{ $record->payrollPeriod->name ?? 'N/A' }}</td>
-                                            <td>
+                                            @foreach(($earningColumns ?? []) as $earningKey => $earningColumn)
+                                                <td class="text-right">
+                                                    {{ number_format((float) ($recordEarnings[$earningKey] ?? 0), 2) }}
+                                                </td>
+                                            @endforeach
+                                            <td class="text-right">
                                                 <strong>KES {{ number_format($record->gross_salary, 2) }}</strong>
                                             </td>
-                                            <td>
+                                            <td class="text-right text-danger">
+                                                {{ number_format((float) ($lineAmounts[$record->id]['nssf'] ?? $record->nssf_contribution ?? 0), 2) }}
+                                            </td>
+                                            <td class="text-right">
+                                                {{ number_format((float) ($lineAmounts[$record->id]['taxable_pay'] ?? 0), 2) }}
+                                            </td>
+                                            @foreach(($deductionColumns ?? []) as $deductionKey => $deductionColumn)
+                                                <td class="text-right text-danger">
+                                                    {{ number_format((float) ($recordDeductions[$deductionKey] ?? 0), 2) }}
+                                                </td>
+                                            @endforeach
+                                            <td class="text-right">
                                                 <span class="text-danger">
                                                     KES {{ number_format($record->total_deductions, 2) }}
                                                 </span>
-                                                <br>
-                                                <small class="text-muted">
-                                                    PAYE: {{ number_format($record->paye_tax, 2) }} |
-                                                    NSSF: {{ number_format($record->nssf_contribution, 2) }}
-                                                </small>
                                             </td>
-                                            <td>
+                                            <td class="text-right">
                                                 <strong class="text-success">
                                                     KES {{ number_format($record->net_salary, 2) }}
                                                 </strong>
@@ -335,6 +358,21 @@
 @section('page_scripts')
 <script>
 $(document).ready(function() {
+    // Wide payroll line columns: enable horizontal scroll on DataTable
+    if ($.fn.DataTable && $.fn.DataTable.isDataTable('#myTable')) {
+        $('#myTable').DataTable().destroy();
+    }
+    if ($('#myTable').length && $('#myTable tbody tr').not(':has(td[colspan])').length > 0) {
+        $('#myTable').DataTable({
+            pageLength: 2000,
+            ordering: true,
+            scrollX: true,
+            autoWidth: false,
+            dom: 'Bfrtip',
+            buttons: ['excelHtml5', 'csvHtml5', 'pdfHtml5', 'pageLength']
+        });
+    }
+
     // Handle select all checkbox
     $('#select-all').change(function() {
         $('.record-checkbox').prop('checked', this.checked);

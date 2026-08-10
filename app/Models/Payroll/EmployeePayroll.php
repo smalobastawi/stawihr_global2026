@@ -41,6 +41,7 @@ class EmployeePayroll extends Model
         'shif_number',
         'tax_status',
         'disability_exemption',
+        'disability_exemption_certificate_number',
         'pension_scheme_id',
         'employee_pension_rate',
         'employer_pension_rate',
@@ -552,6 +553,9 @@ class EmployeePayroll extends Model
             'SHIF Number' => $this->shif_number ?? 'N/A',
             'Tax Status' => $this->tax_status ?? 'N/A',
             'Disability Exemption' => $this->disability_exemption ? 'Yes' : 'No',
+            'Exemption Certificate Number' => $this->disability_exemption
+                ? ($this->disability_exemption_certificate_number ?? 'N/A')
+                : 'N/A',
             'Overtime Rate (Normal)' => $this->overtime_rate_normal ? $this->overtime_rate_normal . 'x' : 'N/A',
             'Overtime Rate (Weekend)' => $this->overtime_rate_weekend ? $this->overtime_rate_weekend . 'x' : 'N/A',
             'Overtime Rate (Holiday)' => $this->overtime_rate_holiday ? $this->overtime_rate_holiday . 'x' : 'N/A',

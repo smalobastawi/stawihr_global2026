@@ -30,6 +30,7 @@ class PrintHeadSetting extends Model
             return $instance;
         }
 
-        return parent::first($columns);
+        // Use the query builder — parent::first() re-enters this override via __callStatic.
+        return static::query()->first($columns);
     }
 }

@@ -26,6 +26,8 @@ use App\Models\Department;
 use App\Models\LeaveAdjustment;
 use App\Models\FinancialYear;
 use App\Models\LeaveType;
+use App\Models\PayrollEarningTypes;
+use App\Models\Payroll\DeductionType;
 use App\Support\CompanyContext;
 
 class PayrollController extends Controller
@@ -79,12 +81,16 @@ class PayrollController extends Controller
      */
     public function index(Request $request)
     {
-        $query = PayrollRecord::with(['employeePayroll.employee', 'payrollPeriod']);
+        $query = PayrollRecord::with([
+            'employeePayroll.employee.department',
+            'payrollPeriod',
+            'details',
+        ]);
         $currentPeriod = PayrollPeriod::where('is_current', true)->first();
         // Apply filters
         if ($request->filled('period_id')) {
             $query->where('payroll_period_id', $request->period_id);
-        } else {
+        } elseif ($currentPeriod) {
             $query->where('payroll_period_id', $currentPeriod->id);
         }
 
@@ -103,8 +109,148 @@ class PayrollController extends Controller
         $payrollRecords = $query->orderBy('created_at', 'desc')->get();
         $periods = PayrollPeriod::orderBy('start_date', 'desc')->get();
 
+        [$earningColumns, $deductionColumns, $lineAmounts] = $this->buildPayrollLineColumns($payrollRecords);
 
-        return view('admin.payroll.index', compact('payrollRecords', 'periods'));
+        return view('admin.payroll.index', compact(
+            'payrollRecords',
+            'periods',
+            'earningColumns',
+            'deductionColumns',
+            'lineAmounts'
+        ));
+    }
+
+    /**
+     * Build dynamic earning/deduction columns and per-record line amounts for the payroll index.
+     *
+     * @return array{0: array<string, string>, 1: array<string, string>, 2: array<int, array{earnings: array<string, float>, deductions: array<string, float>}>}
+     */
+    protected function buildPayrollLineColumns($payrollRecords): array
+    {
+        $earningColumns = [];
+        $deductionColumns = [];
+
+        $earningTypes = PayrollEarningTypes::where('status', GeneralStatus::ACTIVE)
+            ->orderBy('id')
+            ->pluck('name');
+
+        // Always lead with Basic Income from the payroll record header
+        $earningColumns['Basic Income'] = 'Basic Income';
+
+        foreach ($earningTypes as $name) {
+            $earningColumns[$name] = $name;
+        }
+
+        $deductionTypes = DeductionType::where('is_statutory', false)
+            ->where('name', '!=', 'Salary Advance - General')
+            ->orderBy('id')
+            ->pluck('name');
+
+        foreach ($deductionTypes as $name) {
+            $deductionColumns[$name] = $name;
+        }
+
+        // Statutory/other deductions after NSSF + Taxable Pay (NSSF is shown right after Gross)
+        $statutoryColumns = [
+            'PAYE' => 'PAYE',
+            'SHIF' => 'SHIF',
+            'Housing Levy' => 'Housing Levy',
+            'Pension' => 'Pension',
+        ];
+
+        $lineAmounts = [];
+
+        foreach ($payrollRecords as $record) {
+            $earnings = [];
+            $deductions = [];
+
+            // Basic Income comes from the record header (matches summary report behaviour)
+            $earnings['Basic Income'] = (float) ($record->basic_salary ?? 0);
+
+            foreach ($record->details as $detail) {
+                $name = trim((string) $detail->name);
+                if ($name === '') {
+                    continue;
+                }
+
+                $amount = (float) ($detail->amount ?? 0);
+
+                if (in_array($detail->type, ['earning', 'allowance'], true)) {
+                    if ($name === 'Basic Income') {
+                        continue;
+                    }
+                    $earningColumns[$name] = $name;
+                    $earnings[$name] = ($earnings[$name] ?? 0) + $amount;
+                } elseif (in_array($detail->type, ['deduction', 'statutory_deduction'], true)) {
+                    // NSSF is rendered as its own post-gross column
+                    if (strcasecmp($name, 'NSSF') === 0 || stripos($name, 'NSSF') === 0) {
+                        continue;
+                    }
+                    $deductionColumns[$name] = $name;
+                    $deductions[$name] = ($deductions[$name] ?? 0) + $amount;
+                }
+            }
+
+            // Fill statutory amounts from header when not already present as detail lines
+            $headerStatutory = [
+                'PAYE' => (float) ($record->paye_tax ?? 0),
+                'SHIF' => (float) ($record->shif_contribution ?? 0),
+                'Housing Levy' => (float) ($record->housing_levy ?? 0),
+                'Pension' => (float) ($record->pension_contribution ?? 0),
+            ];
+
+            foreach ($headerStatutory as $label => $amount) {
+                if (!isset($deductions[$label])) {
+                    $deductions[$label] = $amount;
+                }
+            }
+
+            $lineAmounts[$record->id] = [
+                'earnings' => $earnings,
+                'deductions' => $deductions,
+                'nssf' => (float) ($record->nssf_contribution ?? 0),
+                'taxable_pay' => $this->resolveTaxablePay($record),
+            ];
+        }
+
+        // Put remaining statutory columns first among deductions, then the rest
+        $deductionColumns = $statutoryColumns + $deductionColumns;
+
+        // Ensure NSSF is not duplicated among later deduction columns
+        foreach (array_keys($deductionColumns) as $columnName) {
+            if (strcasecmp($columnName, 'NSSF') === 0 || stripos($columnName, 'NSSF') === 0) {
+                unset($deductionColumns[$columnName]);
+            }
+        }
+
+        return [$earningColumns, $deductionColumns, $lineAmounts];
+    }
+
+    /**
+     * Resolve taxable pay from the payroll record header / metadata.
+     */
+    protected function resolveTaxablePay(PayrollRecord $record): float
+    {
+        $taxablePay = (float) ($record->taxable_income_base_currency ?? 0);
+        if ($taxablePay > 0) {
+            return $taxablePay;
+        }
+
+        $metadata = $record->metadata;
+        if (is_string($metadata)) {
+            $metadata = json_decode($metadata, true);
+        }
+
+        if (!is_array($metadata)) {
+            return 0.0;
+        }
+
+        return (float) (
+            $metadata['taxable_amounts']['taxable_income']
+            ?? $metadata['tax_breakdown']['taxable_income']
+            ?? $metadata['taxable_income']
+            ?? 0
+        );
     }
 
     /**

@@ -174,6 +174,12 @@
                                                     </span>
                                                 </td>
                                             </tr>
+                                            @if ($employeePayroll->disability_exemption)
+                                                <tr>
+                                                    <td><strong>@lang('payroll.disability_exemption_certificate_number'):</strong></td>
+                                                    <td>{{ $employeePayroll->disability_exemption_certificate_number ?? 'N/A' }}</td>
+                                                </tr>
+                                            @endif
                                             <tr>
                                                 <td><strong>@lang('payroll.pension_schemes'):</strong></td>
                                                 <td>

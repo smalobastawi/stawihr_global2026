@@ -47,14 +47,16 @@ class RequestedApplicationController extends Controller
             $fiscal_end_date   = $activeFinancialYear->end_date;
         }
 
-        $hasSupervisorWiseEmployee = Employee::select('employee_id')->where('supervisor_id', session('logged_session_data.employee_id'))->get()->toArray();
+        $hasSupervisorWiseEmployee = Employee::where('supervisor_id', session('logged_session_data.employee_id'))
+            ->pluck('employee_id')
+            ->toArray();
         $supervisor_approval       = LeaveApplication::select('status')
             ->pluck('status');
         if (count($hasSupervisorWiseEmployee) == 0) {
             $results = [];
         } else {
             $results = LeaveApplication::with(['employee', 'leaveType'])
-                ->whereIn('employee_id', array_values($hasSupervisorWiseEmployee))
+                ->whereIn('employee_id', $hasSupervisorWiseEmployee)
                 ->whereBetween('application_date', [date($fiscal_start_date), date($fiscal_end_date)])
                 ->orderBy('status', 'asc')
                 ->orderBy('leave_application_id', 'desc')
@@ -71,20 +73,29 @@ class RequestedApplicationController extends Controller
     public function viewDetails($id)
     {
         $user                 = Auth::user();
-        $leaveApplicationData = LeaveApplication::with(['employee' => function ($q) {
-            $q->with(['designation']);
-        }])->with('leaveType')->where('leave_application_id', $id)->first(); //Removed : ->where('status',1)
+        $leaveApplicationData = LeaveApplication::with([
+            'employee.designation',
+            'employee.supervisor',
+            'leaveType',
+        ])->where('leave_application_id', $id)->first();
         $signed_in_user_role = $user->roles()->first();
 
         if (! $leaveApplicationData) {
             return response()->view('errors.404', [], 404);
         }
-        $supervisor_id = $leaveApplicationData->employee->supervisor_id;
 
-        $supervisor_details = $leaveApplicationData->employee->supervisor();
+        // Always use the employee's current supervisor (live assignment), not a snapshot at apply time
+        $supervisor_id      = $leaveApplicationData->employee->supervisor_id ?? null;
+        $supervisor_details = $leaveApplicationData->employee->supervisor;
         $currentBalance     = $this->leaveRepository->calCulateEmployeeLeaveBalance($leaveApplicationData->leave_type_id, $leaveApplicationData->employee_id);
-        // dd($leaveApplicationData);
-        return view('admin.leave.leaveApplication.leaveDetails', ['leaveApplicationData' => $leaveApplicationData, 'currentBalance' => $currentBalance, 'signed_in_user_role' => $signed_in_user_role, 'supervisor_id' => $supervisor_id, 'supervisor_details' => $supervisor_details]);
+
+        return view('admin.leave.leaveApplication.leaveDetails', [
+            'leaveApplicationData' => $leaveApplicationData,
+            'currentBalance'       => $currentBalance,
+            'signed_in_user_role'  => $signed_in_user_role,
+            'supervisor_id'        => $supervisor_id,
+            'supervisor_details'   => $supervisor_details,
+        ]);
     }
 
     public function update(Request $request, $id)
@@ -217,17 +228,25 @@ class RequestedApplicationController extends Controller
     public function approveOrRejectLeaveApplication(Request $request)
     {
 
-        $data  = LeaveApplication::findOrFail($request->leave_application_id);
+        $data  = LeaveApplication::with('employee')->findOrFail($request->leave_application_id);
         $input = $request->all();
+        $currentEmployeeId = session('logged_session_data.employee_id');
+
+        // Only the employee's current supervisor may approve/reject (supports reassignment)
+        if (!$data->employee || (int) $data->employee->supervisor_id !== (int) $currentEmployeeId) {
+            return response('error', 403);
+        }
 
         if ($request->status == LeaveStatus::APPROVE) {
             $input['approve_date'] = date('Y-m-d');
+            $input['status']       = LeaveStatus::APPROVE;
             $input['final_status'] = LeaveStatus::APPROVE;
-            $input['approve_by']   = session('logged_session_data.employee_id');
+            $input['approve_by']   = $currentEmployeeId;
         } else {
             $input['reject_date']  = date('Y-m-d');
+            $input['status']       = LeaveStatus::REJECT;
             $input['final_status'] = LeaveStatus::REJECT;
-            $input['reject_by']    = session('logged_session_data.employee_id');
+            $input['reject_by']    = $currentEmployeeId;
         }
 
         try {
