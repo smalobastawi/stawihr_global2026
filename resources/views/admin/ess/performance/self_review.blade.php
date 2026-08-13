@@ -27,6 +27,15 @@
                             </div>
                         @endif
 
+                        @if($appraisal->canEditStaffGoals())
+                            <div class="alert alert-info">
+                                You can update your goals/objectives before submitting.
+                                <a href="{{ route('ess.performance.setupGoals', $appraisal->appraisal_id) }}" class="btn btn-info btn-xs m-l-10">
+                                    <i class="fa fa-bullseye"></i> Edit My Goals
+                                </a>
+                            </div>
+                        @endif
+
                         <!-- Review Period Info -->
                         <div class="alert" style="background-color: #fcf8e3; border-color: #faebcc; color: #8a6d3b;">
                             <div class="row">

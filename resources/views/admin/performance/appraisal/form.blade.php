@@ -34,6 +34,15 @@
                             </div>
                         @endif
 
+                        @if(!empty($isStaffDefinedApproach))
+                            <div class="alert alert-warning">
+                                <i class="fa fa-info-circle"></i>
+                                <strong>Staff-defined goals mode is active.</strong>
+                                Creating an appraisal will not pre-load HR performance areas.
+                                The employee will set their own focus areas, objectives and metrics in Self Service before rating themselves.
+                            </div>
+                        @endif
+
                         @if(isset($editModeData))
                             <form action="{{ route('performance.appraisal.update', $editModeData->appraisal_id) }}" method="POST" id="appraisalForm">
                                 @csrf

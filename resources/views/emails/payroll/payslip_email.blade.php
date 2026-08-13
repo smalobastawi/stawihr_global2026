@@ -159,9 +159,9 @@
             <div class="important-note">
                 <strong>Important Notes:</strong>
                 <ul style="margin: 10px 0; padding-left: 20px;">
-                    <li>The attachment is encrypted with password, use your
-                        {{ $employee->identity_type ? \App\Lib\Enumerations\IdentityType::toArray()[$employee->identity_type] : 'National ID' }}
-                        or Passport number to open it.</li>
+                    <li>The attached payslip is password protected. Use your
+                        {{ employeeDocumentPasswordLabel($employee) }}
+                        to open it. If you do not have a National ID on file, use your Passport number.</li>
                     <li>Please keep this payslip for your personal records and tax filing purposes</li>
                     <li>All statutory deductions have been remitted to the respective government agencies</li>
                     <li>If you have any questions regarding your salary computation, please contact the HR Department

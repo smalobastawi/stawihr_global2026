@@ -5,14 +5,29 @@ namespace App\Http\Controllers\Performance;
 use App\Http\Controllers\Controller;
 use App\Models\Performance\PerformanceFocusArea;
 use App\Models\Performance\PerformanceGoal;
+use App\Models\Performance\PerformanceSetting;
 use App\Models\User;
 use Illuminate\Http\Request;
 
 class GoalController extends Controller
 {
+    protected function ensureHrDefinedApproach()
+    {
+        if (PerformanceSetting::current()->isStaffDefined()) {
+            return redirect()->route('performance.setting.index')
+                ->with('error', 'HR goal setup is disabled because your organization uses staff-defined goals.');
+        }
+
+        return null;
+    }
+
     public function index($focusAreaId)
     {
-        $focusArea = PerformanceFocusArea::findOrFail($focusAreaId);
+        if ($redirect = $this->ensureHrDefinedApproach()) {
+            return $redirect;
+        }
+
+        $focusArea = PerformanceFocusArea::hrCatalog()->findOrFail($focusAreaId);
         $results = PerformanceGoal::where('focus_area_id', $focusAreaId)->orderBy('sort_order')->get();
         $signed_in_user_role = User::select('role_id')->where('id', session('logged_session_data.id'))->pluck('role_id')->first();
 
@@ -25,7 +40,11 @@ class GoalController extends Controller
 
     public function create($focusAreaId)
     {
-        $focusArea = PerformanceFocusArea::findOrFail($focusAreaId);
+        if ($redirect = $this->ensureHrDefinedApproach()) {
+            return $redirect;
+        }
+
+        $focusArea = PerformanceFocusArea::hrCatalog()->findOrFail($focusAreaId);
         $signed_in_user_role = User::select('role_id')->where('id', session('logged_session_data.id'))->pluck('role_id')->first();
 
         return view('admin.performance.goal.form', [
@@ -48,6 +67,8 @@ class GoalController extends Controller
 
         $input['focus_area_id'] = $focusAreaId;
         $input['is_active'] = $request->has('is_active') ? 1 : 0;
+        $input['source'] = 'hr';
+        $input['employee_id'] = null;
 
         try {
             PerformanceGoal::create($input);

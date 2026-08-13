@@ -646,7 +646,19 @@ class PayrollController extends Controller
             'details'
         ]);
 
-        return view('admin.payroll.payslip', compact('payrollRecord'));
+        $employee = $payrollRecord->employeePayroll->employee ?? null;
+        $periodName = $payrollRecord->payrollPeriod->name ?? 'payslip';
+        $employeeName = $employee ? $employee->fullName() : 'employee';
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.payroll.payslip', [
+            'payrollRecord' => $payrollRecord,
+        ])->setPaper('a4');
+
+        protectEmployeePdf($pdf, $employee);
+
+        $filename = 'Payslip_' . preg_replace('/\s+/', '_', $employeeName) . '_' . preg_replace('/\s+/', '_', $periodName) . '.pdf';
+
+        return $pdf->download($filename);
     }
 
     /**

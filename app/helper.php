@@ -58,6 +58,70 @@ if (!function_exists('employeeInfo')) {
     }
 }
 
+if (!function_exists('employeeDocumentPassword')) {
+    /**
+     * Password for employee PDF documents (payslip, P9).
+     * Uses National ID, or Passport number when that is the identity on file.
+     */
+    function employeeDocumentPassword(?Employee $employee): ?string
+    {
+        if (!$employee) {
+            return null;
+        }
+
+        $documentNumber = trim((string) ($employee->national_id ?? ''));
+        if ($documentNumber !== '') {
+            return $documentNumber;
+        }
+
+        $payrollNumber = trim((string) ($employee->payroll_number ?? ''));
+
+        return $payrollNumber !== '' ? $payrollNumber : null;
+    }
+}
+
+if (!function_exists('employeeDocumentPasswordLabel')) {
+    /**
+     * Human-readable label for the document password source.
+     */
+    function employeeDocumentPasswordLabel(?Employee $employee): string
+    {
+        if (!$employee) {
+            return 'National ID or Passport number';
+        }
+
+        $identityType = $employee->identity_type ?? null;
+        $labels = \App\Lib\Enumerations\IdentityType::toArray();
+
+        if ($identityType && isset($labels[$identityType])) {
+            return $labels[$identityType];
+        }
+
+        return 'National ID or Passport number';
+    }
+}
+
+if (!function_exists('protectEmployeePdf')) {
+    /**
+     * Encrypt a DomPDF document with the employee's document password.
+     *
+     * @param  \Barryvdh\DomPDF\PDF  $pdf
+     * @return \Barryvdh\DomPDF\PDF
+     */
+    function protectEmployeePdf($pdf, ?Employee $employee)
+    {
+        $userPassword = employeeDocumentPassword($employee);
+        if ($userPassword) {
+            $pdf->getDomPDF()->getCanvas()->get_cpdf()->setEncryption(
+                $userPassword,
+                (string) env('APP_KEY', 'stawihr')
+            );
+        }
+
+        return $pdf;
+    }
+}
+
 if (!function_exists('employeeDetails')) {
     function employeeDetails($employee_id)
     {

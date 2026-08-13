@@ -97,11 +97,16 @@
                                                     </small>
                                                 @endif
                                             </td>
-                                            <td style="width: 200px; text-align: center;">
+                                            <td style="width: 260px; text-align: center;">
                                                 <a href="{!! route('ess.performance.show', $value->appraisal_id) !!}" class="btn btn-primary btn-xs btnColor" title="View Details">
                                                     <i class="fa fa-eye" aria-hidden="true"></i>
                                                 </a>
                                                 @if(in_array($value->status, ['draft', 'self_review']))
+                                                    @if($value->canEditStaffGoals())
+                                                        <a href="{!! route('ess.performance.setupGoals', $value->appraisal_id) !!}" class="btn btn-info btn-sm btnColor" title="Set Goals / Objectives" style="margin-left: 5px;">
+                                                            <i class="fa fa-bullseye" aria-hidden="true"></i> <strong>Set Goals</strong>
+                                                        </a>
+                                                    @endif
                                                     <a href="{!! route('ess.performance.selfReview', $value->appraisal_id) !!}" class="btn btn-warning btn-sm btnColor" title="Complete Self Review" style="margin-left: 5px;">
                                                         <i class="fa fa-edit" aria-hidden="true"></i> <strong>Self Review</strong>
                                                     </a>

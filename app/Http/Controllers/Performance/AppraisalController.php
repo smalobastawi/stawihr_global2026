@@ -14,6 +14,7 @@ use App\Models\Performance\PerformanceBehavioralItem;
 use App\Models\Performance\PerformanceDevelopmentPlan;
 use App\Models\Performance\PerformanceLearningPlan;
 use App\Models\Performance\ReviewPeriod;
+use App\Models\Performance\PerformanceSetting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -109,8 +110,11 @@ class AppraisalController extends Controller
 
     public function create()
     {
+        $setting = PerformanceSetting::current();
         $employees = Employee::where('status', 1)->get();
-        $focusAreas = PerformanceFocusArea::where('is_active', 1)->with('goals')->get();
+        $focusAreas = $setting->isHrDefined()
+            ? PerformanceFocusArea::hrCatalog()->where('is_active', 1)->with('goals')->get()
+            : collect();
         $behavioralItems = PerformanceBehavioralItem::where('is_active', 1)->orderBy('sort_order')->get();
         $reviewPeriods = ReviewPeriod::active()->get();
         $signed_in_user_role = User::select('role_id')->where('id', session('logged_session_data.id'))->pluck('role_id')->first();
@@ -124,6 +128,8 @@ class AppraisalController extends Controller
             'preselectedEmployee' => null,
             'preselectedFocusAreas' => collect(),
             'departments' => $departments,
+            'appraisalApproach' => $setting->appraisal_approach,
+            'isStaffDefinedApproach' => $setting->isStaffDefined(),
         ]);
     }
 
@@ -134,7 +140,11 @@ class AppraisalController extends Controller
             return response()->json([]);
         }
 
-        $focusAreas = PerformanceFocusArea::where('is_active', 1)
+        if (PerformanceSetting::current()->isStaffDefined()) {
+            return response()->json([]);
+        }
+
+        $focusAreas = PerformanceFocusArea::hrCatalog()->where('is_active', 1)
             ->where(function ($q) use ($employee) {
                 $q->whereNull('department_id')
                     ->orWhere('department_id', $employee->department_id);
@@ -164,36 +174,41 @@ class AppraisalController extends Controller
         $input['review_end_date'] = $reviewPeriod->end_date;
         $input['status'] = 'draft';
 
+        $setting = PerformanceSetting::current();
+        $input['goals_defined_by'] = $setting->isStaffDefined() ? 'staff' : 'hr';
+
         try {
             $appraisal = PerformanceAppraisal::create($input);
 
-            // Pre-populate scores from goals linked to employee's department/designation
-            $employee = Employee::find($input['employee_id']);
-            $focusAreas = PerformanceFocusArea::where('is_active', 1)
-                ->where(function ($q) use ($employee) {
-                    $q->whereNull('department_id')
-                        ->orWhere('department_id', $employee->department_id);
-                })
-                ->where(function ($q) use ($employee) {
-                    $q->whereNull('designation_id')
-                        ->orWhere('designation_id', $employee->designation_id);
-                })
-                ->with('goals')
-                ->get();
+            // Pre-populate scores from HR catalog only when organization uses HR-defined approach
+            if ($setting->isHrDefined()) {
+                $employee = Employee::find($input['employee_id']);
+                $focusAreas = PerformanceFocusArea::hrCatalog()->where('is_active', 1)
+                    ->where(function ($q) use ($employee) {
+                        $q->whereNull('department_id')
+                            ->orWhere('department_id', $employee->department_id);
+                    })
+                    ->where(function ($q) use ($employee) {
+                        $q->whereNull('designation_id')
+                            ->orWhere('designation_id', $employee->designation_id);
+                    })
+                    ->with('goals')
+                    ->get();
 
-            foreach ($focusAreas as $focusArea) {
-                foreach ($focusArea->goals as $goal) {
-                    PerformanceAppraisalScore::create([
-                        'appraisal_id' => $appraisal->appraisal_id,
-                        'goal_id' => $goal->goal_id,
-                        'itemized_weighting' => $goal->itemized_weighting,
-                        'self_weighting' => 0,
-                        'review_weighting' => 0,
-                    ]);
+                foreach ($focusAreas as $focusArea) {
+                    foreach ($focusArea->goals as $goal) {
+                        PerformanceAppraisalScore::create([
+                            'appraisal_id' => $appraisal->appraisal_id,
+                            'goal_id' => $goal->goal_id,
+                            'itemized_weighting' => $goal->itemized_weighting,
+                            'self_weighting' => 0,
+                            'review_weighting' => 0,
+                        ]);
+                    }
                 }
             }
 
-            // Pre-populate behavioral scores
+            // Pre-populate behavioral scores (available in both approaches)
             $behavioralItems = PerformanceBehavioralItem::where('is_active', 1)->orderBy('sort_order')->get();
             foreach ($behavioralItems as $item) {
                 PerformanceAppraisalBehavioralScore::create([
@@ -211,7 +226,10 @@ class AppraisalController extends Controller
         }
 
         if ($bug == 0) {
-            return redirect()->route('performance.appraisal.index')->with('success', 'Performance appraisal created successfully.');
+            $message = $setting->isStaffDefined()
+                ? 'Performance appraisal created. The employee can now set their own goals/objectives before self-rating.'
+                : 'Performance appraisal created successfully.';
+            return redirect()->route('performance.appraisal.index')->with('success', $message);
         } else {
             return redirect()->route('performance.appraisal.index')->with('error', 'An error occurred: ' . $bug);
         }
@@ -370,6 +388,8 @@ class AppraisalController extends Controller
             }
 
             try {
+                $setting = PerformanceSetting::current();
+
                 // Create appraisal
                 $appraisal = PerformanceAppraisal::create([
                     'employee_id' => $employeeId,
@@ -378,30 +398,33 @@ class AppraisalController extends Controller
                     'review_start_date' => $startDate,
                     'review_end_date' => $endDate,
                     'status' => 'draft',
+                    'goals_defined_by' => $setting->isStaffDefined() ? 'staff' : 'hr',
                 ]);
 
-                // Pre-populate scores from goals
-                $focusAreas = PerformanceFocusArea::where('is_active', 1)
-                    ->where(function ($q) use ($employee) {
-                        $q->whereNull('department_id')
-                            ->orWhere('department_id', $employee->department_id);
-                    })
-                    ->where(function ($q) use ($employee) {
-                        $q->whereNull('designation_id')
-                            ->orWhere('designation_id', $employee->designation_id);
-                    })
-                    ->with('goals')
-                    ->get();
+                // Pre-populate scores from HR catalog only for HR-defined approach
+                if ($setting->isHrDefined()) {
+                    $focusAreas = PerformanceFocusArea::hrCatalog()->where('is_active', 1)
+                        ->where(function ($q) use ($employee) {
+                            $q->whereNull('department_id')
+                                ->orWhere('department_id', $employee->department_id);
+                        })
+                        ->where(function ($q) use ($employee) {
+                            $q->whereNull('designation_id')
+                                ->orWhere('designation_id', $employee->designation_id);
+                        })
+                        ->with('goals')
+                        ->get();
 
-                foreach ($focusAreas as $focusArea) {
-                    foreach ($focusArea->goals as $goal) {
-                        PerformanceAppraisalScore::create([
-                            'appraisal_id' => $appraisal->appraisal_id,
-                            'goal_id' => $goal->goal_id,
-                            'itemized_weighting' => $goal->itemized_weighting,
-                            'self_weighting' => 0,
-                            'review_weighting' => 0,
-                        ]);
+                    foreach ($focusAreas as $focusArea) {
+                        foreach ($focusArea->goals as $goal) {
+                            PerformanceAppraisalScore::create([
+                                'appraisal_id' => $appraisal->appraisal_id,
+                                'goal_id' => $goal->goal_id,
+                                'itemized_weighting' => $goal->itemized_weighting,
+                                'self_weighting' => 0,
+                                'review_weighting' => 0,
+                            ]);
+                        }
                     }
                 }
 

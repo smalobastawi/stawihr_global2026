@@ -68,12 +68,13 @@ class SendPayslipEmail extends Mailable
             'payrollPeriod',
             'details'
         ]);
-        $userPassword = $this->payrollRecord->employeePayroll->employee->national_id ?? $this->payrollRecord->employeePayroll->employee->payroll_number;
+
+        $employee = $this->payrollRecord->employeePayroll->employee ?? null;
+
         $pdf = Pdf::loadView('admin.payroll.payslip', [
             'payrollRecord' => $this->payrollRecord
         ])->setPaper('a4');
-        $pdf->getDomPDF()->getCanvas()->get_cpdf()->setEncryption($userPassword, env('APP_KEY'));
 
-        return $pdf;
+        return protectEmployeePdf($pdf, $employee);
     }
 }

@@ -1224,6 +1224,11 @@
                              </a>
 
                              <ul class="treeview-menu nav nav-third-level" style="background-color: #00b3ee99">
+                                 @can('performance.setting.index')
+                                     <li><a class="hideMenu" href="{{ route('performance.setting.index') }}"><i
+                                                 class="fa fa-circle-o"></i> Appraisal Settings</a></li>
+                                 @endcan
+
                                  @can('performance.ratingScale.index')
                                      <li><a class="hideMenu" href="{{ route('performance.ratingScale.index') }}"><i
                                                  class="fa fa-circle-o"></i> Rating Scales</a></li>
@@ -1234,10 +1239,20 @@
                                                  class="fa fa-circle-o"></i> Review Periods</a></li>
                                  @endcan
 
-                                 @can('performance.focusArea.index')
-                                     <li><a class="hideMenu" href="{{ route('performance.focusArea.index') }}"><i
-                                                 class="fa fa-circle-o"></i> Focus Areas</a></li>
-                                 @endcan
+                                 @php
+                                     try {
+                                         $performanceApproachIsHr = \App\Models\Performance\PerformanceSetting::current()->isHrDefined();
+                                     } catch (\Throwable $e) {
+                                         $performanceApproachIsHr = true;
+                                     }
+                                 @endphp
+
+                                 @if($performanceApproachIsHr)
+                                     @can('performance.focusArea.index')
+                                         <li><a class="hideMenu" href="{{ route('performance.focusArea.index') }}"><i
+                                                     class="fa fa-circle-o"></i> Focus Areas</a></li>
+                                     @endcan
+                                 @endif
 
                                  @can('performance.behavioralItem.index')
                                      <li><a class="hideMenu" href="{{ route('performance.behavioralItem.index') }}"><i

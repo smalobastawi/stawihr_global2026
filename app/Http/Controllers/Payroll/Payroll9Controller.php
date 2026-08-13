@@ -449,18 +449,20 @@ class Payroll9Controller extends Controller implements ShouldQueue
 
         $p9Data = $this->buildP9Data($request, $startDate, $endDate);
         $company = $this->resolveCompanyForFinancialYear($financialYear);
+        $employee = $p9Data['employeeDetails'];
 
         $pdf_doc = Pdf::loadView('admin.payroll.p9.export', [
             'salaryDetails' => $p9Data['salaryDetails'],
-            'employeeDetails' => $p9Data['employeeDetails'],
+            'employeeDetails' => $employee,
             'taxationData' => $p9Data['taxationData'],
             'totals' => $p9Data['totals'],
             'company' => $company,
             'financialYear' => $financialYear,
         ]);
         $pdf_doc->setPaper('A3', 'landscape');
+        protectEmployeePdf($pdf_doc, $employee);
 
-        return $pdf_doc->download('P9A' . ' ' . $p9Data['employeeDetails']->first_name . ' ' . $p9Data['employeeDetails']->last_name . ' ' . $p9Data['financialYearEnd'] . '.pdf');
+        return $pdf_doc->download('P9A' . ' ' . $employee->first_name . ' ' . $employee->last_name . ' ' . $p9Data['financialYearEnd'] . '.pdf');
     }
 
     public function newGeneratePreview(Request $request)
@@ -502,22 +504,27 @@ class Payroll9Controller extends Controller implements ShouldQueue
                 : null)
             ?? getFirstCompany();
 
+        $employee = $p9Data['employeeDetails'];
+
         $pdf = Pdf::loadView('admin.payroll.p9.export', [
             'financial_year_end' => $p9Data['financialYearEnd'],
             'salaryDetails' => $p9Data['salaryDetails'],
-            'employeeDetails' => $p9Data['employeeDetails'],
+            'employeeDetails' => $employee,
             'taxationData' => $p9Data['taxationData'],
             'totals' => $p9Data['totals'],
             'company' => $company,
             'financialYear' => $financialYear,
         ]);
         $pdf->setPaper('A3', 'landscape');
+        protectEmployeePdf($pdf, $employee);
 
         $mailContent = [
-            'employee_name' => $p9Data['employeeDetails']->first_name,
+            'employee_name' => $employee->first_name,
+            'employee' => $employee,
             'p9form' => $pdf,
-            'employeeEmail' => $p9Data['employeeDetails']->email,
+            'employeeEmail' => $employee->email,
             'company' => $company,
+            'passwordLabel' => employeeDocumentPasswordLabel($employee),
         ];
 
         try {

@@ -175,6 +175,8 @@ Route::group(['module' => 'Self Service', 'prefix' => 'ess', 'as' => 'ess.', 'mi
     Route::group(['section' => 'performance', 'sub_section' => 'self_evaluation', 'prefix' => 'performance', 'as' => 'performance.'], function () {
         Route::get('/my-appraisals', [EssIndexController::class, 'myAppraisals'])->name('myAppraisals');
         Route::get('/self-evaluation', [EssIndexController::class, 'goToSelfEvaluation'])->name('selfEvaluation');
+        Route::get('/{appraisal}/setupGoals', [EssIndexController::class, 'setupAppraisalGoals'])->name('setupGoals');
+        Route::post('/{appraisal}/setupGoals', [EssIndexController::class, 'saveAppraisalGoals'])->name('saveGoals');
         Route::get('/{appraisal}/selfReview', [EssIndexController::class, 'selfReview'])->name('selfReview');
         Route::post('/{appraisal}/saveSelfReview', [EssIndexController::class, 'saveSelfReview'])->name('saveSelfReview');
         Route::post('/{appraisal}/submitSelfReview', [EssIndexController::class, 'submitSelfReview'])->name('submitSelfReview');

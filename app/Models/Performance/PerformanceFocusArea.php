@@ -18,6 +18,9 @@ class PerformanceFocusArea extends Model
         'description',
         'department_id',
         'designation_id',
+        'employee_id',
+        'appraisal_id',
+        'source',
         'is_active',
     ];
 
@@ -36,9 +39,34 @@ class PerformanceFocusArea extends Model
         return $this->belongsTo(\App\Models\Designation::class, 'designation_id', 'designation_id');
     }
 
+    public function employee()
+    {
+        return $this->belongsTo(\App\Models\Employee::class, 'employee_id', 'employee_id');
+    }
+
+    public function appraisal()
+    {
+        return $this->belongsTo(PerformanceAppraisal::class, 'appraisal_id', 'appraisal_id');
+    }
+
     public function goals()
     {
         return $this->hasMany(PerformanceGoal::class, 'focus_area_id', 'focus_area_id');
+    }
+
+    public function scopeHrCatalog($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('employee_id')
+                ->where(function ($inner) {
+                    $inner->where('source', 'hr')->orWhereNull('source');
+                });
+        });
+    }
+
+    public function scopeStaffOwned($query, $employeeId)
+    {
+        return $query->where('employee_id', $employeeId)->where('source', 'staff');
     }
 
     public function appraisalScores()

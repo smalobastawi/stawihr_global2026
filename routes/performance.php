@@ -8,6 +8,7 @@ use App\Http\Controllers\Performance\BehavioralItemController;
 use App\Http\Controllers\Performance\AppraisalController;
 use App\Http\Controllers\Performance\AppraisalReportController;
 use App\Http\Controllers\Performance\ReviewPeriodController;
+use App\Http\Controllers\Performance\PerformanceSettingController;
 
 Route::group(['module' => 'Performance Management', 'prefix' => 'performanceManagement', 'middleware' => ['prevent-back-history', 'auth', 'permission']], function () {
 
@@ -15,6 +16,12 @@ Route::group(['module' => 'Performance Management', 'prefix' => 'performanceMana
     // HR / ADMIN FUNCTIONS - Setup & Configuration
     // ============================================
     Route::group(['section' => 'setup'], function () {
+
+        // Organization appraisal approach settings
+        Route::group(['sub_section' => 'performance_setting', 'prefix' => 'setting'], function () {
+            Route::get('/', [PerformanceSettingController::class, 'index'])->name('performance.setting.index');
+            Route::put('/update', [PerformanceSettingController::class, 'update'])->name('performance.setting.update');
+        });
 
         // Rating Guidelines
         Route::group(['sub_section' => 'rating_scale', 'prefix' => 'ratingScale'], function () {

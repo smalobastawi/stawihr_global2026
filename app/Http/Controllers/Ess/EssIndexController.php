@@ -73,6 +73,9 @@ use App\Models\Vehicle\VehicleAssignment;
 use App\Models\Performance\PerformanceAppraisal;
 use App\Models\Performance\PerformanceAppraisalScore;
 use App\Models\Performance\PerformanceAppraisalBehavioralScore;
+use App\Models\Performance\PerformanceFocusArea;
+use App\Models\Performance\PerformanceGoal;
+use App\Models\Performance\PerformanceSetting;
 use App\Models\Pip\PipPlan;
 use App\Models\Pdp\PdpPlan;
 use App\Models\Pdp\PdpSetting;
@@ -1163,15 +1166,27 @@ class EssIndexController extends Controller
     }
     public function generatePayslip($id)
     {
-        $paySlipId = $id;
-        $payrollRecord = \App\Models\Payroll\PayrollRecord::findOrFail($paySlipId);
+        $payrollRecord = \App\Models\Payroll\PayrollRecord::findOrFail($id);
         $payrollRecord->load([
-            'employeePayroll.employee',
+            'employeePayroll.employee.company',
+            'company',
             'payrollPeriod',
             'details'
         ]);
 
-        return view('admin.payroll.payslip', compact('payrollRecord'));
+        $employee = $payrollRecord->employeePayroll->employee ?? null;
+        $periodName = $payrollRecord->payrollPeriod->name ?? 'payslip';
+        $employeeName = $employee ? $employee->fullName() : 'employee';
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.payroll.payslip', [
+            'payrollRecord' => $payrollRecord,
+        ])->setPaper('a4');
+
+        protectEmployeePdf($pdf, $employee);
+
+        $filename = 'Payslip_' . preg_replace('/\s+/', '_', $employeeName) . '_' . preg_replace('/\s+/', '_', $periodName) . '.pdf';
+
+        return $pdf->download($filename);
     }
 
     /**
@@ -1526,7 +1541,154 @@ class EssIndexController extends Controller
                 ->with('error', 'No pending self-evaluation available. Please check your appraisal list for current status.');
         }
 
+        if ($appraisal->canEditStaffGoals() && $appraisal->scores()->count() === 0) {
+            return redirect()->route('ess.performance.setupGoals', $appraisal->appraisal_id)
+                ->with('info', 'Please set your performance goals/objectives before starting self-evaluation.');
+        }
+
         return redirect()->route('ess.performance.selfReview', $appraisal->appraisal_id);
+    }
+
+    /**
+     * Staff-defined goals: form to set focus areas, objectives and metrics for an appraisal.
+     */
+    public function setupAppraisalGoals($id)
+    {
+        $employee = $this->employee;
+
+        if (!$employee || !$employee->employee_id) {
+            return redirect()->route('ess.performance.myAppraisals')->with('error', 'No employee record found.');
+        }
+
+        $appraisal = PerformanceAppraisal::with(['scores.goal.focusArea'])
+            ->where('employee_id', $employee->employee_id)
+            ->findOrFail($id);
+
+        if (!$appraisal->usesStaffDefinedGoals()) {
+            return redirect()->route('ess.performance.selfReview', $appraisal->appraisal_id)
+                ->with('error', 'This appraisal uses HR-defined performance areas. You only need to rate yourself.');
+        }
+
+        if (!$appraisal->canEditStaffGoals()) {
+            return redirect()->route('ess.performance.myAppraisals')
+                ->with('error', 'Goals can no longer be edited for this appraisal.');
+        }
+
+        $existingFocusAreas = PerformanceFocusArea::with('goals')
+            ->where('appraisal_id', $appraisal->appraisal_id)
+            ->where('employee_id', $employee->employee_id)
+            ->where('source', 'staff')
+            ->orderBy('focus_area_id')
+            ->get();
+
+        $setting = PerformanceSetting::current();
+
+        return view('admin.ess.performance.setup_goals', compact('appraisal', 'existingFocusAreas', 'setting'));
+    }
+
+    /**
+     * Save staff-defined focus areas/goals and sync appraisal score rows.
+     */
+    public function saveAppraisalGoals(Request $request, $id)
+    {
+        $employee = $this->employee;
+
+        if (!$employee || !$employee->employee_id) {
+            return redirect()->route('ess.performance.myAppraisals')->with('error', 'No employee record found.');
+        }
+
+        $appraisal = PerformanceAppraisal::where('employee_id', $employee->employee_id)->findOrFail($id);
+
+        if (!$appraisal->usesStaffDefinedGoals() || !$appraisal->canEditStaffGoals()) {
+            return redirect()->route('ess.performance.myAppraisals')
+                ->with('error', 'You cannot edit goals for this appraisal.');
+        }
+
+        $input = $request->validate([
+            'focus_areas' => 'required|array|min:1',
+            'focus_areas.*.focus_area_name' => 'required|string|max:255',
+            'focus_areas.*.weight' => 'required|numeric|min:0|max:100',
+            'focus_areas.*.description' => 'nullable|string',
+            'focus_areas.*.goals' => 'required|array|min:1',
+            'focus_areas.*.goals.*.strategic_objective' => 'required|string|max:255',
+            'focus_areas.*.goals.*.performance_metric' => 'required|string|max:255',
+            'focus_areas.*.goals.*.performance_target' => 'required|string',
+            'focus_areas.*.goals.*.key_initiatives' => 'nullable|string',
+            'focus_areas.*.goals.*.itemized_weighting' => 'required|numeric|min:0|max:100',
+        ]);
+
+        $totalWeight = collect($input['focus_areas'])->sum(fn ($fa) => (float) $fa['weight']);
+        if (abs($totalWeight - 100) > 0.01) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Focus area weights must total 100%. Current total: ' . number_format($totalWeight, 2) . '%.');
+        }
+
+        try {
+            \DB::transaction(function () use ($appraisal, $employee, $input) {
+                // Remove previous staff-defined areas/goals and score rows for this appraisal
+                $oldFocusAreaIds = PerformanceFocusArea::where('appraisal_id', $appraisal->appraisal_id)
+                    ->where('employee_id', $employee->employee_id)
+                    ->where('source', 'staff')
+                    ->pluck('focus_area_id');
+
+                if ($oldFocusAreaIds->isNotEmpty()) {
+                    $oldGoalIds = PerformanceGoal::whereIn('focus_area_id', $oldFocusAreaIds)->pluck('goal_id');
+                    if ($oldGoalIds->isNotEmpty()) {
+                        PerformanceAppraisalScore::where('appraisal_id', $appraisal->appraisal_id)
+                            ->whereIn('goal_id', $oldGoalIds)
+                            ->delete();
+                        PerformanceGoal::whereIn('goal_id', $oldGoalIds)->forceDelete();
+                    }
+                    PerformanceFocusArea::whereIn('focus_area_id', $oldFocusAreaIds)->forceDelete();
+                } else {
+                    PerformanceAppraisalScore::where('appraisal_id', $appraisal->appraisal_id)->delete();
+                }
+
+                foreach ($input['focus_areas'] as $focusAreaData) {
+                    $focusArea = PerformanceFocusArea::create([
+                        'focus_area_name' => $focusAreaData['focus_area_name'],
+                        'weight' => $focusAreaData['weight'],
+                        'description' => $focusAreaData['description'] ?? null,
+                        'employee_id' => $employee->employee_id,
+                        'appraisal_id' => $appraisal->appraisal_id,
+                        'source' => 'staff',
+                        'is_active' => 1,
+                    ]);
+
+                    foreach ($focusAreaData['goals'] as $index => $goalData) {
+                        $goal = PerformanceGoal::create([
+                            'focus_area_id' => $focusArea->focus_area_id,
+                            'employee_id' => $employee->employee_id,
+                            'source' => 'staff',
+                            'strategic_objective' => $goalData['strategic_objective'],
+                            'performance_metric' => $goalData['performance_metric'],
+                            'performance_target' => $goalData['performance_target'],
+                            'key_initiatives' => $goalData['key_initiatives'] ?? null,
+                            'itemized_weighting' => $goalData['itemized_weighting'],
+                            'sort_order' => $index + 1,
+                            'is_active' => 1,
+                        ]);
+
+                        PerformanceAppraisalScore::create([
+                            'appraisal_id' => $appraisal->appraisal_id,
+                            'goal_id' => $goal->goal_id,
+                            'itemized_weighting' => $goal->itemized_weighting,
+                            'self_weighting' => 0,
+                            'review_weighting' => 0,
+                        ]);
+                    }
+                }
+
+                $appraisal->status = 'draft';
+                $appraisal->save();
+            });
+        } catch (\Exception $e) {
+            return redirect()->back()->withInput()->with('error', 'Failed to save goals: ' . $e->getMessage());
+        }
+
+        return redirect()->route('ess.performance.selfReview', $appraisal->appraisal_id)
+            ->with('success', 'Your goals/objectives were saved. You can now complete your self-evaluation.');
     }
 
     /**
@@ -1553,6 +1715,11 @@ class EssIndexController extends Controller
         if (!in_array($appraisal->status, ['draft', 'self_review'])) {
             return redirect()->route('ess.performance.myAppraisals')
                 ->with('error', 'Self evaluation is no longer available. The appraisal has moved to ' . str_replace('_', ' ', $appraisal->status) . ' phase.');
+        }
+
+        if ($appraisal->canEditStaffGoals() && $appraisal->scores->count() === 0) {
+            return redirect()->route('ess.performance.setupGoals', $appraisal->appraisal_id)
+                ->with('info', 'Please set your performance goals/objectives before starting self-evaluation.');
         }
 
         // Group by focus area
@@ -1638,6 +1805,11 @@ class EssIndexController extends Controller
         if (!in_array($appraisal->status, ['draft', 'self_review'])) {
             return redirect()->route('ess.performance.myAppraisals')
                 ->with('error', 'Cannot submit self evaluation. The appraisal has already moved to ' . str_replace('_', ' ', $appraisal->status) . ' phase.');
+        }
+
+        if ($appraisal->usesStaffDefinedGoals() && $appraisal->scores()->count() === 0) {
+            return redirect()->route('ess.performance.setupGoals', $appraisal->appraisal_id)
+                ->with('error', 'Please set your goals/objectives before submitting self-evaluation.');
         }
 
         // Mark as submitted for supervisor review

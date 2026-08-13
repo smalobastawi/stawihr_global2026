@@ -19,6 +19,7 @@ class PerformanceAppraisal extends Model
         'review_start_date',
         'review_end_date',
         'status',
+        'goals_defined_by',
         'total_itemized_weighting',
         'total_self_weighting',
         'total_review_weighting',
@@ -126,5 +127,16 @@ class PerformanceAppraisal extends Model
         $finalScore += $behavioralTotal;
 
         return round($finalScore, 2);
+    }
+
+    public function usesStaffDefinedGoals(): bool
+    {
+        return ($this->goals_defined_by ?? 'hr') === 'staff';
+    }
+
+    public function canEditStaffGoals(): bool
+    {
+        return $this->usesStaffDefinedGoals()
+            && in_array($this->status, ['draft', 'self_review'], true);
     }
 }

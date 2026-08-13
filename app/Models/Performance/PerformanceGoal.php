@@ -14,6 +14,8 @@ class PerformanceGoal extends Model
 
     protected $fillable = [
         'focus_area_id',
+        'employee_id',
+        'source',
         'strategic_objective',
         'performance_metric',
         'performance_target',
@@ -32,6 +34,21 @@ class PerformanceGoal extends Model
     public function focusArea()
     {
         return $this->belongsTo(PerformanceFocusArea::class, 'focus_area_id', 'focus_area_id');
+    }
+
+    public function employee()
+    {
+        return $this->belongsTo(\App\Models\Employee::class, 'employee_id', 'employee_id');
+    }
+
+    public function scopeHrCatalog($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereNull('employee_id')
+                ->where(function ($inner) {
+                    $inner->where('source', 'hr')->orWhereNull('source');
+                });
+        });
     }
 
     public function appraisalScores()

@@ -10,7 +10,15 @@
 
 <body>
     <div class="container-fluid">
+        <p>Dear {{ $employee_name ?? 'Employee' }},</p>
+
         <p>Please find the attached P9 form for your use.</p>
+
+        <p>
+            The attached P9 PDF is password protected. Use your
+            <strong>{{ $passwordLabel ?? employeeDocumentPasswordLabel($employee ?? null) }}</strong>
+            to open it. If you do not have a National ID on file, use your Passport number.
+        </p>
 
         <p>Kind Regards</p>
         

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Performance;
 
 use App\Http\Controllers\Controller;
 use App\Models\Performance\PerformanceFocusArea;
+use App\Models\Performance\PerformanceSetting;
 use App\Models\Department;
 use App\Models\Designation;
 use App\Models\User;
@@ -11,9 +12,23 @@ use Illuminate\Http\Request;
 
 class FocusAreaController extends Controller
 {
+    protected function ensureHrDefinedApproach()
+    {
+        if (PerformanceSetting::current()->isStaffDefined()) {
+            return redirect()->route('performance.setting.index')
+                ->with('error', 'HR focus area setup is disabled because your organization uses staff-defined goals. Change Appraisal Settings to enable HR-defined areas.');
+        }
+
+        return null;
+    }
+
     public function index()
     {
-        $results = PerformanceFocusArea::with(['department', 'designation', 'goals'])->get();
+        if ($redirect = $this->ensureHrDefinedApproach()) {
+            return $redirect;
+        }
+
+        $results = PerformanceFocusArea::hrCatalog()->with(['department', 'designation', 'goals'])->get();
         $signed_in_user_role = User::select('role_id')->where('id', session('logged_session_data.id'))->pluck('role_id')->first();
 
         return view('admin.performance.focusArea.index', [
@@ -24,6 +39,10 @@ class FocusAreaController extends Controller
 
     public function create()
     {
+        if ($redirect = $this->ensureHrDefinedApproach()) {
+            return $redirect;
+        }
+
         $departments = Department::all();
         $designations = Designation::all();
         $signed_in_user_role = User::select('role_id')->where('id', session('logged_session_data.id'))->pluck('role_id')->first();
@@ -49,7 +68,11 @@ class FocusAreaController extends Controller
         $input['is_active'] = $request->has('is_active') ? 1 : 0;
 
         try {
-            PerformanceFocusArea::create($input);
+            PerformanceFocusArea::create(array_merge($input, [
+                'source' => 'hr',
+                'employee_id' => null,
+                'appraisal_id' => null,
+            ]));
             $bug = 0;
         } catch (\Exception $e) {
             $bug = $e->getMessage();

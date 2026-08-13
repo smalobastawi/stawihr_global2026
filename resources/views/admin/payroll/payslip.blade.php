@@ -428,9 +428,24 @@
                             <tbody>
 
                                 <tr>
-                                    <td>NSSF Employer</td>
+                                    <td>NSSF Employer - Tier I</td>
                                     <td class="amount currency">
-                                        {{ number_format($payrollRecord->nssf_contribution, 2) }}</td>
+                                        {{ number_format($payrollRecord->nssf_tier1_company_contribution ?? 0, 2) }}</td>
+                                </tr>
+                                <tr>
+                                    <td>NSSF Employer - Tier II</td>
+                                    <td class="amount currency">
+                                        {{ number_format($payrollRecord->nssf_tier2_company_contribution ?? 0, 2) }}</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>NSSF Employer Total</strong></td>
+                                    <td class="amount currency">
+                                        <strong>{{ number_format(
+                                            ($payrollRecord->nssf_tier1_company_contribution ?? 0) +
+                                            ($payrollRecord->nssf_tier2_company_contribution ?? 0),
+                                            2
+                                        ) }}</strong>
+                                    </td>
                                 </tr>
 
                                 <tr>
@@ -486,8 +501,26 @@
                             </tr>
 
                             <tr>
-                                <td>NSSF Employee</td>
-                                <td class="amount currency">{{ number_format($payrollRecord->nssf_contribution, 2) }}
+                                <td>NSSF Employee - Tier I</td>
+                                <td class="amount currency">{{ number_format($payrollRecord->nssf_tier1_contribution ?? 0, 2) }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>NSSF Employee - Tier II</td>
+                                <td class="amount currency">{{ number_format($payrollRecord->nssf_tier2_contribution ?? 0, 2) }}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>NSSF Employee Total</strong></td>
+                                <td class="amount currency">
+                                    @php
+                                        $nssfEmployeeTotal = (float) ($payrollRecord->nssf_tier1_contribution ?? 0)
+                                            + (float) ($payrollRecord->nssf_tier2_contribution ?? 0);
+                                        if ($nssfEmployeeTotal <= 0) {
+                                            $nssfEmployeeTotal = (float) ($payrollRecord->nssf_contribution ?? 0);
+                                        }
+                                    @endphp
+                                    <strong>{{ number_format($nssfEmployeeTotal, 2) }}</strong>
                                 </td>
                             </tr>
 
