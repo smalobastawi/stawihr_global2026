@@ -129,6 +129,8 @@ Route::group(['module' => 'Administration', 'middleware' => ['prevent-back-histo
     Route::group(['section' => 'user', 'sub_section' => 'user'], function () {
         Route::resource('user', UserController::class)->parameters(['user' => 'id']);
         Route::post('user/{id}/restore', [UserController::class, 'restore'])->name('user.restore');
+        Route::delete('user/{id}/purge', [UserController::class, 'purge'])->name('user.purge');
+        Route::post('user/bulk-purge', [UserController::class, 'bulkPurge'])->name('user.bulkPurge');
         Route::get('users/inactive', [UserController::class, 'indexInactive'])->name('user.inactive');
         Route::get('users/active', [UserController::class, 'indexActive'])->name('user.active');
     });

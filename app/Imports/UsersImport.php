@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\EmployeePayoutChannel;
 use Maatwebsite\Excel\Concerns\ToModel;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use App\Lib\Enumerations\StaffContractTypes;
 use Illuminate\Validation\ValidationException;
@@ -136,37 +137,44 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
                 return null;
             }
 
-            $parentData = User::updateOrCreate(
-                ['email' => $employeeAccountDataFormat['email']],
-                $employeeAccountDataFormat
-            );
+            // Create the user account, employee record, payroll, contract, and joiner
+            // atomically. If any step fails (including the Employee insert), the entire
+            // transaction is rolled back so no orphan User profile is left in the system.
+            $newEmployee = DB::transaction(function () use ($row, $start_date, $effective_date, $end_of_contract, $end_of_probation, $employeeAccountDataFormat) {
+                $parentData = User::updateOrCreate(
+                    ['email' => $employeeAccountDataFormat['email']],
+                    $employeeAccountDataFormat
+                );
 
-            // Create or update Employee record
-            $employeeDataFormat = $this->makeEmployeePersonalInformationDataFormat_from_excel(
-                $row,
-                $start_date,
-                $employeeAccountDataFormat['email'],
-                $parentData->id
-            );
+                // Create or update Employee record
+                $employeeDataFormat = $this->makeEmployeePersonalInformationDataFormat_from_excel(
+                    $row,
+                    $start_date,
+                    $employeeAccountDataFormat['email'],
+                    $parentData->id
+                );
 
-            $newEmployee = Employee::updateOrCreate(
-                [
-                    'payroll_number' => $employeeDataFormat['payroll_number'],
-                ],
-                $employeeDataFormat
-            );
+                $employee = Employee::updateOrCreate(
+                    [
+                        'payroll_number' => $employeeDataFormat['payroll_number'],
+                    ],
+                    $employeeDataFormat
+                );
 
-            // Create or update Employee Payroll record
-            $this->createOrUpdateEmployeePayroll($row, $newEmployee, $effective_date);
+                // Create or update Employee Payroll record
+                $this->createOrUpdateEmployeePayroll($row, $employee, $effective_date);
 
-            // Assign default role
-            $parentData->assignRole('Employee');
+                // Assign default role
+                $parentData->assignRole('Employee');
 
-            // Create contract record
-            $this->createOrUpdateContract($row, $newEmployee, $start_date, $end_of_contract, $end_of_probation);
+                // Create contract record
+                $this->createOrUpdateContract($row, $employee, $start_date, $end_of_contract, $end_of_probation);
 
-            // Update joiners table
-            $this->createOrUpdateJoinerRecord($newEmployee, $start_date);
+                // Update joiners table
+                $this->createOrUpdateJoinerRecord($employee, $start_date);
+
+                return $employee;
+            });
 
             if ($newEmployee) {
                 session()->flash('success', "Employee {$newEmployee->first_name} {$newEmployee->last_name} imported successfully.", 30);

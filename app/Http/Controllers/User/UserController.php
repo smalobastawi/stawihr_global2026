@@ -213,6 +213,136 @@ class UserController extends Controller
         }
     }
 
+    /**
+     * Permanently delete a user. If the user has a linked employee, the employee
+     * and every record that references the user/employee are also hard-deleted.
+     */
+    public function purge($id)
+    {
+        $user = User::withTrashed()->findOrFail($id);
+
+        try {
+            $hadEmployee = Employee::withTrashed()->where('user_id', $user->id)->exists();
+            $this->anonymizedDeletionService->purgeUser($user);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => $hadEmployee
+                    ? 'User, linked employee, and all related records have been permanently deleted.'
+                    : 'User and all related records have been permanently deleted.',
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\Exception $e) {
+            \Log::error('User permanent deletion failed', [
+                'user_id' => $id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Could not permanently delete this user. ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Permanently delete many users at once. Users with a linked employee will
+     * also have the employee and all related records removed.
+     */
+    public function bulkPurge(Request $request)
+    {
+        $ids = $request->input('ids', []);
+
+        if (!is_array($ids) || empty($ids)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No users selected for deletion.',
+            ], 422);
+        }
+
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn ($id) => $id > 0)));
+
+        if (empty($ids)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No valid user IDs were provided.',
+            ], 422);
+        }
+
+        $signedInId = Auth::id();
+        if (in_array($signedInId, $ids, true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'You cannot delete your own account.',
+            ], 422);
+        }
+
+        $users = User::withTrashed()->whereIn('id', $ids)->get();
+        $existingIds = $users->pluck('id')->all();
+        $missingIds = array_values(array_diff($ids, $existingIds));
+
+        $deleted = 0;
+        $failed = [];
+
+        foreach ($users as $user) {
+            try {
+                $this->anonymizedDeletionService->purgeUser($user);
+                $deleted++;
+            } catch (\RuntimeException $e) {
+                $failed[] = [
+                    'id' => $user->id,
+                    'name' => trim(($user->employeeDetails->first_name ?? '') . ' ' . ($user->employeeDetails->last_name ?? '')) ?: $user->user_name,
+                    'reason' => $e->getMessage(),
+                ];
+            } catch (\Exception $e) {
+                \Log::error('Bulk user permanent deletion failed', [
+                    'user_id' => $user->id,
+                    'message' => $e->getMessage(),
+                ]);
+                $failed[] = [
+                    'id' => $user->id,
+                    'name' => trim(($user->employeeDetails->first_name ?? '') . ' ' . ($user->employeeDetails->last_name ?? '')) ?: $user->user_name,
+                    'reason' => $e->getMessage(),
+                ];
+            }
+        }
+
+        $status = $deleted === count($users) ? 'success' : ($deleted > 0 ? 'partial' : 'error');
+
+        return response()->json([
+            'status' => $status,
+            'deleted' => $deleted,
+            'requested' => count($ids),
+            'missing' => $missingIds,
+            'failed' => $failed,
+            'message' => $this->bulkResultMessage($deleted, count($users), $failed, $missingIds),
+        ], $status === 'error' ? 500 : 200);
+    }
+
+    private function bulkResultMessage(int $deleted, int $found, array $failed, array $missing): string
+    {
+        if ($deleted === $found && empty($missing)) {
+            return "{$deleted} user(s) permanently deleted along with all related records.";
+        }
+
+        $parts = [];
+        if ($deleted > 0) {
+            $parts[] = "{$deleted} user(s) permanently deleted";
+        }
+        if (!empty($failed)) {
+            $parts[] = count($failed) . ' failed';
+        }
+        if (!empty($missing)) {
+            $parts[] = count($missing) . ' not found';
+        }
+
+        return implode(', ', $parts) . '.';
+    }
+
     public function restore($id)
     {
         try {

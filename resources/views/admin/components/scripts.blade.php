@@ -177,6 +177,62 @@
                      }
                  });
              } else {
+             swal("Cancelled", "No changes were made.", "error");
+         }
+     });
+     return false;
+     });
+
+     $(document).on('click', '.permanent-delete-employee', function() {
+         var actionTo = $(this).attr('href');
+         var token = $(this).attr('data-token');
+         var redirectTo = $(this).attr('data-redirect');
+         swal({
+             title: "Permanently delete?",
+             text: "This will PERMANENTLY delete the employee, their linked user account, and EVERY related record (attendance, leave, payroll, training, contracts, etc.). This action CANNOT be undone.",
+             type: "warning",
+             showCancelButton: true,
+             confirmButtonColor: "#000000",
+             confirmButtonText: "Yes, delete permanently",
+             closeOnConfirm: false
+         }, function(isConfirm) {
+             if (isConfirm) {
+                 $.ajax({
+                     url: actionTo,
+                     type: 'post',
+                     data: {
+                         _method: 'delete',
+                         _token: token
+                     },
+                     dataType: 'json',
+                     success: function(data) {
+                         if (data.status === 'success') {
+                             swal({
+                                 title: "Permanently deleted!",
+                                 text: data.message,
+                                 type: "success"
+                             }, function() {
+                                 if (redirectTo) {
+                                     window.location.href = redirectTo;
+                                 } else {
+                                     location.reload();
+                                 }
+                             });
+                         } else {
+                             swal("Error!", data.message || "Some error found. Please try again.", "error");
+                         }
+                     },
+                     error: function(jqXHR) {
+                         var errorMessage = "Some error found. Please try again.";
+                         if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                             errorMessage = jqXHR.responseJSON.message;
+                         } else if (jqXHR.responseText) {
+                             errorMessage = $.trim(jqXHR.responseText);
+                         }
+                         swal("Error!", errorMessage, "error");
+                     }
+                 });
+             } else {
                  swal("Cancelled", "No changes were made.", "error");
              }
          });

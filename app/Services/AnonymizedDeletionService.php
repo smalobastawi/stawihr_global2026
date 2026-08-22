@@ -166,6 +166,194 @@ class AnonymizedDeletionService
         });
     }
 
+    /**
+     * Hard-delete a user and (if present) their linked employee and every
+     * record that references them. Records are removed permanently and the
+     * anonymized backup is also purged.
+     */
+    public function purgeUser(User $user): void
+    {
+        if ($user->id === Auth::id()) {
+            throw new \RuntimeException('You cannot delete your own account.');
+        }
+
+        DB::transaction(function () use ($user) {
+            $employee = Employee::withTrashed()->where('user_id', $user->id)->first();
+
+            if ($employee) {
+                $this->purgeEmployeeRecords($employee->employee_id);
+                $employee->forceDelete();
+            }
+
+            $this->purgeUserRecords($user->id);
+
+            // Drop the anonymized backup if any so a purge is truly irreversible.
+            AnonymizedRecordBackup::withTrashed()
+                ->where('user_id', $user->id)
+                ->forceDelete();
+
+            $user->forceDelete();
+        });
+    }
+
+    /**
+     * Hard-delete an employee, their linked user, and every record that
+     * references them. Records are removed permanently and the anonymized
+     * backup is also purged.
+     */
+    public function purgeEmployee(Employee $employee): void
+    {
+        if (!$employee->user_id) {
+            throw new \RuntimeException('Employee has no linked user account.');
+        }
+
+        $user = User::withTrashed()->find($employee->user_id);
+        if ($user && $user->id === Auth::id()) {
+            throw new \RuntimeException('You cannot delete your own account.');
+        }
+
+        DB::transaction(function () use ($employee, $user) {
+            $this->purgeEmployeeRecords($employee->employee_id);
+            $employee->forceDelete();
+
+            if ($user) {
+                $this->purgeUserRecords($user->id);
+
+                AnonymizedRecordBackup::withTrashed()
+                    ->where('user_id', $user->id)
+                    ->forceDelete();
+
+                $user->forceDelete();
+            }
+        });
+    }
+
+    /**
+     * Remove every row in the database that references the given employee_id.
+     * Uses INFORMATION_SCHEMA so it picks up tables even if no Eloquent model
+     * exists for them. Foreign key checks are disabled to allow the deletes
+     * to happen in a single transaction without ordering gymnastics.
+     */
+    private function purgeEmployeeRecords(int $employeeId): void
+    {
+        // Supervisor self-reference on the same table.
+        DB::table('employee')
+            ->where('supervisor_id', $employeeId)
+            ->update(['supervisor_id' => null]);
+
+        // Termination targets the employee via `terminate_to`.
+        if (Schema::hasTable('termination') && Schema::hasColumn('termination', 'terminate_to')) {
+            DB::table('termination')->where('terminate_to', $employeeId)->delete();
+        }
+
+        $this->purgeReferencingRows('employee', 'employee_id', $employeeId);
+    }
+
+    /**
+     * Remove every row that references the given user id (excluding employee
+     * rows, which are handled by purgeEmployeeRecords / purgeEmployee).
+     */
+    private function purgeUserRecords(int $userId): void
+    {
+        // Drop spatie/permission role bindings before the user row goes.
+        if (Schema::hasTable('model_has_roles')) {
+            DB::table('model_has_roles')
+                ->where('model_type', User::class)
+                ->where('model_id', $userId)
+                ->delete();
+        }
+
+        if (Schema::hasTable('model_has_permissions')) {
+            DB::table('model_has_permissions')
+                ->where('model_type', User::class)
+                ->where('model_id', $userId)
+                ->delete();
+        }
+
+        // Sanctum tokens
+        if (Schema::hasTable('personal_access_tokens')) {
+            DB::table('personal_access_tokens')->where('tokenable_id', $userId)
+                ->where('tokenable_type', User::class)
+                ->delete();
+        }
+
+        // Activity log entries authored by this user.
+        if (Schema::hasTable('activity_log')) {
+            DB::table('activity_log')
+                ->where('causer_type', User::class)
+                ->where('causer_id', $userId)
+                ->delete();
+        }
+
+        $this->purgeReferencingRows('user', 'user_id', $userId);
+    }
+
+    /**
+     * Columns that reference a user/employee as a creator/approver/head, not
+     * as the row's owner. We null these out instead of deleting the row so
+     * that configuration records (departments, holidays, etc.) are preserved
+     * even when their creator/head is purged.
+     */
+    private const MODIFIER_COLUMNS = [
+        'created_by', 'updated_by', 'approved_by', 'deleted_by', 'deleted_approved_by',
+        'stage1_approved_by', 'stage2_approved_by', 'stage3_approved_by',
+        'supervisor_id', 'head_id', 'manager_id',
+        'department_head_id', 'section_head_id', 'designation_head_id',
+        'causer_id', 'sent_by', 'actioned_by',
+    ];
+
+    /**
+     * Discover every table with a foreign key to $referencedTable.$column and
+     * either delete rows where the FK matches $referencedId (ownership-style
+     * columns) or null the FK (modifier-style columns like created_by).
+     */
+    private function purgeReferencingRows(string $referencedTable, string $column, int $referencedId): void
+    {
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver !== 'mysql' && $driver !== 'mariadb') {
+            // Best effort: only the user/employee rows themselves will be removed
+            // for non-MySQL drivers, and any remaining FKs will throw.
+            return;
+        }
+
+        $database = DB::connection()->getDatabaseName();
+
+        $rows = DB::select(
+            'SELECT TABLE_NAME, COLUMN_NAME
+             FROM information_schema.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA = ?
+               AND REFERENCED_TABLE_NAME = ?
+               AND REFERENCED_COLUMN_NAME = ?',
+            [$database, $referencedTable, $column]
+        );
+
+        try {
+            DB::statement('SET FOREIGN_KEY_CHECKS = 0');
+
+            foreach ($rows as $tableRow) {
+                $table = $tableRow->TABLE_NAME;
+                $col = $tableRow->COLUMN_NAME;
+
+                if ($table === $referencedTable) {
+                    continue;
+                }
+
+                if (!Schema::hasColumn($table, $col)) {
+                    continue;
+                }
+
+                if (in_array($col, self::MODIFIER_COLUMNS, true)) {
+                    DB::table($table)->where($col, $referencedId)->update([$col => null]);
+                } else {
+                    DB::table($table)->where($col, $referencedId)->delete();
+                }
+            }
+        } finally {
+            DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+        }
+    }
+
     public function hasRestorableBackup(int $userId): bool
     {
         return AnonymizedRecordBackup::restorable()

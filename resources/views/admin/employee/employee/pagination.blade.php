@@ -126,6 +126,14 @@
                            class="anonymize-delete btn btn-danger btn-xs deleteBtn btnColor">
                             <i class="fa fa-trash-o" aria-hidden="true"></i>
                         </a>
+                        <a href="{!! route('employee.purge', $value->employee_id) !!}"
+                           data-token="{!! csrf_token() !!}"
+                           data-id="{!! $value->employee_id !!}"
+                           data-redirect="{{ route('employee.inactive.index') }}"
+                           class="permanent-delete-employee btn btn-dark btn-xs deleteBtn btnColor"
+                           title="Permanently delete employee, linked user, and all related records">
+                            <i class="fa fa-eraser" aria-hidden="true"></i>
+                        </a>
                         @endcan
                     @endif
                 </td>

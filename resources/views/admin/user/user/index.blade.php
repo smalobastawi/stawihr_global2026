@@ -59,10 +59,29 @@
                                     <i class="glyphicon glyphicon-remove"></i>&nbsp;<strong>{{ session()->get('error') }}</strong>
                                 </div>
                             @endif
+                            <div class="m-b-15 bulk-action-bar" style="display: none;">
+                                <span class="bulk-selection-count label label-info">0 selected</span>
+                                @can('user.destroy')
+                                <button type="button"
+                                        class="btn btn-sm btn-danger bulk-purge-btn"
+                                        data-url="{{ route('user.bulkPurge') }}"
+                                        data-token="{{ csrf_token() }}">
+                                    <i class="fa fa-trash"></i> Permanently Delete Selected
+                                </button>
+                                @endcan
+                                <button type="button" class="btn btn-sm btn-default bulk-clear-btn">
+                                    <i class="fa fa-times"></i> Clear selection
+                                </button>
+                            </div>
                             <div class="table-responsive">
                                 <table id="myTable" class="table table-bordered">
                                     <thead class="tr_header">
                                     <tr>
+                                        <th style="width: 36px;">
+                                            <label style="margin: 0; font-weight: normal;">
+                                                <input type="checkbox" class="bulk-select-all" title="Select all">
+                                            </label>
+                                        </th>
                                         <th>#</th>
                                         <th>Role(s)</th>
                                         <th>Username</th>
@@ -78,6 +97,14 @@
                                             $isRestorable = in_array($value->id, $restorableUserIds ?? [], true);
                                         @endphp
                                         <tr class="user-row-{{ $value->id }}">
+                                            <td>
+                                                @if($value->id != \Auth::id())
+                                                    <input type="checkbox"
+                                                           class="bulk-select-row"
+                                                           value="{{ $value->id }}"
+                                                           data-has-employee="{{ $value->employeeDetails ? '1' : '0' }}">
+                                                @endif
+                                            </td>
                                             <td>{{ $loop->iteration }}</td>
                                             <td>
                                                 @forelse ($value['roles'] as $role)
@@ -133,9 +160,20 @@
                                                                class="btn btn-sm btn-danger delete-btn"
                                                                title="Anonymize & Deactivate"
                                                                data-url="{{ route('user.destroy', $value->id) }}"
-                                                               data-token="{{ csrf_token() }}" 
+                                                               data-token="{{ csrf_token() }}"
                                                                data-id="{{ $value->id }}">
                                                                 <i class="fa fa-trash"></i>
+                                                            </button>
+                                                            @endcan
+                                                            @can('user.destroy')
+                                                            <button type="button"
+                                                               class="btn btn-sm btn-dark purge-btn"
+                                                               title="Permanently delete user, employee, and all related records"
+                                                               data-url="{{ route('user.purge', $value->id) }}"
+                                                               data-token="{{ csrf_token() }}"
+                                                               data-id="{{ $value->id }}"
+                                                               data-has-employee="{{ $value->employeeDetails ? '1' : '0' }}">
+                                                                <i class="fa fa-eraser"></i>
                                                             </button>
                                                             @endcan
                                                         @else
@@ -250,6 +288,132 @@
                 if(confirm('Send password reset link to this user?')) {
                     window.location = $(this).attr('href');
                 }
+            });
+
+            // ---------- Bulk selection & permanent delete ----------
+            var $bar = $('.bulk-action-bar');
+            var $count = $('.bulk-selection-count');
+            var $rows = $('.bulk-select-row');
+            var $selectAll = $('.bulk-select-all');
+
+            function refreshBulkBar() {
+                var checked = $('.bulk-select-row:checked');
+                var n = checked.length;
+                if (n > 0) {
+                    $bar.show();
+                    $count.text(n + ' selected');
+                } else {
+                    $bar.hide();
+                    $count.text('0 selected');
+                }
+                $selectAll.prop('checked', $rows.length > 0 && n === $rows.length);
+            }
+
+            $rows.on('change', refreshBulkBar);
+
+            $selectAll.on('change', function() {
+                $rows.prop('checked', this.checked);
+                refreshBulkBar();
+            });
+
+            $('.bulk-clear-btn').on('click', function() {
+                $rows.prop('checked', false);
+                $selectAll.prop('checked', false);
+                refreshBulkBar();
+            });
+
+            function performPurgeCall(url, method, token, payload, onSuccess) {
+                $.ajax({
+                    url: url,
+                    type: method,
+                    data: payload,
+                    headers: { 'X-CSRF-TOKEN': token, 'Accept': 'application/json' },
+                    success: function(response) {
+                        onSuccess(response);
+                    },
+                    error: function(xhr) {
+                        var message = 'Error processing request.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            message = xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            message = $.trim(xhr.responseText);
+                        }
+                        alert(message);
+                    }
+                });
+            }
+
+            // Single-row permanent delete
+            $(document).on('click', '.purge-btn', function(e) {
+                e.preventDefault();
+                var url = $(this).data('url');
+                var token = $(this).data('token');
+                var userId = $(this).data('id');
+                var hasEmployee = $(this).data('has-employee') == '1';
+                var row = $('.user-row-' + userId);
+
+                var msg = hasEmployee
+                    ? 'This will PERMANENTLY delete this user, their linked employee profile, and EVERY related record (attendance, leave, payroll, training, etc.). This action CANNOT be undone. Continue?'
+                    : 'This will PERMANENTLY delete this user and every related record. This action CANNOT be undone. Continue?';
+
+                if (!confirm(msg)) {
+                    return;
+                }
+
+                performPurgeCall(url, 'DELETE', token, { _token: token }, function(response) {
+                    if (response && response.status === 'success') {
+                        row.fadeOut(400, function() {
+                            $(this).remove();
+                            refreshBulkBar();
+                        });
+                        alert(response.message || 'User permanently deleted.');
+                    } else {
+                        alert((response && response.message) || 'Error deleting user.');
+                    }
+                });
+            });
+
+            // Bulk permanent delete
+            $('.bulk-purge-btn').on('click', function(e) {
+                e.preventDefault();
+                var url = $(this).data('url');
+                var token = $(this).data('token');
+                var ids = $('.bulk-select-row:checked').map(function() {
+                    return $(this).val();
+                }).get();
+
+                if (ids.length === 0) {
+                    alert('Please select at least one user.');
+                    return;
+                }
+
+                var msg = 'PERMANENTLY delete ' + ids.length + ' user(s)? '
+                    + 'Users with a linked employee will also have their employee profile and every related record removed. '
+                    + 'This action CANNOT be undone.';
+
+                if (!confirm(msg)) {
+                    return;
+                }
+
+                performPurgeCall(url, 'POST', token, { _token: token, ids: ids }, function(response) {
+                    if (response && (response.status === 'success' || response.status === 'partial')) {
+                        ids.forEach(function(id) {
+                            $('.user-row-' + id).fadeOut(300, function() {
+                                $(this).remove();
+                            });
+                        });
+                        $('.bulk-clear-btn').trigger('click');
+                        var detail = '';
+                        if (response.failed && response.failed.length) {
+                            detail = '\n\nFailed: ' + response.failed.map(function(f) {
+                                return f.name + ' (' + f.reason + ')';
+                            }).join('; ');
+                        }
+                        alert((response.message || 'Bulk delete complete.') + detail);
+                    } else {
+                        alert((response && response.message) || 'Bulk delete failed.');
+                    }
+                });
             });
         });
     </script>

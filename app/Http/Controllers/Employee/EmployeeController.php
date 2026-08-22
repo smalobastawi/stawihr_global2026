@@ -801,6 +801,38 @@ class EmployeeController extends Controller
         }
     }
 
+    /**
+     * Permanently delete an employee, their linked user account, and every
+     * record that references them. This action is irreversible.
+     */
+    public function purge($id)
+    {
+        try {
+            $employee = Employee::withTrashed()->findOrFail($id);
+            $this->anonymizedDeletionService->purgeEmployee($employee);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Employee, linked user, and all related records have been permanently deleted.',
+            ]);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Employee permanent deletion failed', [
+                'employee_id' => $id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Could not permanently delete this employee. ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function getEmployeeList()
     {
         $results = Employee::where('status', '=', '1')->with([
