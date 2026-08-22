@@ -827,11 +827,11 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
 
     public function createOrFetchDesignation($designation): int
     {
-        if (is_null($designation) || trim($designation) === '') {
+        if (is_null($designation) || trim((string) $designation) === '') {
             return 1;
         }
 
-        $designation = trim(strtoupper($designation));
+        $designation = trim(strtoupper((string) $designation));
 
         try {
             $designation1 = Designation::firstOrCreate(
@@ -840,113 +840,164 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
             );
 
             return $designation1->designation_id;
-        } catch (\Exception $e) {
-            Log::error("Error processing designation: " . $e->getMessage());
+        } catch (\Illuminate\Database\QueryException $e) {
+            $existing = Designation::withTrashed()
+                ->where('designation_name', $designation)
+                ->first();
+
+            if ($existing) {
+                if (method_exists($existing, 'trashed') && $existing->trashed()) {
+                    $existing->restore();
+                }
+                return $existing->designation_id;
+            }
+
+            Log::error("Error processing designation '{$designation}': " . $e->getMessage());
             return 1;
         }
     }
 
     public function createOrFetchWorkShift($workShift): int
     {
-        if (is_null($workShift) || $workShift == '') {
+        if (is_null($workShift) || trim((string) $workShift) === '') {
             return 1;
         }
 
-        $workShift1 = WorkShift::where('shift_name', $workShift)->first();
-        if ($workShift1) {
-            return $workShift1->work_shift_id;
-        }
+        $workShift = trim((string) $workShift);
 
-        $workShift1 = new WorkShift();
-        $workShift1->shift_name = $workShift;
-        if ($workShift1->save()) {
-            return $workShift1->work_shift_id;
-        }
+        try {
+            $workShift1 = WorkShift::firstOrCreate(
+                ['shift_name' => $workShift],
+                ['shift_name' => $workShift]
+            );
 
-        return $workShift1->work_shift_id;
+            return $workShift1->work_shift_id;
+        } catch (\Illuminate\Database\QueryException $e) {
+            $existing = WorkShift::where('shift_name', $workShift)->first();
+            if ($existing) {
+                return $existing->work_shift_id;
+            }
+
+            Log::error("Error processing work shift '{$workShift}': " . $e->getMessage());
+            return 1;
+        }
     }
 
     public function createOrFetchBranch($location): int
     {
-        if (is_null($location) || $location == '') {
+        if (is_null($location) || trim((string) $location) === '') {
             return 1;
         }
 
-        $location1 = Location::where('location_name', $location)->first();
-        if ($location1) {
-            return $location1->location_id;
-        }
+        $location = trim((string) $location);
 
-        $location1 = new Location();
-        $location1->location_name = $location;
-        $location1->status = \GeneralStatus::ACTIVE;
-        
-        if ($location1->save()) {
-            
-            return $location1->location_id;
-        }
+        try {
+            $location1 = Location::firstOrCreate(
+                ['location_name' => $location],
+                ['location_name' => $location, 'status' => \GeneralStatus::ACTIVE]
+            );
 
-        return $location1->location_id;
+            return $location1->location_id;
+        } catch (\Illuminate\Database\QueryException $e) {
+            $existing = Location::withTrashed()
+                ->where('location_name', $location)
+                ->first();
+
+            if ($existing) {
+                if (method_exists($existing, 'trashed') && $existing->trashed()) {
+                    $existing->restore();
+                }
+                return $existing->location_id;
+            }
+
+            Log::error("Error processing location '{$location}': " . $e->getMessage());
+            return 1;
+        }
     }
 
     public function createOrFetchDepartment($department): int
     {
-        if (is_null($department) || $department == '') {
+        if (is_null($department) || trim((string) $department) === '') {
             return 1;
         }
 
-        $department1 = Department::where('department_name', $department)->first();
+        $department = trim((string) $department);
 
-        if ($department1) {
+        try {
+            $department1 = Department::firstOrCreate(
+                ['department_name' => $department],
+                ['department_name' => $department]
+            );
+
             return $department1->department_id;
-        }
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Soft-deleted row or concurrent insert hit the unique key.
+            // Re-fetch (including soft-deleted) and attach the existing record.
+            $existing = Department::withTrashed()
+                ->where('department_name', $department)
+                ->first();
 
-        $department1 = new Department();
-        $department1->department_name = $department;
-        if ($department1->save()) {
-            return $department1->department_id;
-        }
+            if ($existing) {
+                if (method_exists($existing, 'trashed') && $existing->trashed()) {
+                    $existing->restore();
+                }
+                return $existing->department_id;
+            }
 
-        return $department1->department_id;
+            Log::error("Error processing department '{$department}': " . $e->getMessage());
+            return 1;
+        }
     }
 
     public function createOrFetchEmployeeGroup($employeeGroup): int
     {
-        if (is_null($employeeGroup) || $employeeGroup == '') {
+        if (is_null($employeeGroup) || trim((string) $employeeGroup) === '') {
             return 1;
         }
 
-        $employeeGroup1 = EmployeeGroup::where('name', $employeeGroup)->first();
-        if ($employeeGroup1) {
+        $employeeGroup = trim((string) $employeeGroup);
+
+        try {
+            $employeeGroup1 = EmployeeGroup::firstOrCreate(
+                ['name' => $employeeGroup],
+                ['name' => $employeeGroup]
+            );
+
             return $employeeGroup1->id;
-        }
+        } catch (\Illuminate\Database\QueryException $e) {
+            $existing = EmployeeGroup::where('name', $employeeGroup)->first();
+            if ($existing) {
+                return $existing->id;
+            }
 
-        $employeeGroup2 = new EmployeeGroup();
-        $employeeGroup2->name = $employeeGroup;
-        if ($employeeGroup2->save()) {
-            return $employeeGroup2->id;
+            Log::error("Error processing employee group '{$employeeGroup}': " . $e->getMessage());
+            return 1;
         }
-
-        return $employeeGroup2->id;
     }
 
     public function createOrFetchSection($section): int
     {
-        if (is_null($section) || $section == '') {
+        if (is_null($section) || trim((string) $section) === '') {
             return 1;
         }
 
-        $section1 = EmployeeSection::where('name', $section)->first();
-        if ($section1) {
-            return $section1->id;
-        }
+        $section = trim((string) $section);
 
-        $section1 = new EmployeeSection();
-        $section1->name = $section;
-        if ($section1->save()) {
-            return $section1->id;
-        }
+        try {
+            $section1 = EmployeeSection::firstOrCreate(
+                ['name' => $section],
+                ['name' => $section]
+            );
 
-        return $section1->id;
+            return $section1->id;
+        } catch (\Illuminate\Database\QueryException $e) {
+            $existing = EmployeeSection::where('name', $section)->first();
+            if ($existing) {
+                return $existing->id;
+            }
+
+            Log::error("Error processing section '{$section}': " . $e->getMessage());
+            return 1;
+        }
     }
 }
