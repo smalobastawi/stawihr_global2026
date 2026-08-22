@@ -413,11 +413,29 @@ class DataImportController extends Controller
             return 'One or more employees are missing a contract start date. Please add start_date or effective_date in your file.';
         }
 
-        if (str_contains($message, 'Integrity constraint violation')) {
-            return 'Some required employee information is missing or invalid. Please review your file and try again.';
+        if (preg_match("/Column '([^']+)' cannot be null/i", $message, $matches)) {
+            $column = $matches[1];
+            return "One or more rows are missing required field '{$column}'. Please complete the Excel file and try again.";
         }
 
-        return 'The import could not be completed. Please check your file format and required fields, then try again.';
+        if (preg_match("/Duplicate entry '([^']*)' for key '([^']+)'/i", $message, $matches)) {
+            return "Duplicate value '{$matches[1]}' found ({$matches[2]}). Please remove duplicates and try again.";
+        }
+
+        if (str_contains($message, 'Integrity constraint violation')) {
+            $detail = preg_replace('/\s+/', ' ', trim($message));
+            if (preg_match('/SQLSTATE\[[^\]]+\]:\s*(.+)$/i', $detail, $matches)) {
+                $detail = $matches[1];
+            }
+            if (strlen($detail) > 300) {
+                $detail = substr($detail, 0, 297) . '...';
+            }
+
+            return "Some required employee information is missing or invalid. Details: {$detail}";
+        }
+
+        return 'The import could not be completed. Please check your file format and required fields, then try again. Details: '
+            . (strlen($message) > 250 ? substr($message, 0, 247) . '...' : $message);
     }
 
     public function importLeaves(Request $request)

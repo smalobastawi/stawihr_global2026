@@ -89,13 +89,17 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
                 'last_name' => 'required|string|min:2',
                 'payroll_number' => 'required|string',
                 'department' => 'required|string',
+                'idpassport' => 'required|string',
+            ], [
+                'idpassport.required' => 'ID/Passport (national ID or passport number) is required.',
             ]);
 
             if ($validator->fails()) {
                 foreach ($validator->errors()->toArray() as $field => $messages) {
-                    $columnValue = $row[$field] ?? 'N/A';
+                    $columnLabel = $this->friendlyColumnLabel($field);
+                    $columnValue = $this->displayValue($row[$field] ?? null);
                     foreach ($messages as $message) {
-                        $this->errors[] = "Row {$currentRow}, Column '{$field}': {$columnValue} - {$message}";
+                        $this->errors[] = "Row {$currentRow}, Column '{$columnLabel}': {$columnValue} - {$message}";
                     }
                 }
 
@@ -118,9 +122,20 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
             return null;
         }
 
+        $preflightError = $this->preflightRowRequirements($row, $currentRow);
+        if ($preflightError) {
+            $this->errors[] = $preflightError;
+            return null;
+        }
+
         try {
             // Create or update User account
             $employeeAccountDataFormat = $this->makeEmployeeAccountDataFormat_from_excel($row);
+            if (empty($employeeAccountDataFormat['email'])) {
+                $this->errors[] = "Row {$currentRow} was skipped: email could not be determined. Provide personal_email or payroll_number.";
+                return null;
+            }
+
             $parentData = User::updateOrCreate(
                 ['email' => $employeeAccountDataFormat['email']],
                 $employeeAccountDataFormat
@@ -162,7 +177,7 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
                 'payroll_number' => $row['payroll_number'] ?? null,
                 'message' => $e->getMessage(),
             ]);
-            $this->errors[] = $this->formatRowException($e, $currentRow);
+            $this->errors[] = $this->formatRowException($e, $currentRow, $row);
             return null;
         }
     }
@@ -200,8 +215,16 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
             $row['idpassport'] = $row['id_passport'];
         }
 
+        if (!empty($row['national_id']) && empty($row['idpassport'])) {
+            $row['idpassport'] = $row['national_id'];
+        }
+
         if (empty($row['payroll_number']) && !empty($row['id_passport'])) {
             $row['payroll_number'] = (string) $row['id_passport'];
+        }
+
+        if (empty($row['payroll_number']) && !empty($row['idpassport'])) {
+            $row['payroll_number'] = (string) $row['idpassport'];
         }
 
         return $row;
@@ -219,19 +242,151 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
         return null;
     }
 
-    private function formatRowException(\Throwable $e, int $currentRow): string
+    private function formatRowException(\Throwable $e, int $currentRow, array $row = []): string
     {
         $message = $e->getMessage();
+        $payroll = $this->displayValue($row['payroll_number'] ?? null);
+        $name = trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? ''));
+        $who = trim($name) !== '' ? " ({$name}" . ($payroll !== 'N/A' ? ", payroll {$payroll}" : '') . ')' : ($payroll !== 'N/A' ? " (payroll {$payroll})" : '');
 
         if (str_contains($message, "Column 'start_date' cannot be null")) {
-            return "Row {$currentRow} was skipped: contract start date is missing. Please provide start_date or effective_date.";
+            return "Row {$currentRow}{$who} was skipped: contract start date is missing. Please provide start_date or effective_date.";
+        }
+
+        if (preg_match("/Column '([^']+)' cannot be null/i", $message, $matches)) {
+            $column = $matches[1];
+            $label = $this->friendlyColumnLabel($column);
+            $hint = $this->requiredFieldHint($column);
+
+            return "Row {$currentRow}{$who} was skipped: required field '{$label}' is missing or empty.{$hint}";
+        }
+
+        if (preg_match("/Duplicate entry '([^']*)' for key '([^']+)'/i", $message, $matches)) {
+            $duplicateValue = $matches[1];
+            $keyName = $matches[2];
+            $fieldHint = $this->duplicateKeyHint($keyName);
+
+            return "Row {$currentRow}{$who} was skipped: duplicate value '{$duplicateValue}' for {$fieldHint}. An employee/user with this value already exists.";
+        }
+
+        if (preg_match('/FOREIGN KEY \(`([^`]+)`\)/i', $message, $matches)) {
+            $column = $matches[1];
+            $label = $this->friendlyColumnLabel($column);
+
+            return "Row {$currentRow}{$who} was skipped: invalid reference for '{$label}'. Check that related data exists (or select a specific company if importing as SuperAdmin).";
         }
 
         if (str_contains($message, 'Integrity constraint violation')) {
-            return "Row {$currentRow} was skipped: required employee information is missing or invalid.";
+            $detail = $this->summarizeSqlMessage($message);
+
+            return "Row {$currentRow}{$who} was skipped: required employee information is missing or invalid. Details: {$detail}";
         }
 
-        return "Row {$currentRow} was skipped: could not import this employee. Please check the data and try again.";
+        $detail = $this->summarizeSqlMessage($message);
+
+        return "Row {$currentRow}{$who} was skipped: could not import this employee. Details: {$detail}";
+    }
+
+    private function preflightRowRequirements(array $row, int $currentRow): ?string
+    {
+        $companyId = \App\Support\CompanyContext::defaultCompanyIdForNewRecord();
+        if (empty($companyId) && empty($row['company_id'] ?? null)) {
+            return "Row {$currentRow} was skipped: no company selected. As SuperAdmin, select a specific company before importing, or include a valid company in the file.";
+        }
+
+        $nationalId = trim((string) ($row['idpassport'] ?? $row['national_id'] ?? ''));
+        if ($nationalId === '') {
+            return "Row {$currentRow} was skipped: ID/Passport (national_id) is required.";
+        }
+
+        return null;
+    }
+
+    private function friendlyColumnLabel(string $field): string
+    {
+        $labels = [
+            'first_name' => 'First Name',
+            'last_name' => 'Last Name',
+            'middle_name' => 'Middle Name',
+            'payroll_number' => 'Payroll Number',
+            'department' => 'Department',
+            'designation' => 'Designation',
+            'idpassport' => 'ID/Passport',
+            'national_id' => 'ID/Passport',
+            'personal_email' => 'Personal Email',
+            'email' => 'Email',
+            'start_date' => 'Start Date',
+            'effective_date' => 'Effective Date',
+            'department_id' => 'Department',
+            'designation_id' => 'Designation',
+            'location_id' => 'Location',
+            'company_id' => 'Company',
+            'user_id' => 'User Account',
+            'work_shift_id' => 'Work Shift',
+            'phone' => 'Phone',
+        ];
+
+        return $labels[$field] ?? str_replace('_', ' ', $field);
+    }
+
+    private function requiredFieldHint(string $column): string
+    {
+        $hints = [
+            'national_id' => ' Provide id_passport / ID Passport in the Excel file.',
+            'company_id' => ' Select a specific company in the header (not All Companies) before importing.',
+            'department_id' => ' Provide a Department value in the Excel file.',
+            'designation_id' => ' Provide a Designation value in the Excel file.',
+            'user_id' => ' Ensure personal_email or payroll_number is present so a user account can be created.',
+            'work_shift_id' => ' Work shift could not be assigned; check defaults.',
+            'start_date' => ' Provide start_date or effective_date.',
+            'email' => ' Provide personal_email or payroll_number.',
+        ];
+
+        return $hints[$column] ?? '';
+    }
+
+    private function duplicateKeyHint(string $keyName): string
+    {
+        $key = strtolower($keyName);
+        if (str_contains($key, 'email')) {
+            return 'email';
+        }
+        if (str_contains($key, 'payroll')) {
+            return 'payroll number';
+        }
+        if (str_contains($key, 'national') || str_contains($key, 'staff_no')) {
+            return 'national ID / staff number';
+        }
+        if (str_contains($key, 'user_name') || str_contains($key, 'username')) {
+            return 'username';
+        }
+
+        return "unique key '{$keyName}'";
+    }
+
+    private function summarizeSqlMessage(string $message): string
+    {
+        $message = preg_replace('/\s+/', ' ', trim($message));
+        // Prefer the actionable SQLSTATE / constraint part
+        if (preg_match('/SQLSTATE\[[^\]]+\]:\s*(.+)$/i', $message, $matches)) {
+            $message = $matches[1];
+        }
+        if (strlen($message) > 280) {
+            $message = substr($message, 0, 277) . '...';
+        }
+
+        return $message;
+    }
+
+    private function displayValue($value): string
+    {
+        if ($value === null || $value === '') {
+            return 'N/A';
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? 'N/A' : $value;
     }
 
     /**
@@ -310,6 +465,7 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
 
         // Basic Information
         $employeeData['user_id'] = $user_id;
+        $employeeData['company_id'] = \App\Support\CompanyContext::defaultCompanyIdForNewRecord();
         $employeeData['payroll_number'] = $data['payroll_number'] ?? null;
         $employeeData['staff_no'] = $data['payroll_number'] ?? null;
         $employeeData['first_name'] = $data['first_name'] ?? null;
@@ -319,12 +475,12 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
         $employeeData['personal_email'] = $data['personal_email'] ?? $email;
        
         // ID Information
-        $employeeData['national_id'] = $data['idpassport'] ?? null;
+        $employeeData['national_id'] = $data['idpassport'] ?? $data['national_id'] ?? null;
 
         // Work Information
         $employeeData['department_id'] = $department_id;
         $employeeData['designation_id'] = $designation_id;
-        $employeeData['id'] = $location_id;
+        $employeeData['location_id'] = $location_id;
         $employeeData['work_shift_id'] = 1; // Default work shift
         $employeeData['supervisor_id'] = $supervisor_id;
 
