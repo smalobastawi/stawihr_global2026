@@ -87,9 +87,9 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
                 'first_name' => 'required|string|min:2',
                 'middle_name' => 'nullable|string',
                 'last_name' => 'required|string|min:2',
-                'payroll_number' => 'required|string',
+                'payroll_number' => 'required',
                 'department' => 'required|string',
-                'idpassport' => 'required|string',
+                'idpassport' => 'required',
             ], [
                 'idpassport.required' => 'ID/Passport (national ID or passport number) is required.',
             ]);
@@ -466,8 +466,8 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
         // Basic Information
         $employeeData['user_id'] = $user_id;
         $employeeData['company_id'] = \App\Support\CompanyContext::defaultCompanyIdForNewRecord();
-        $employeeData['payroll_number'] = $data['payroll_number'] ?? null;
-        $employeeData['staff_no'] = $data['payroll_number'] ?? null;
+        $employeeData['payroll_number'] = $data['payroll_number'] !== null && $data['payroll_number'] !== '' ? (string) $data['payroll_number'] : null;
+        $employeeData['staff_no'] = $data['payroll_number'] !== null && $data['payroll_number'] !== '' ? (string) $data['payroll_number'] : null;
         $employeeData['first_name'] = $data['first_name'] ?? null;
         $employeeData['last_name'] = $data['last_name'] ?? null;
         $employeeData['middle_name'] = $data['middle_name'] ?? null;
@@ -475,7 +475,8 @@ class UsersImport implements ToModel, WithHeadingRow, WithStartRow, SkipsEmptyRo
         $employeeData['personal_email'] = $data['personal_email'] ?? $email;
        
         // ID Information
-        $employeeData['national_id'] = $data['idpassport'] ?? $data['national_id'] ?? null;
+        $idpassportRaw = $data['idpassport'] ?? $data['national_id'] ?? null;
+        $employeeData['national_id'] = $idpassportRaw !== null && $idpassportRaw !== '' ? (string) $idpassportRaw : null;
 
         // Work Information
         $employeeData['department_id'] = $department_id;
